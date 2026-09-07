@@ -1,0 +1,95 @@
+# ==============================================================================
+# Monorepo .gitignore (React Web + React Native / Expo)
+# ==============================================================================
+
+# --- Dependencies ---
+node_modules/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# --- Production & Build Outputs ---
+dist/
+build/
+out/
+.next/
+web-build/
+*.tsbuildinfo
+
+# --- Monorepo & Build Tool Caches ---
+.turbo/
+.nx/
+.cache/
+.parcel-cache/
+
+# --- Expo & React Native ---
+.expo/
+.expo-shared/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+.metro-health-check*
+
+# Native Android (if prebuilt or ejected)
+apps/mobile/android/app/build/
+apps/mobile/android/.gradle/
+apps/mobile/android/build/
+apps/mobile/android/local.properties
+*.apk
+*.aab
+
+# Native iOS (if prebuilt or ejected)
+apps/mobile/ios/Pods/
+apps/mobile/ios/build/
+apps/mobile/ios/DerivedData/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+*.xccheckout
+*.moved-builder
+*.ipa
+*.xcuserstate
+
+# --- Environment Variables & Secrets ---
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env*.local
+!.env.example
+
+# --- Logs ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# --- Testing & Coverage ---
+coverage/
+.nyc_output/
+
+# --- Operating System & IDEs ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# --- Temporary & Scratch ---
+tmp/
+temp/
+scratch/
