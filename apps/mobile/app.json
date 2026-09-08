@@ -19,7 +19,8 @@
     },
     "scheme": "jiraclone",
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-asset"
     ]
   }
 }
