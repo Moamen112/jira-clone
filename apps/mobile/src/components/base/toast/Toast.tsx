@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   StyleSheet,
@@ -46,11 +46,17 @@ export const Toast: React.FC<ToastProps> = ({
   onAction,
   style,
 }) => {
+  const [shouldRender, setShouldRender] = useState(visible);
   const translateY = useRef(new Animated.Value(position === 'top' ? -100 : 100)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (visible) {
+      setShouldRender(true);
+      translateY.setValue(position === 'top' ? -100 : 100);
+      opacity.setValue(0);
+
       Animated.parallel([
         Animated.timing(translateY, {
           toValue: 0,
@@ -65,17 +71,23 @@ export const Toast: React.FC<ToastProps> = ({
       ]).start();
 
       if (duration > 0) {
-        const timer = setTimeout(() => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => {
           handleDismiss();
         }, duration);
-        return () => clearTimeout(timer);
       }
-    } else {
+    } else if (shouldRender) {
       handleDismiss();
     }
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, [visible]);
 
   const handleDismiss = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+
     Animated.parallel([
       Animated.timing(translateY, {
         toValue: position === 'top' ? -100 : 100,
@@ -88,11 +100,12 @@ export const Toast: React.FC<ToastProps> = ({
         useNativeDriver: true,
       }),
     ]).start(() => {
+      setShouldRender(false);
       onDismiss?.();
     });
   };
 
-  if (!visible) return null;
+  if (!shouldRender) return null;
 
   const getVariantStyles = () => {
     switch (variant) {
@@ -101,14 +114,14 @@ export const Toast: React.FC<ToastProps> = ({
           bg: colors.light.accentSoft,
           textColor: colors.light.accent,
           borderColor: colors.light.accent,
-          icon: 'âœ“',
+          icon: '✓',
         };
       case 'warn':
         return {
           bg: colors.light.warnSoft,
           textColor: colors.light.warn,
           borderColor: colors.light.warn,
-          icon: 'âš ',
+          icon: '⚠',
         };
       case 'info':
       default:
@@ -116,7 +129,7 @@ export const Toast: React.FC<ToastProps> = ({
           bg: colors.light.surface,
           textColor: colors.light.ink,
           borderColor: colors.light.line,
-          icon: 'â„¹',
+          icon: 'ℹ',
         };
     }
   };
@@ -168,7 +181,7 @@ export const Toast: React.FC<ToastProps> = ({
 
         <Pressable onPress={handleDismiss} hitSlop={8} style={styles.closeButton}>
           <Text variant="caption" bold color={colors.light.inkMuted}>
-            âœ•
+            ✕
           </Text>
         </Pressable>
       </View>
@@ -220,4 +233,3 @@ const styles = StyleSheet.create({
 });
 
 export default Toast;
-

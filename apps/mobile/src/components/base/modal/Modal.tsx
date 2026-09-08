@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   Modal as RNModal,
   View,
@@ -126,7 +126,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(22, 24, 26, 0.45)', // ink overlay
   },
   bottomSheet: {
