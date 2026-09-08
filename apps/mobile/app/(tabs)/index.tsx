@@ -15,10 +15,10 @@ import {
   Modal,
   Dropdown,
   Toast,
-} from '../src/components/base';
-import { colors } from '../src/tokens/colors';
-import { spacing } from '../src/tokens/spacing';
-import { radius } from '../src/tokens/radius';
+} from '../../src/components/base';
+import { colors } from '../../src/tokens/colors';
+import { spacing } from '../../src/tokens/spacing';
+import { radius } from '../../src/tokens/radius';
 
 export default function HomeScreen() {
   // Interactive UI states
@@ -266,7 +266,7 @@ export default function HomeScreen() {
           />
         </View>
 
-        <View style={{ height: 60 }} />
+        <View style={{ height: 40 }} />
       </ScrollView>
 
       {/* Interactive Bottom Sheet Modal */}
@@ -344,6 +344,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing[4],
+    paddingBottom: spacing[6],
   },
   header: {
     marginBottom: spacing[4],
