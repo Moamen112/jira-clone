@@ -1,8 +1,8 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { colors } from '../../tokens/colors';
-import { radius } from '../../tokens/radius';
-import { spacing } from '../../tokens/spacing';
+import { colors } from '../../../tokens/colors';
+import { radius } from '../../../tokens/radius';
+import { spacing } from '../../../tokens/spacing';
 import { Text } from '../typography/Text';
 
 export type BadgeVariant =
@@ -130,3 +130,4 @@ const styles = StyleSheet.create({
 });
 
 export default Badge;
+

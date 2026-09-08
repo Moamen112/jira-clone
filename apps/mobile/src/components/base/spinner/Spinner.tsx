@@ -1,7 +1,7 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, ActivityIndicator, StyleSheet, ViewStyle } from 'react-native';
-import { colors } from '../../tokens/colors';
-import { spacing } from '../../tokens/spacing';
+import { colors } from '../../../tokens/colors';
+import { spacing } from '../../../tokens/spacing';
 import { Text } from '../typography/Text';
 
 export interface SpinnerProps {
@@ -70,3 +70,4 @@ const styles = StyleSheet.create({
 });
 
 export default Spinner;
+

@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+﻿import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, ViewStyle, DimensionValue } from 'react-native';
-import { colors } from '../../tokens/colors';
-import { radius } from '../../tokens/radius';
+import { colors } from '../../../tokens/colors';
+import { radius } from '../../../tokens/radius';
 
 export interface SkeletonProps {
   /** Width of skeleton block */
@@ -75,3 +75,4 @@ const styles = StyleSheet.create({
 });
 
 export default Skeleton;
+

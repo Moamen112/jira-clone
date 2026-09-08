@@ -1,7 +1,7 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { colors } from '../../tokens/colors';
-import { radius } from '../../tokens/radius';
+import { colors } from '../../../tokens/colors';
+import { radius } from '../../../tokens/radius';
 import { Avatar, AvatarSize } from '../avatar/Avatar';
 import { Text } from '../typography/Text';
 
@@ -119,3 +119,4 @@ const styles = StyleSheet.create({
 });
 
 export default AvatarGroup;
+

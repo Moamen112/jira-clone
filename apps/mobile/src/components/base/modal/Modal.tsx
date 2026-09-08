@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   Modal as RNModal,
   View,
@@ -9,9 +9,9 @@ import {
   ViewStyle,
   ScrollView,
 } from 'react-native';
-import { colors } from '../../tokens/colors';
-import { radius } from '../../tokens/radius';
-import { spacing } from '../../tokens/spacing';
+import { colors } from '../../../tokens/colors';
+import { radius } from '../../../tokens/radius';
+import { spacing } from '../../../tokens/spacing';
 import { Text } from '../typography/Text';
 import { IconButton } from '../icon-button/IconButton';
 
@@ -97,7 +97,7 @@ export const Modal: React.FC<ModalProps> = ({
               <IconButton
                 variant="ghost"
                 size="sm"
-                icon={<Text variant="body" bold color={colors.light.inkMuted}>✕</Text>}
+                icon={<Text variant="body" bold color={colors.light.inkMuted}>âœ•</Text>}
                 onPress={onClose}
               />
             </View>
@@ -186,3 +186,4 @@ const styles = StyleSheet.create({
 });
 
 export default Modal;
+

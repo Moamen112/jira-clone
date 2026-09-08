@@ -8,10 +8,10 @@ import {
   TextStyle,
   PressableProps,
 } from 'react-native';
-import { colors } from '../../tokens/colors';
-import { radius } from '../../tokens/radius';
-import { spacing } from '../../tokens/spacing';
-import { layout } from '../../tokens/layout';
+import { colors } from '../../../tokens/colors';
+import { radius } from '../../../tokens/radius';
+import { spacing } from '../../../tokens/spacing';
+import { layout } from '../../../tokens/layout';
 import { Text } from '../typography/Text';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -56,7 +56,7 @@ export const Button: React.FC<ButtonProps> = ({
   const isDisabled = disabled || loading;
 
   const getContainerStyle = (pressed: boolean): ViewStyle => {
-    let bg = colors.light.accent;
+    let bg: string = colors.light.accent;
     let border: string | undefined;
 
     switch (variant) {
@@ -75,8 +75,8 @@ export const Button: React.FC<ButtonProps> = ({
         break;
     }
 
-    let minHeight = layout.tapTarget;
-    let paddingH = spacing[4];
+    let minHeight: number = layout.tapTarget;
+    let paddingH: number = spacing[4];
 
     if (size === 'sm') {
       minHeight = 32;
@@ -162,3 +162,4 @@ const styles = StyleSheet.create({
 });
 
 export default Button;
+

@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-native",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@jira-clone/shared": ["../../packages/shared/src"],
+      "@jira-clone/shared/*": ["../../packages/shared/src/*"]
+    }
+  },
+  "include": [
+    "src",
+    "app",
+    "metro.config.js"
+  ]
+}

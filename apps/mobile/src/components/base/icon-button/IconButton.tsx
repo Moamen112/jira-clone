@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -6,9 +6,9 @@ import {
   ViewStyle,
   PressableProps,
 } from 'react-native';
-import { colors } from '../../tokens/colors';
-import { radius } from '../../tokens/radius';
-import { layout } from '../../tokens/layout';
+import { colors } from '../../../tokens/colors';
+import { radius } from '../../../tokens/radius';
+import { layout } from '../../../tokens/layout';
 import { ButtonVariant, ButtonSize } from '../button/Button';
 
 export interface IconButtonProps extends Omit<PressableProps, 'style'> {
@@ -113,3 +113,4 @@ const styles = StyleSheet.create({
 });
 
 export default IconButton;
+

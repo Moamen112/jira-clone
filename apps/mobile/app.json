@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Jira Clone",
+    "slug": "jira-clone-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#EDEBE4"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#EDEBE4"
+      }
+    },
+    "scheme": "jiraclone",
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

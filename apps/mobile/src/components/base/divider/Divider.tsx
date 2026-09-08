@@ -1,7 +1,7 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { colors } from '../../tokens/colors';
-import { spacing, SpacingToken } from '../../tokens/spacing';
+import { colors } from '../../../tokens/colors';
+import { spacing, SpacingToken } from '../../../tokens/spacing';
 
 export interface DividerProps {
   /** Direction of the line */
@@ -55,3 +55,4 @@ export const Divider: React.FC<DividerProps> = ({
 };
 
 export default Divider;
+

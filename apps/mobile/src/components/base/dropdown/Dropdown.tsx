@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View,
   Pressable,
@@ -6,10 +6,10 @@ import {
   ScrollView,
   ViewStyle,
 } from 'react-native';
-import { colors } from '../../tokens/colors';
-import { radius } from '../../tokens/radius';
-import { spacing } from '../../tokens/spacing';
-import { layout } from '../../tokens/layout';
+import { colors } from '../../../tokens/colors';
+import { radius } from '../../../tokens/radius';
+import { spacing } from '../../../tokens/spacing';
+import { layout } from '../../../tokens/layout';
 import { Text } from '../typography/Text';
 import { Modal } from '../modal/Modal';
 import { Input } from '../input/Input';
@@ -113,7 +113,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
         </View>
 
         <Text variant="caption" muted style={styles.chevron}>
-          ▼
+          â–¼
         </Text>
       </Pressable>
 
@@ -176,7 +176,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
 
                 {isSelected && (
                   <Text variant="body" bold color={colors.light.accent}>
-                    ✓
+                    âœ“
                   </Text>
                 )}
               </Pressable>
@@ -258,3 +258,4 @@ const styles = StyleSheet.create({
 });
 
 export default Dropdown;
+

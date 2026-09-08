@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+﻿import React, { useEffect, useRef } from 'react';
 import {
   Animated,
   StyleSheet,
@@ -7,9 +7,9 @@ import {
   ViewStyle,
   Platform,
 } from 'react-native';
-import { colors } from '../../tokens/colors';
-import { radius } from '../../tokens/radius';
-import { spacing } from '../../tokens/spacing';
+import { colors } from '../../../tokens/colors';
+import { radius } from '../../../tokens/radius';
+import { spacing } from '../../../tokens/spacing';
 import { Text } from '../typography/Text';
 
 export type ToastVariant = 'info' | 'success' | 'warn';
@@ -101,14 +101,14 @@ export const Toast: React.FC<ToastProps> = ({
           bg: colors.light.accentSoft,
           textColor: colors.light.accent,
           borderColor: colors.light.accent,
-          icon: '✓',
+          icon: 'âœ“',
         };
       case 'warn':
         return {
           bg: colors.light.warnSoft,
           textColor: colors.light.warn,
           borderColor: colors.light.warn,
-          icon: '⚠',
+          icon: 'âš ',
         };
       case 'info':
       default:
@@ -116,7 +116,7 @@ export const Toast: React.FC<ToastProps> = ({
           bg: colors.light.surface,
           textColor: colors.light.ink,
           borderColor: colors.light.line,
-          icon: 'ℹ',
+          icon: 'â„¹',
         };
     }
   };
@@ -168,7 +168,7 @@ export const Toast: React.FC<ToastProps> = ({
 
         <Pressable onPress={handleDismiss} hitSlop={8} style={styles.closeButton}>
           <Text variant="caption" bold color={colors.light.inkMuted}>
-            ✕
+            âœ•
           </Text>
         </Pressable>
       </View>
@@ -220,3 +220,4 @@ const styles = StyleSheet.create({
 });
 
 export default Toast;
+

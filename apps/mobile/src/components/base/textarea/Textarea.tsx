@@ -1,4 +1,4 @@
-import React, { useState, forwardRef } from 'react';
+﻿import React, { useState, forwardRef } from 'react';
 import {
   View,
   TextInput,
@@ -6,9 +6,9 @@ import {
   StyleSheet,
   ViewStyle,
 } from 'react-native';
-import { colors } from '../../tokens/colors';
-import { radius } from '../../tokens/radius';
-import { spacing } from '../../tokens/spacing';
+import { colors } from '../../../tokens/colors';
+import { radius } from '../../../tokens/radius';
+import { spacing } from '../../../tokens/spacing';
 import { Text } from '../typography/Text';
 
 export interface TextareaProps extends TextInputProps {
@@ -170,3 +170,4 @@ const styles = StyleSheet.create({
 });
 
 export default Textarea;
+

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View,
   Image,
@@ -6,8 +6,8 @@ import {
   ViewStyle,
   ImageSourcePropType,
 } from 'react-native';
-import { colors } from '../../tokens/colors';
-import { radius } from '../../tokens/radius';
+import { colors } from '../../../tokens/colors';
+import { radius } from '../../../tokens/radius';
 import { Text } from '../typography/Text';
 
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
@@ -170,3 +170,4 @@ const styles = StyleSheet.create({
 });
 
 export default Avatar;
+

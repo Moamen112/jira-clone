@@ -1,4 +1,4 @@
-import React, { useState, forwardRef } from 'react';
+﻿import React, { useState, forwardRef } from 'react';
 import {
   View,
   TextInput,
@@ -7,10 +7,10 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { colors } from '../../tokens/colors';
-import { radius } from '../../tokens/radius';
-import { spacing } from '../../tokens/spacing';
-import { layout } from '../../tokens/layout';
+import { colors } from '../../../tokens/colors';
+import { radius } from '../../../tokens/radius';
+import { spacing } from '../../../tokens/spacing';
+import { layout } from '../../../tokens/layout';
 import { Text } from '../typography/Text';
 
 export interface InputProps extends TextInputProps {
@@ -156,3 +156,4 @@ const styles = StyleSheet.create({
 });
 
 export default Input;
+
