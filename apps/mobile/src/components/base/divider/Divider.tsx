@@ -1,6 +1,6 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { spacing, SpacingToken } from '../../../tokens/spacing';
 
 export interface DividerProps {
@@ -19,10 +19,12 @@ export interface DividerProps {
 export const Divider: React.FC<DividerProps> = ({
   orientation = 'horizontal',
   margin = 3,
-  color = colors.light.line,
+  color,
   thickness = 1,
   style,
 }) => {
+  const { colors } = useTheme();
+  const dividerColor = color || colors.line;
   const marginValue =
     typeof margin === 'number' && margin in spacing
       ? spacing[margin as SpacingToken]
@@ -39,13 +41,13 @@ export const Divider: React.FC<DividerProps> = ({
           ? {
               width: '100%',
               height: thickness,
-              backgroundColor: color,
+              backgroundColor: dividerColor,
               marginVertical: marginValue,
             }
           : {
               height: '100%',
               width: thickness,
-              backgroundColor: color,
+              backgroundColor: dividerColor,
               marginHorizontal: marginValue,
             },
         style,

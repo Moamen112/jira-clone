@@ -7,7 +7,7 @@ import {
   ViewStyle,
   Platform,
 } from 'react-native';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { radius } from '../../../tokens/radius';
 import { spacing } from '../../../tokens/spacing';
 import { Text } from '../typography/Text';
@@ -46,6 +46,7 @@ export const Toast: React.FC<ToastProps> = ({
   onAction,
   style,
 }) => {
+  const { colors } = useTheme();
   const [shouldRender, setShouldRender] = useState(visible);
   const translateY = useRef(new Animated.Value(position === 'top' ? -100 : 100)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -111,24 +112,24 @@ export const Toast: React.FC<ToastProps> = ({
     switch (variant) {
       case 'success':
         return {
-          bg: colors.light.accentSoft,
-          textColor: colors.light.accent,
-          borderColor: colors.light.accent,
+          bg: colors.accentSoft,
+          textColor: colors.accent,
+          borderColor: colors.accent,
           icon: '✓',
         };
       case 'warn':
         return {
-          bg: colors.light.warnSoft,
-          textColor: colors.light.warn,
-          borderColor: colors.light.warn,
+          bg: colors.warnSoft,
+          textColor: colors.warn,
+          borderColor: colors.warn,
           icon: '⚠',
         };
       case 'info':
       default:
         return {
-          bg: colors.light.surface,
-          textColor: colors.light.ink,
-          borderColor: colors.light.line,
+          bg: colors.surface,
+          textColor: colors.ink,
+          borderColor: colors.line,
           icon: 'ℹ',
         };
     }
@@ -173,14 +174,14 @@ export const Toast: React.FC<ToastProps> = ({
 
         {actionLabel && onAction && (
           <Pressable onPress={onAction} style={styles.actionButton}>
-            <Text variant="bodySmall" bold color={colors.light.accent}>
+            <Text variant="bodySmall" bold color={colors.accent}>
               {actionLabel}
             </Text>
           </Pressable>
         )}
 
         <Pressable onPress={handleDismiss} hitSlop={8} style={styles.closeButton}>
-          <Text variant="caption" bold color={colors.light.inkMuted}>
+          <Text variant="caption" bold color={colors.inkMuted}>
             ✕
           </Text>
         </Pressable>

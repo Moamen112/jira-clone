@@ -1,4 +1,4 @@
-﻿import React, { useState, forwardRef } from 'react';
+import React, { useState, forwardRef } from 'react';
 import {
   View,
   TextInput,
@@ -6,7 +6,7 @@ import {
   StyleSheet,
   ViewStyle,
 } from 'react-native';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { radius } from '../../../tokens/radius';
 import { spacing } from '../../../tokens/spacing';
 import { Text } from '../typography/Text';
@@ -39,7 +39,7 @@ export const Textarea = forwardRef<TextInput, TextareaProps>(
       containerStyle,
       inputWrapperStyle,
       style,
-      placeholderTextColor = colors.light.inkMuted,
+      placeholderTextColor,
       editable = true,
       onFocus,
       onBlur,
@@ -48,6 +48,7 @@ export const Textarea = forwardRef<TextInput, TextareaProps>(
     },
     ref
   ) => {
+    const { colors } = useTheme();
     const [isFocused, setIsFocused] = useState(false);
     const [currentLength, setCurrentLength] = useState(
       (value || defaultValue || '').length
@@ -69,10 +70,10 @@ export const Textarea = forwardRef<TextInput, TextareaProps>(
     };
 
     const borderColor = error
-      ? colors.light.warn
+      ? colors.warn
       : isFocused
-      ? colors.light.accent
-      : colors.light.line;
+      ? colors.accent
+      : colors.line;
 
     return (
       <View style={[styles.container, containerStyle]}>
@@ -88,8 +89,8 @@ export const Textarea = forwardRef<TextInput, TextareaProps>(
             {
               borderColor,
               backgroundColor: editable
-                ? colors.light.surface
-                : colors.light.paper,
+                ? colors.surface
+                : colors.paper,
             },
             inputWrapperStyle,
           ]}
@@ -102,13 +103,13 @@ export const Textarea = forwardRef<TextInput, TextareaProps>(
             maxLength={maxLength}
             value={value}
             defaultValue={defaultValue}
-            placeholderTextColor={placeholderTextColor}
+            placeholderTextColor={placeholderTextColor || colors.inkMuted}
             onFocus={handleFocus}
             onBlur={handleBlur}
             onChangeText={handleChangeText}
             style={[
               styles.textInput,
-              { color: colors.light.ink },
+              { color: colors.ink },
               style,
             ]}
             {...rest}
@@ -117,7 +118,7 @@ export const Textarea = forwardRef<TextInput, TextareaProps>(
 
         <View style={styles.footer}>
           {error ? (
-            <Text variant="errorText" color={colors.light.warn}>
+            <Text variant="errorText" color={colors.warn}>
               {error}
             </Text>
           ) : hint ? (

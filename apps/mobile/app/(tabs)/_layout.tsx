@@ -2,19 +2,20 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../../src/tokens/colors';
+import { useTheme } from '../../src/tokens';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const bottomInset = insets.bottom > 0 ? insets.bottom : 8;
+  const { colors } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.light.accent,
-        tabBarInactiveTintColor: colors.light.inkMuted,
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.inkMuted,
         tabBarStyle: {
-          backgroundColor: colors.light.paper,
+          backgroundColor: colors.paper,
           borderTopWidth: 0,
           borderWidth: 0,
           elevation: 0,
@@ -28,11 +29,11 @@ export default function TabLayout() {
           fontWeight: '600',
         },
         headerStyle: {
-          backgroundColor: colors.light.paper,
-          borderBottomColor: colors.light.line,
+          backgroundColor: colors.paper,
+          borderBottomColor: colors.line,
           borderBottomWidth: 1,
         },
-        headerTintColor: colors.light.ink,
+        headerTintColor: colors.ink,
         headerTitleStyle: {
           fontWeight: '700',
           fontSize: 18,
@@ -60,7 +61,7 @@ export default function TabLayout() {
         name="spaces"
         options={{
           title: 'Spaces',
-          headerTitle: 'Spaces & Projects',
+          headerTitle: 'Spaces',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'grid' : 'grid-outline'}
@@ -76,14 +77,7 @@ export default function TabLayout() {
         name="notifications"
         options={{
           title: 'Notifications',
-          headerTitle: 'Activity & Alerts',
-          tabBarBadge: 3,
-          tabBarBadgeStyle: {
-            backgroundColor: colors.light.warn,
-            color: '#FFFFFF',
-            fontSize: 10,
-            lineHeight: 14,
-          },
+          headerTitle: 'Notifications',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'notifications' : 'notifications-outline'}

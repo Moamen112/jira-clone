@@ -1,4 +1,4 @@
-﻿import React, { useState, forwardRef } from 'react';
+import React, { useState, forwardRef } from 'react';
 import {
   View,
   TextInput,
@@ -7,10 +7,10 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { colors } from '../../../tokens/colors';
 import { radius } from '../../../tokens/radius';
 import { spacing } from '../../../tokens/spacing';
 import { layout } from '../../../tokens/layout';
+import { useTheme } from '../../../tokens';
 import { Text } from '../typography/Text';
 
 export interface InputProps extends TextInputProps {
@@ -41,7 +41,7 @@ export const Input = forwardRef<TextInput, InputProps>(
       containerStyle,
       inputWrapperStyle,
       style,
-      placeholderTextColor = colors.light.inkMuted,
+      placeholderTextColor,
       editable = true,
       onFocus,
       onBlur,
@@ -49,6 +49,7 @@ export const Input = forwardRef<TextInput, InputProps>(
     },
     ref
   ) => {
+    const { colors } = useTheme();
     const [isFocused, setIsFocused] = useState(false);
 
     const handleFocus = (e: any) => {
@@ -62,10 +63,10 @@ export const Input = forwardRef<TextInput, InputProps>(
     };
 
     const borderColor = error
-      ? colors.light.warn
+      ? colors.warn
       : isFocused
-      ? colors.light.accent
-      : colors.light.line;
+      ? colors.accent
+      : colors.line;
 
     return (
       <View style={[styles.container, containerStyle]}>
@@ -81,8 +82,8 @@ export const Input = forwardRef<TextInput, InputProps>(
             {
               borderColor,
               backgroundColor: editable
-                ? colors.light.surface
-                : colors.light.paper,
+                ? colors.surface
+                : colors.paper,
             },
             inputWrapperStyle,
           ]}
@@ -92,12 +93,12 @@ export const Input = forwardRef<TextInput, InputProps>(
           <TextInput
             ref={ref}
             editable={editable}
-            placeholderTextColor={placeholderTextColor}
+            placeholderTextColor={placeholderTextColor || colors.inkMuted}
             onFocus={handleFocus}
             onBlur={handleBlur}
             style={[
               styles.textInput,
-              { color: colors.light.ink },
+              { color: colors.ink },
               style,
             ]}
             {...rest}
@@ -107,7 +108,7 @@ export const Input = forwardRef<TextInput, InputProps>(
         </View>
 
         {error ? (
-          <Text variant="errorText" color={colors.light.warn} style={styles.feedback}>
+          <Text variant="errorText" color={colors.warn} style={styles.feedback}>
             {error}
           </Text>
         ) : hint ? (

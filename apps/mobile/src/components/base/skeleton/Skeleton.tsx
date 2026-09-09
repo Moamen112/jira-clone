@@ -1,6 +1,6 @@
-﻿import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, ViewStyle, DimensionValue } from 'react-native';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { radius } from '../../../tokens/radius';
 
 export interface SkeletonProps {
@@ -23,9 +23,11 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   height = 20,
   borderRadius = radius.input,
   circle = false,
-  color = colors.light.line,
+  color,
   style,
 }) => {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.line;
   const opacityAnim = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
           width,
           height,
           borderRadius: resolvedRadius,
-          backgroundColor: color,
+          backgroundColor: resolvedColor,
           opacity: opacityAnim,
         },
         style,

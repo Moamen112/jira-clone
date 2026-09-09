@@ -9,7 +9,7 @@ import {
   ViewStyle,
   ScrollView,
 } from 'react-native';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { radius } from '../../../tokens/radius';
 import { spacing } from '../../../tokens/spacing';
 import { Text } from '../typography/Text';
@@ -47,6 +47,7 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   contentStyle,
 }) => {
+  const { colors } = useTheme();
   const isSheet = presentation === 'bottomSheet';
 
   return (
@@ -67,6 +68,10 @@ export const Modal: React.FC<ModalProps> = ({
         <View
           style={[
             isSheet ? styles.bottomSheet : styles.dialog,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.line,
+            },
             isSheet && { maxHeight: `${Math.round(maxHeightRatio * 100)}%` as any },
             contentStyle,
           ]}
@@ -74,13 +79,13 @@ export const Modal: React.FC<ModalProps> = ({
           {/* Bottom Sheet Drag Indicator Handle */}
           {isSheet && (
             <View style={styles.handleContainer}>
-              <View style={styles.handleBar} />
+              <View style={[styles.handleBar, { backgroundColor: colors.line }]} />
             </View>
           )}
 
           {/* Modal Header */}
           {(title || subtitle) && (
-            <View style={styles.header}>
+            <View style={[styles.header, { borderBottomColor: colors.line }]}>
               <View style={styles.headerTitles}>
                 {subtitle && (
                   <Text variant="monoKey" muted>
@@ -97,7 +102,7 @@ export const Modal: React.FC<ModalProps> = ({
               <IconButton
                 variant="ghost"
                 size="sm"
-                icon={<Text variant="body" bold color={colors.light.inkMuted}>âœ•</Text>}
+                icon={<Text variant="body" bold color={colors.inkMuted}>✕</Text>}
                 onPress={onClose}
               />
             </View>
@@ -113,7 +118,11 @@ export const Modal: React.FC<ModalProps> = ({
           </ScrollView>
 
           {/* Optional Footer */}
-          {footer && <View style={styles.footer}>{footer}</View>}
+          {footer && (
+            <View style={[styles.footer, { borderTopColor: colors.line }]}>
+              {footer}
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
     </RNModal>
@@ -131,26 +140,22 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(22, 24, 26, 0.45)', // ink overlay
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   bottomSheet: {
-    backgroundColor: colors.light.surface,
     borderTopLeftRadius: radius.sheet,
     borderTopRightRadius: radius.sheet,
     paddingTop: spacing[2],
     paddingBottom: Platform.OS === 'ios' ? spacing[6] : spacing[4],
     borderWidth: 1,
-    borderColor: colors.light.line,
   },
   dialog: {
-    backgroundColor: colors.light.surface,
     borderRadius: radius.sheet,
     marginHorizontal: spacing[4],
     marginBottom: 'auto',
     marginTop: 'auto',
     maxHeight: '80%',
     borderWidth: 1,
-    borderColor: colors.light.line,
   },
   handleContainer: {
     alignItems: 'center',
@@ -160,7 +165,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: radius.pill,
-    backgroundColor: colors.light.line,
   },
   header: {
     flexDirection: 'row',
@@ -169,7 +173,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[2],
     borderBottomWidth: 1,
-    borderBottomColor: colors.light.line,
   },
   headerTitles: {
     flex: 1,
@@ -185,7 +188,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
     paddingTop: spacing[3],
     borderTopWidth: 1,
-    borderTopColor: colors.light.line,
   },
 });
 

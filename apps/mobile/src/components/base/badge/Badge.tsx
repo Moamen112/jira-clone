@@ -1,8 +1,8 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { colors } from '../../../tokens/colors';
 import { radius } from '../../../tokens/radius';
 import { spacing } from '../../../tokens/spacing';
+import { useTheme } from '../../../tokens';
 import { Text } from '../typography/Text';
 
 export type BadgeVariant =
@@ -44,41 +44,43 @@ export const Badge: React.FC<BadgeProps> = ({
   textColor,
   style,
 }) => {
+  const { colors } = useTheme();
+
   const getVariantStyles = (): { bg: string; text: string; border?: string } => {
     switch (variant) {
       case 'accent':
         return {
-          bg: colors.light.accentSoft,
-          text: colors.light.accent,
+          bg: colors.accentSoft,
+          text: colors.accent,
         };
       case 'warn':
         return {
-          bg: colors.light.warnSoft,
-          text: colors.light.warn,
+          bg: colors.warnSoft,
+          text: colors.warn,
         };
       case 'neutral':
         return {
-          bg: colors.light.paper,
-          text: colors.light.inkMuted,
-          border: colors.light.line,
+          bg: colors.paper,
+          text: colors.inkMuted,
+          border: colors.line,
         };
       case 'mono':
         return {
-          bg: colors.light.paper,
-          text: colors.light.ink,
-          border: colors.light.line,
+          bg: colors.paper,
+          text: colors.ink,
+          border: colors.line,
         };
       case 'done':
         return {
-          bg: colors.light.accent,
+          bg: colors.accent,
           text: '#FFFFFF',
         };
       case 'default':
       default:
         return {
-          bg: colors.light.surface,
-          text: colors.light.ink,
-          border: colors.light.line,
+          bg: colors.surface,
+          text: colors.ink,
+          border: colors.line,
         };
     }
   };

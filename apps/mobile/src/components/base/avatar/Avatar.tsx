@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Image,
@@ -6,7 +6,7 @@ import {
   ViewStyle,
   ImageSourcePropType,
 } from 'react-native';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { radius } from '../../../tokens/radius';
 import { Text } from '../typography/Text';
 
@@ -62,9 +62,10 @@ export const Avatar: React.FC<AvatarProps> = ({
   size = 'md',
   unassigned = false,
   bordered = false,
-  borderColor = colors.light.paper,
+  borderColor,
   style,
 }) => {
+  const { colors } = useTheme();
   const [imageError, setImageError] = useState(false);
 
   const getDimension = (): number => {
@@ -98,14 +99,15 @@ export const Avatar: React.FC<AvatarProps> = ({
             width: dim,
             height: dim,
             borderRadius: radius.pill,
-            borderColor: colors.light.inkMuted,
+            borderColor: colors.inkMuted,
+            backgroundColor: colors.surface,
           },
           style,
         ]}
       >
         <Text
           variant="caption"
-          color={colors.light.inkMuted}
+          color={colors.inkMuted}
           style={{ fontSize, fontWeight: '600' }}
         >
           ?
@@ -126,7 +128,7 @@ export const Avatar: React.FC<AvatarProps> = ({
           borderRadius: radius.pill,
           backgroundColor: hasValidImage ? 'transparent' : palette.bg,
           borderWidth: bordered ? 2 : 0,
-          borderColor,
+          borderColor: borderColor || colors.paper,
         },
         style,
       ]}
@@ -160,7 +162,6 @@ const styles = StyleSheet.create({
   unassigned: {
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    backgroundColor: colors.light.surface,
   },
   image: {
     width: '100%',

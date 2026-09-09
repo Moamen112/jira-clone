@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   Text as RNText,
   TextProps as RNTextProps,
@@ -6,7 +6,7 @@ import {
   TextStyle,
   Platform,
 } from 'react-native';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { typeScale, TypeStyleToken } from '../../../tokens/typography';
 
 export interface TextProps extends RNTextProps {
@@ -33,13 +33,14 @@ export const Text: React.FC<TextProps> = ({
   children,
   ...rest
 }) => {
+  const { colors } = useTheme();
   const token = typeScale[variant] || typeScale.body;
 
   const fontColor = color
     ? color
     : muted
-    ? colors.light.inkMuted
-    : colors.light.ink;
+    ? colors.inkMuted
+    : colors.ink;
 
   // React Native font weight string
   const resolvedWeight = bold

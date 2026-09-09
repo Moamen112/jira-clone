@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -6,7 +6,7 @@ import {
   ViewStyle,
   PressableProps,
 } from 'react-native';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { radius } from '../../../tokens/radius';
 import { layout } from '../../../tokens/layout';
 import { ButtonVariant, ButtonSize } from '../button/Button';
@@ -38,6 +38,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
   style,
   ...rest
 }) => {
+  const { colors } = useTheme();
   const isDisabled = disabled || loading;
 
   const getDimension = (): number => {
@@ -60,17 +61,17 @@ export const IconButton: React.FC<IconButtonProps> = ({
 
     switch (variant) {
       case 'primary':
-        bg = colors.light.accent;
+        bg = colors.accent;
         break;
       case 'secondary':
-        bg = colors.light.surface;
-        border = colors.light.line;
+        bg = colors.surface;
+        border = colors.line;
         break;
       case 'danger':
-        bg = colors.light.warn;
+        bg = colors.warn;
         break;
       case 'ghost':
-        bg = pressed ? colors.light.paper : 'transparent';
+        bg = pressed ? colors.paper : 'transparent';
         break;
     }
 
@@ -87,7 +88,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
 
   const spinnerColor = variant === 'primary' || variant === 'danger'
     ? '#FFFFFF'
-    : colors.light.ink;
+    : colors.ink;
 
   return (
     <Pressable

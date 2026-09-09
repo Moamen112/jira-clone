@@ -1,6 +1,6 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { radius } from '../../../tokens/radius';
 import { Avatar, AvatarSize } from '../avatar/Avatar';
 import { Text } from '../typography/Text';
@@ -28,9 +28,11 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
   users = [],
   max = 3,
   size = 'sm',
-  borderColor = colors.light.paper,
+  borderColor,
   style,
 }) => {
+  const { colors } = useTheme();
+  const activeBorderColor = borderColor ?? colors.paper;
   const visibleUsers = users.slice(0, max);
   const remainingCount = users.length - max;
 
@@ -71,7 +73,7 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
             imageUrl={user.avatarUrl}
             size={size}
             bordered
-            borderColor={borderColor}
+            borderColor={activeBorderColor}
           />
         </View>
       ))}
@@ -85,14 +87,15 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({
               height: dim,
               borderRadius: radius.pill,
               marginLeft: -overlap,
-              borderColor,
+              backgroundColor: colors.surface,
+              borderColor: activeBorderColor,
               zIndex: 0,
             },
           ]}
         >
           <Text
             variant="caption"
-            color={colors.light.ink}
+            color={colors.ink}
             bold
             style={{ fontSize: Math.max(9, Math.floor(dim * 0.35)) }}
           >
@@ -111,7 +114,6 @@ const styles = StyleSheet.create({
   },
   avatarWrapper: {},
   remainingBadge: {
-    backgroundColor: colors.light.surface,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',

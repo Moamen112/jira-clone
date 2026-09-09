@@ -8,10 +8,10 @@ import {
   TextStyle,
   PressableProps,
 } from 'react-native';
-import { colors } from '../../../tokens/colors';
 import { radius } from '../../../tokens/radius';
 import { spacing } from '../../../tokens/spacing';
 import { layout } from '../../../tokens/layout';
+import { useTheme } from '../../../tokens';
 import { Text } from '../typography/Text';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -53,22 +53,23 @@ export const Button: React.FC<ButtonProps> = ({
   children,
   ...rest
 }) => {
+  const { colors } = useTheme();
   const isDisabled = disabled || loading;
 
   const getContainerStyle = (pressed: boolean): ViewStyle => {
-    let bg: string = colors.light.accent;
+    let bg: string = colors.accent;
     let border: string | undefined;
 
     switch (variant) {
       case 'primary':
-        bg = colors.light.accent;
+        bg = colors.accent;
         break;
       case 'secondary':
-        bg = colors.light.surface;
-        border = colors.light.line;
+        bg = colors.surface;
+        border = colors.line;
         break;
       case 'danger':
-        bg = colors.light.warn;
+        bg = colors.warn;
         break;
       case 'ghost':
         bg = 'transparent';
@@ -105,13 +106,13 @@ export const Button: React.FC<ButtonProps> = ({
         return '#FFFFFF';
       case 'secondary':
       case 'ghost':
-        return colors.light.ink;
+        return colors.ink;
     }
   };
 
   const spinnerColor = variant === 'primary' || variant === 'danger'
     ? '#FFFFFF'
-    : colors.light.ink;
+    : colors.ink;
 
   return (
     <Pressable

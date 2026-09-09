@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Pressable,
@@ -6,7 +6,7 @@ import {
   ScrollView,
   ViewStyle,
 } from 'react-native';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { radius } from '../../../tokens/radius';
 import { spacing } from '../../../tokens/spacing';
 import { layout } from '../../../tokens/layout';
@@ -24,28 +24,28 @@ export interface DropdownOption {
 export interface DropdownProps {
   /** Field label placed above trigger */
   label?: string;
+  /** Currently selected option value */
+  value?: string;
   /** Available options */
   options: DropdownOption[];
-  /** Currently selected value */
-  value?: string;
-  /** Callback on selection */
+  /** Callback fired when an option is chosen */
   onSelect: (value: string) => void;
-  /** Placeholder when nothing is selected */
+  /** Placeholder when unselected */
   placeholder?: string;
-  /** Error message */
+  /** Error message displayed below trigger */
   error?: string;
-  /** Disable trigger */
+  /** Disabled state */
   disabled?: boolean;
-  /** Enable search input inside sheet */
+  /** Enable search filter in bottom sheet */
   searchable?: boolean;
-  /** Trigger container style */
+  /** Style override */
   style?: ViewStyle;
 }
 
 export const Dropdown: React.FC<DropdownProps> = ({
   label,
-  options,
   value,
+  options,
   onSelect,
   placeholder = 'Select an option...',
   error,
@@ -53,6 +53,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
   searchable = false,
   style,
 }) => {
+  const { colors } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -71,10 +72,10 @@ export const Dropdown: React.FC<DropdownProps> = ({
   };
 
   const borderColor = error
-    ? colors.light.warn
+    ? colors.warn
     : isOpen
-    ? colors.light.accent
-    : colors.light.line;
+    ? colors.accent
+    : colors.line;
 
   return (
     <View style={[styles.container, style]}>
@@ -93,8 +94,8 @@ export const Dropdown: React.FC<DropdownProps> = ({
           {
             borderColor,
             backgroundColor: disabled
-              ? colors.light.paper
-              : colors.light.surface,
+              ? colors.paper
+              : colors.surface,
             opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
           },
         ]}
@@ -105,7 +106,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
           )}
           <Text
             variant="body"
-            color={selectedOption ? colors.light.ink : colors.light.inkMuted}
+            color={selectedOption ? colors.ink : colors.inkMuted}
             numberOfLines={1}
           >
             {selectedOption ? selectedOption.label : placeholder}
@@ -113,12 +114,12 @@ export const Dropdown: React.FC<DropdownProps> = ({
         </View>
 
         <Text variant="caption" muted style={styles.chevron}>
-          â–¼
+          ▼
         </Text>
       </Pressable>
 
       {error && (
-        <Text variant="errorText" color={colors.light.warn} style={styles.errorText}>
+        <Text variant="errorText" color={colors.warn} style={styles.errorText}>
           {error}
         </Text>
       )}
@@ -152,7 +153,8 @@ export const Dropdown: React.FC<DropdownProps> = ({
                 onPress={() => handleSelect(opt.value)}
                 style={({ pressed }) => [
                   styles.optionRow,
-                  isSelected && styles.optionSelected,
+                  { borderBottomColor: colors.line },
+                  isSelected && { backgroundColor: colors.accentSoft, borderRadius: radius.input },
                   { opacity: pressed ? 0.7 : 1 },
                 ]}
               >
@@ -162,7 +164,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
                     <Text
                       variant="body"
                       bold={isSelected}
-                      color={isSelected ? colors.light.accent : colors.light.ink}
+                      color={isSelected ? colors.accent : colors.ink}
                     >
                       {opt.label}
                     </Text>
@@ -175,8 +177,8 @@ export const Dropdown: React.FC<DropdownProps> = ({
                 </View>
 
                 {isSelected && (
-                  <Text variant="body" bold color={colors.light.accent}>
-                    âœ“
+                  <Text variant="body" bold color={colors.accent}>
+                    ✓
                   </Text>
                 )}
               </Pressable>
@@ -238,12 +240,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[3],
     paddingHorizontal: spacing[2],
     borderBottomWidth: 1,
-    borderBottomColor: colors.light.line,
   },
-  optionSelected: {
-    backgroundColor: colors.light.accentSoft,
-    borderRadius: radius.input,
-  },
+  optionSelected: {},
   optionLeft: {
     flexDirection: 'row',
     alignItems: 'center',

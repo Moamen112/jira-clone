@@ -2,14 +2,31 @@ import React from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Provider } from 'react-redux';
+import { store } from '../src/store';
+import { ThemeProvider, useTheme } from '../src/tokens';
 
-export default function RootLayout() {
+function AppNavigator() {
+  const { isDark } = useTheme();
+
   return (
-    <SafeAreaProvider>
-      <StatusBar style="dark" />
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
-    </SafeAreaProvider>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <Provider store={store}>
+      <ThemeProvider>
+        <SafeAreaProvider>
+          <AppNavigator />
+        </SafeAreaProvider>
+      </ThemeProvider>
+    </Provider>
   );
 }

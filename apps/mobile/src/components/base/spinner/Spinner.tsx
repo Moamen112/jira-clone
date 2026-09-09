@@ -1,6 +1,6 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, ActivityIndicator, StyleSheet, ViewStyle } from 'react-native';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { spacing } from '../../../tokens/spacing';
 import { Text } from '../typography/Text';
 
@@ -21,12 +21,15 @@ export interface SpinnerProps {
 
 export const Spinner: React.FC<SpinnerProps> = ({
   size = 'small',
-  color = colors.light.accent,
+  color,
   label,
   direction = 'column',
   centered = false,
   style,
 }) => {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.accent;
+
   return (
     <View
       style={[
@@ -36,7 +39,7 @@ export const Spinner: React.FC<SpinnerProps> = ({
         style,
       ]}
     >
-      <ActivityIndicator size={size} color={color} />
+      <ActivityIndicator size={size} color={resolvedColor} />
       {label && (
         <Text
           variant="caption"
