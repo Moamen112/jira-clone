@@ -1,6 +1,6 @@
-﻿import { User } from '../types/user';
+import { User } from '../types/user';
 import { Project } from '../types/project';
-import { BoardColumn } from '../types/board';
+import { Board, BoardColumn } from '../types/board';
 import { Card } from '../types/card';
 import { Comment } from '../types/comment';
 import { ActivityLog } from '../types/activity';
@@ -30,6 +30,13 @@ export const mockColumns: BoardColumn[] = [
   { id: 'col-done', projectId: 'proj-1', title: 'Done', order: 3 },
 ];
 
+export const mockBoard: Board = {
+  id: 'board-1',
+  projectId: 'proj-1',
+  name: 'Fieldnotes Core Sprint',
+  columns: mockColumns,
+};
+
 export const mockCards: Card[] = [
   {
     id: 'card-1',
@@ -40,6 +47,7 @@ export const mockCards: Card[] = [
     columnId: 'col-done',
     publisherId: 'user-1', // Alex (Publisher)
     assigneeId: 'user-2',  // Sarah (Assignee)
+    assigneeIds: ['user-1', 'user-2'],
     priority: 'high',
     order: 0,
     commentCount: 2,

@@ -1,11 +1,16 @@
-﻿import { CardRole } from '../types/card';
+import { CardRole } from '../types/card';
 
 export function getCardRole(
   currentUserId: string,
-  card: { publisherId: string; assigneeId?: string | null }
+  card: { publisherId: string; assigneeId?: string | null; assigneeIds?: string[] }
 ): CardRole {
   if (card.publisherId === currentUserId) return 'publisher';
-  if (card.assigneeId === currentUserId) return 'assignee';
+  if (
+    card.assigneeId === currentUserId ||
+    (card.assigneeIds && card.assigneeIds.includes(currentUserId))
+  ) {
+    return 'assignee';
+  }
   return 'viewer';
 }
 
