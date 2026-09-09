@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { Text, Avatar } from '../../base';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { spacing } from '../../../tokens/spacing';
 import { User } from '@jira-clone/shared';
 
@@ -64,7 +64,10 @@ export const UserBadge: React.FC<UserBadgeProps> = ({
         style={({ pressed }) => [
           styles.container,
           styles.containerBase,
-          pressed && styles.containerPressed,
+          pressed && {
+            backgroundColor: colors.accentSoft,
+            borderRadius: 6,
+          },
           style,
         ]}
       >
@@ -84,10 +87,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing[2],
     alignSelf: 'flex-start',
-  },
-  containerPressed: {
-    backgroundColor: colors.light.accentSoft,
-    borderRadius: 6,
   },
   inner: {
     flexDirection: 'row',

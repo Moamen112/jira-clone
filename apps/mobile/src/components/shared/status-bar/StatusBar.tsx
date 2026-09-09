@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { Badge } from '../../base';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { radius } from '../../../tokens/radius';
 import { BoardColumn } from '@jira-clone/shared';
 
@@ -24,7 +24,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   withDot = true,
   style,
 }) => {
-  const dotColor = status.color || colors.light.accent;
+  const { colors } = useTheme();
+  const dotColor = status.color || colors.accent;
 
   return (
     <Badge
@@ -39,8 +40,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
           ]}
         />
       ) : undefined}
-      backgroundColor={colors.light.surface}
-      textColor={colors.light.ink}
+      backgroundColor={colors.surface}
+      textColor={colors.ink}
       style={style}
     />
   );

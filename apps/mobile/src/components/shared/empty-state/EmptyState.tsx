@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { Text, Button, ButtonVariant } from '../../base';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { radius } from '../../../tokens/radius';
 import { spacing } from '../../../tokens/spacing';
 
@@ -39,9 +39,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   actionVariant = 'primary',
   secondaryActionLabel,
   onSecondaryAction,
-  iconContainerColor = colors.light.accentSoft,
+  iconContainerColor,
   style,
 }) => {
+  const { colors } = useTheme();
+  const resolvedIconContainerColor = iconContainerColor || colors.accentSoft;
   const hasPrimaryAction = Boolean(actionLabel && onAction);
   const hasSecondaryAction = Boolean(secondaryActionLabel && onSecondaryAction);
 
@@ -51,7 +53,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <View
           style={[
             styles.iconContainer,
-            { backgroundColor: iconContainerColor },
+            { backgroundColor: resolvedIconContainerColor },
           ]}
         >
           {icon}

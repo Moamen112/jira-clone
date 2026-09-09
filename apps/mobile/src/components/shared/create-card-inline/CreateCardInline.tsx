@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { Text, Button, Input } from '../../base';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { radius } from '../../../tokens/radius';
 import { spacing } from '../../../tokens/spacing';
 
@@ -37,6 +37,7 @@ export const CreateCardInline: React.FC<CreateCardInlineProps> = ({
   disabled = false,
   style,
 }) => {
+  const { colors } = useTheme();
   const [expanded, setExpanded] = useState(autoExpand);
   const [title, setTitle] = useState('');
   const [error, setError] = useState<string | undefined>(undefined);
@@ -99,14 +100,18 @@ export const CreateCardInline: React.FC<CreateCardInlineProps> = ({
         disabled={disabled}
         style={({ pressed }) => [
           styles.addRow,
+          { borderColor: colors.line },
           disabled && styles.addRowDisabled,
-          pressed && !disabled && styles.addRowPressed,
+          pressed && !disabled && {
+            backgroundColor: colors.surface,
+            borderColor: colors.accent,
+          },
           style,
         ]}
         accessibilityRole="button"
         accessibilityLabel={placeholder}
       >
-        <Text variant="body" bold color={colors.light.accent}>
+        <Text variant="body" bold color={colors.accent}>
           +
         </Text>
         <Text variant="caption" muted>
@@ -117,7 +122,16 @@ export const CreateCardInline: React.FC<CreateCardInlineProps> = ({
   }
 
   return (
-    <View style={[styles.composerContainer, style]}>
+    <View
+      style={[
+        styles.composerContainer,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.line,
+        },
+        style,
+      ]}
+    >
       <Input
         value={title}
         onChangeText={handleChangeText}
@@ -162,21 +176,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[3],
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: colors.light.line,
     borderRadius: radius.input,
-  },
-  addRowPressed: {
-    backgroundColor: colors.light.surface,
-    borderColor: colors.light.accent,
   },
   addRowDisabled: {
     opacity: 0.5,
   },
   composerContainer: {
-    backgroundColor: colors.light.surface,
-    borderWidth: 1,
-    borderColor: colors.light.line,
     borderRadius: radius.card,
+    borderWidth: 1,
     padding: spacing[3],
   },
   actionsRow: {

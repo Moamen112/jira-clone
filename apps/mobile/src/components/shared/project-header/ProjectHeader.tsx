@@ -8,7 +8,6 @@ import {
   Button,
   ButtonVariant,
 } from '../../base';
-import { colors } from '../../../tokens/colors';
 import { spacing } from '../../../tokens/spacing';
 import { Project } from '@jira-clone/shared';
 

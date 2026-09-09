@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle } from 'react-native';
 import { Badge } from '../../base';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { CardPriority } from '@jira-clone/shared';
 
 export type PriorityBadgeSize = 'sm' | 'md';
@@ -19,39 +19,6 @@ export interface PriorityBadgeProps {
   style?: ViewStyle;
 }
 
-const PRIORITY_META: Record<CardPriority, { label: string; color: string; bg: string; arrow: string }> = {
-  lowest: {
-    label: 'Lowest',
-    color: colors.light.inkMuted,
-    bg: colors.light.surface,
-    arrow: '↓',
-  },
-  low: {
-    label: 'Low',
-    color: colors.light.accent,
-    bg: colors.light.accentSoft,
-    arrow: '→',
-  },
-  medium: {
-    label: 'Medium',
-    color: colors.light.warn,
-    bg: colors.light.warnSoft,
-    arrow: '→',
-  },
-  high: {
-    label: 'High',
-    color: '#B8460E',
-    bg: colors.light.warnSoft,
-    arrow: '↑',
-  },
-  highest: {
-    label: 'Highest',
-    color: colors.light.warn,
-    bg: colors.light.warnSoft,
-    arrow: '⤴',
-  },
-};
-
 export const PriorityBadge: React.FC<PriorityBadgeProps> = ({
   priority,
   size = 'sm',
@@ -59,7 +26,56 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({
   showLabel = true,
   style,
 }) => {
-  const meta = PRIORITY_META[priority];
+  const { colors, isDark } = useTheme();
+
+  // Resolve the per-priority visual metadata against the active color palette.
+  const getPriorityMeta = (): {
+    label: string;
+    color: string;
+    bg: string;
+    arrow: string;
+  } => {
+    switch (priority) {
+      case 'lowest':
+        return {
+          label: 'Lowest',
+          color: colors.inkMuted,
+          bg: colors.surface,
+          arrow: '↓',
+        };
+      case 'low':
+        return {
+          label: 'Low',
+          color: colors.accent,
+          bg: colors.accentSoft,
+          arrow: '→',
+        };
+      case 'medium':
+        return {
+          label: 'Medium',
+          color: colors.warn,
+          bg: colors.warnSoft,
+          arrow: '→',
+        };
+      case 'high':
+        return {
+          label: 'High',
+          color: isDark ? colors.warn : '#B8460E', // deep terracotta in light mode
+          bg: colors.warnSoft,
+          arrow: '↑',
+        };
+      case 'highest':
+      default:
+        return {
+          label: 'Highest',
+          color: colors.warn,
+          bg: isDark ? colors.warn : colors.warnSoft,
+          arrow: '⤴',
+        };
+    }
+  };
+
+  const meta = getPriorityMeta();
 
   return (
     <Badge

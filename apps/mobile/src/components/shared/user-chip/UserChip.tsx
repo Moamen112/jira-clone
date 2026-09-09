@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Pressable, StyleSheet, ViewStyle } from 'react-native';
-import { Text, Badge, Avatar, AvatarSize } from '../../base';
-import { colors } from '../../../tokens/colors';
+import { Text, Avatar, AvatarSize } from '../../base';
+import { useTheme } from '../../../tokens';
 import { radius } from '../../../tokens/radius';
 import { spacing } from '../../../tokens/spacing';
 import { User } from '@jira-clone/shared';
@@ -40,6 +40,7 @@ export const UserChip: React.FC<UserChipProps> = ({
   onPress,
   style,
 }) => {
+  const { colors } = useTheme();
   const avatarSize = AVATAR_SIZE_BY_SIZE[size];
   const removeAffordance = removable && onRemove ? (
     <Pressable
@@ -49,19 +50,21 @@ export const UserChip: React.FC<UserChipProps> = ({
       accessibilityLabel={`Remove ${user.name}`}
       style={({ pressed }) => [
         styles.removeButton,
-        pressed && styles.removeButtonPressed,
+        pressed && { backgroundColor: colors.warnSoft },
       ]}
     >
       <Text
         variant="caption"
         bold
-        color={colors.light.inkMuted}
+        color={colors.inkMuted}
         style={styles.removeGlyph}
       >
         ×
       </Text>
     </Pressable>
   ) : null;
+
+  const textColor = variant === 'accent' ? colors.accent : colors.ink;
 
   if (onPress) {
     return (
@@ -71,7 +74,9 @@ export const UserChip: React.FC<UserChipProps> = ({
         accessibilityLabel={user.name}
         style={({ pressed }) => [
           styles.chipBase,
-          variant === 'accent' ? styles.chipAccent : styles.chipDefault,
+          variant === 'accent'
+            ? { backgroundColor: colors.accentSoft }
+            : { backgroundColor: colors.surface, borderColor: colors.line, borderWidth: 1 },
           pressed && styles.chipPressed,
           style,
         ]}
@@ -82,7 +87,7 @@ export const UserChip: React.FC<UserChipProps> = ({
             variant={size === 'sm' ? 'caption' : 'bodySmall'}
             bold
             numberOfLines={1}
-            color={variant === 'accent' ? colors.light.accent : colors.light.ink}
+            color={textColor}
           >
             {user.name}
           </Text>
@@ -93,14 +98,22 @@ export const UserChip: React.FC<UserChipProps> = ({
   }
 
   return (
-    <View style={[styles.chipBase, variant === 'accent' ? styles.chipAccent : styles.chipDefault, style]}>
+    <View
+      style={[
+        styles.chipBase,
+        variant === 'accent'
+          ? { backgroundColor: colors.accentSoft }
+          : { backgroundColor: colors.surface, borderColor: colors.line, borderWidth: 1 },
+        style,
+      ]}
+    >
       <View style={styles.chipContent}>
         <Avatar name={user.name} imageUrl={user.avatarUrl} size={avatarSize} />
         <Text
           variant={size === 'sm' ? 'caption' : 'bodySmall'}
           bold
           numberOfLines={1}
-          color={variant === 'accent' ? colors.light.accent : colors.light.ink}
+          color={textColor}
         >
           {user.name}
         </Text>
@@ -119,14 +132,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[2],
     borderRadius: radius.pill,
   },
-  chipDefault: {
-    backgroundColor: colors.light.surface,
-    borderWidth: 1,
-    borderColor: colors.light.line,
-  },
-  chipAccent: {
-    backgroundColor: colors.light.accentSoft,
-  },
   chipPressed: {
     opacity: 0.7,
   },
@@ -142,9 +147,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  removeButtonPressed: {
-    backgroundColor: colors.light.warnSoft,
   },
   removeGlyph: {
     lineHeight: 16,

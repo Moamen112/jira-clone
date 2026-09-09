@@ -7,7 +7,7 @@ import {
   AvatarGroupUser,
   Divider,
 } from '../../base';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { radius } from '../../../tokens/radius';
 import { spacing } from '../../../tokens/spacing';
 import { Project } from '@jira-clone/shared';
@@ -41,6 +41,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   onPress,
   style,
 }) => {
+  const { colors } = useTheme();
   const content = (
     <View style={styles.cardInner}>
       <View style={styles.cardHeader}>
@@ -64,7 +65,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 
       {issueCounts && (
         <View style={styles.countsSection}>
-          <Divider margin={2} />
+          <Divider margin={2} color={colors.line} />
 
           <View style={styles.countsRow}>
             <View style={styles.countPill}>
@@ -72,12 +73,12 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               <Text variant="caption" bold>{issueCounts.todo}</Text>
             </View>
             <View style={styles.countPill}>
-              <Text variant="caption" color={colors.light.accent} bold>
+              <Text variant="caption" color={colors.accent} bold>
                 Active: {issueCounts.inProgress}
               </Text>
             </View>
             <View style={styles.countPill}>
-              <Text variant="caption" color={colors.light.inkMuted}>
+              <Text variant="caption" color={colors.inkMuted}>
                 Done: {issueCounts.done}
               </Text>
             </View>
@@ -93,7 +94,10 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         onPress={onPress}
         style={({ pressed }) => [
           styles.card,
-          pressed && styles.cardPressed,
+          {
+            backgroundColor: pressed ? colors.paper : colors.surface,
+            borderColor: pressed ? colors.accent : colors.line,
+          },
           style,
         ]}
       >
@@ -102,20 +106,27 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     );
   }
 
-  return <View style={[styles.card, style]}>{content}</View>;
+  return (
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.line,
+        },
+        style,
+      ]}
+    >
+      {content}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.light.surface,
     padding: spacing[4],
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: colors.light.line,
-  },
-  cardPressed: {
-    backgroundColor: colors.light.paper,
-    borderColor: colors.light.accent,
   },
   cardInner: {
     gap: spacing[2],

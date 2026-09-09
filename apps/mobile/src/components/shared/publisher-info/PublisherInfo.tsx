@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { Text, Avatar } from '../../base';
-import { colors } from '../../../tokens/colors';
 import { spacing } from '../../../tokens/spacing';
 import { User } from '@jira-clone/shared';
 

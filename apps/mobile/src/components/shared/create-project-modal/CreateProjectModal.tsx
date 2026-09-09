@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Modal, Button, Input, Textarea, Text } from '../../base';
-import { colors } from '../../../tokens/colors';
+import { useTheme } from '../../../tokens';
 import { spacing } from '../../../tokens/spacing';
 
 export interface CreateProjectInput {
@@ -53,6 +53,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   title = DEFAULT_TITLE,
   subtitle = DEFAULT_SUBTITLE,
 }) => {
+  const { colors } = useTheme();
   const [name, setName] = useState('');
   const [key, setKey] = useState('');
   const [description, setDescription] = useState('');
@@ -219,7 +220,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
         {formError && (
           <Text
             variant="errorText"
-            color={colors.light.warn}
+            color={colors.warn}
             style={styles.formError}
           >
             {formError}
