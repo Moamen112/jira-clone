@@ -23,6 +23,28 @@ export const mockProject: Project = {
   updatedAt: '2026-09-07T12:00:00.000Z',
 };
 
+export const mockProjects: Project[] = [
+  mockProject,
+  {
+    id: 'proj-2',
+    name: 'Marketplace Mobile',
+    key: 'MKT',
+    description: 'Consumer marketplace app — discovery, checkout, and order tracking.',
+    ownerId: 'user-2',
+    createdAt: '2026-09-03T09:00:00.000Z',
+    updatedAt: '2026-09-06T14:30:00.000Z',
+  },
+  {
+    id: 'proj-3',
+    name: 'Billing & Invoicing',
+    key: 'BILL',
+    description: 'Invoices, payments, and dunning across the Fieldnotes platform.',
+    ownerId: 'user-3',
+    createdAt: '2026-09-04T11:00:00.000Z',
+    updatedAt: '2026-09-05T16:45:00.000Z',
+  },
+];
+
 export const mockColumns: BoardColumn[] = [
   { id: 'col-todo', projectId: 'proj-1', title: 'To Do', order: 0 },
   { id: 'col-progress', projectId: 'proj-1', title: 'In Progress', order: 1 },

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { Badge } from '../../base';
+import { Badge, Text } from '../../base';
 import { useTheme } from '../../../tokens';
 import { CardPriority } from '@jira-clone/shared';
 
@@ -90,14 +90,14 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({
               { backgroundColor: meta.color },
             ]}
           />
-          <View
-            style={[
-              styles.arrowText,
-              { color: meta.color },
-            ]}
+          <Text
+            variant="caption"
+            bold
+            color={meta.color}
+            style={styles.arrowText}
           >
             {meta.arrow}
-          </View>
+          </Text>
         </View>
       ) : undefined}
       backgroundColor={meta.bg}

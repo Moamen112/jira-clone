@@ -1,617 +1,276 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import {
   mockCards,
   mockColumns,
+  mockProjects,
   mockUsers,
   mockCurrentUser,
-  mockComments,
   mockActivityLogs,
-  getCardRole,
   Card as CardType,
-  User,
-  Comment,
-} from '@jira-clone/shared';
-import { Text, Toast, Button } from '../../src/components/base';
-import {
-  Card,
-  CardDetail,
-  AssigneeSelect,
-  ConfirmDialog,
-  ConfirmDialogVariant,
-  CommentSection,
-  CardMoveMenu,
-  CardPosition,
-  BoardFilterBar,
-  filterCards,
   BoardColumn,
-  Board,
-} from '../../src/components/shared';
-import { spacing } from '../../src/tokens/spacing';
-import { useTheme, ThemeMode } from '../../src/tokens';
+} from '@jira-clone/shared';
+import { Text, Badge, Avatar } from '../../src/components/base';
+import { StatusBar } from '../../src/components/shared/status-bar';
+import { PriorityBadge } from '../../src/components/shared/priority-badge';
+import { ActivityLog } from '../../src/components/shared/activity-log';
+import { useTheme, spacing, radius, ThemeMode } from '../../src/tokens';
 
+const THEME_MODES: ThemeMode[] = ['light', 'dark', 'system'];
+const THEME_MODE_LABELS: Record<ThemeMode, string> = {
+  light: 'Light',
+  dark: 'Dark',
+  system: 'System',
+};
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function getStatus(columnId: string): BoardColumn {
+  return (
+    mockColumns.find((c) => c.id === columnId) ?? {
+      id: columnId,
+      projectId: '',
+      title: 'Unknown',
+      order: 0,
+    }
+  );
+}
+
+function isAssignedToUser(card: CardType, userId: string): boolean {
+  return (
+    card.assigneeId === userId ||
+    (card.assigneeIds !== undefined && card.assigneeIds.includes(userId))
+  );
+}
+
+/**
+ * Home dashboard — greeting, theme switcher, quick stats, my work,
+ * project shortcuts, and recent activity. Deep-links into the Spaces stack.
+ */
 export default function HomeScreen() {
-  const { mode, isDark, colors, setThemeMode } = useTheme();
-  const [cards, setCards] = useState<CardType[]>(mockCards);
-  const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
-  const [demoAssigneeId, setDemoAssigneeId] = useState<string | null>(mockUsers[1].id);
-  const [demoMultiAssigneeIds, setDemoMultiAssigneeIds] = useState<string[]>([
-    mockUsers[0].id,
-    mockUsers[1].id,
-  ]);
-  const [demoConfirmVisible, setDemoConfirmVisible] = useState(false);
-  const [demoConfirmVariant, setDemoConfirmVariant] = useState<ConfirmDialogVariant>('danger');
-  const [moveMenuCard, setMoveMenuCard] = useState<CardType | null>(null);
-  const [moveMenuVisible, setMoveMenuVisible] = useState(false);
-  const [comments, setComments] = useState<Comment[]>(mockComments);
-  const [detailVisible, setDetailVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastVisible, setToastVisible] = useState(false);
+  const { colors, mode, setThemeMode } = useTheme();
+  const router = useRouter();
 
-  // Board Filter Bar state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [assignedToMe, setAssignedToMe] = useState(false);
-  const [createdByMe, setCreatedByMe] = useState(false);
-  const [hasCommentsFilter, setHasCommentsFilter] = useState(false);
-  const [selectedFilterUserIds, setSelectedFilterUserIds] = useState<string[]>([]);
-
-  const handleToggleFilterUserId = (userId: string) => {
-    setSelectedFilterUserIds((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
-    );
-  };
-
-  const handleClearFilters = () => {
-    setSearchQuery('');
-    setAssignedToMe(false);
-    setCreatedByMe(false);
-    setHasCommentsFilter(false);
-    setSelectedFilterUserIds([]);
-  };
-
-  const filteredCards = filterCards(cards, {
-    searchQuery,
-    assignedToMe,
-    createdByMe,
-    hasComments: hasCommentsFilter,
-    selectedUserIds: selectedFilterUserIds,
-    currentUserId: mockCurrentUser.id,
+  const todayLabel = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
   });
 
-  const handleCardPress = (card: CardType) => {
-    setSelectedCard(card);
-    setDetailVisible(true);
-  };
+  const assignedCount = mockCards.filter((c) =>
+    isAssignedToUser(c, mockCurrentUser.id)
+  ).length;
+  const createdCount = mockCards.filter(
+    (c) => c.publisherId === mockCurrentUser.id
+  ).length;
 
-  const handleCardMovePress = (card: CardType) => {
-    setMoveMenuCard(card);
-    setMoveMenuVisible(true);
-  };
-
-  const handleMoveColumn = (
-    columnId: string,
-    targetCard: CardType,
-    position?: CardPosition
-  ) => {
-    const targetColumn = mockColumns.find((c) => c.id === columnId);
-    setCards((prev) =>
-      prev.map((c) => (c.id === targetCard.id ? { ...c, columnId } : c))
+  const myWork = mockCards
+    .filter(
+      (c) =>
+        isAssignedToUser(c, mockCurrentUser.id) ||
+        c.publisherId === mockCurrentUser.id
+    )
+    .sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     );
-    if (selectedCard && selectedCard.id === targetCard.id) {
-      setSelectedCard((prev) => (prev ? { ...prev, columnId } : null));
-    }
-    setToastMessage(
-      `Moved ${targetCard.key} to ${targetColumn?.title || 'column'}${
-        position === 'top' ? ' (top)' : ''
-      }`
-    );
-    setToastVisible(true);
+
+  const openCard = (cardId: string) => {
+    router.push({
+      pathname: '/(tabs)/spaces/card',
+      params: { cardId },
+    });
   };
 
-  const handleCardSave = (updatedCard: CardType) => {
-    setCards((prev) =>
-      prev.map((c) => (c.id === updatedCard.id ? updatedCard : c))
-    );
-    setSelectedCard(updatedCard);
-    setDetailVisible(false);
-    setToastMessage(`Card ${updatedCard.key} updated successfully.`);
-    setToastVisible(true);
-  };
-
-  const handleCardDelete = (cardId: string) => {
-    const key = selectedCard?.key || '';
-    setCards((prev) => prev.filter((c) => c.id !== cardId));
-    setDetailVisible(false);
-    setSelectedCard(null);
-    setToastMessage(`Card ${key} deleted.`);
-    setToastVisible(true);
-  };
-
-  const handleCreateCard = (title: string, columnId: string) => {
-    const columnCards = cards.filter((c) => c.columnId === columnId);
-    const newCard: CardType = {
-      id: `card-${Date.now()}`,
-      key: `FIELD-${cards.length + 1}`,
-      title,
-      projectId: 'project-1',
-      columnId,
-      order: columnCards.length,
-      publisherId: mockCurrentUser.id,
-      assigneeId: null,
-      assigneeIds: [],
-      priority: 'medium',
-      commentCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setCards((prev) => [...prev, newCard]);
-    setToastMessage(`Created ${newCard.key}: "${title}"`);
-    setToastVisible(true);
-  };
-
-  const handleAddComment = (content: string, cardId?: string) => {
-    const targetCardId = cardId || selectedCard?.id;
-    if (!targetCardId) return;
-
-    const newComment: Comment = {
-      id: `comment-${Date.now()}`,
-      cardId: targetCardId,
-      authorId: mockCurrentUser.id,
-      content,
-      createdAt: new Date().toISOString(),
-    };
-
-    setComments((prev) => [...prev, newComment]);
-    setCards((prev) =>
-      prev.map((c) =>
-        c.id === targetCardId
-          ? { ...c, commentCount: (c.commentCount || 0) + 1 }
-          : c
-      )
-    );
-    setToastMessage('Comment posted');
-    setToastVisible(true);
-  };
-
-  const handleDeleteComment = (commentId: string) => {
-    const comment = comments.find((c) => c.id === commentId);
-    setComments((prev) => prev.filter((c) => c.id !== commentId));
-    if (comment) {
-      setCards((prev) =>
-        prev.map((c) =>
-          c.id === comment.cardId
-            ? { ...c, commentCount: Math.max(0, (c.commentCount || 1) - 1) }
-            : c
-        )
-      );
-    }
-    setToastMessage('Comment deleted');
-    setToastVisible(true);
-  };
-
-  // Helper to find assignee by user ID
-  const getAssignee = (assigneeId?: string | null) => {
-    return mockUsers.find((u) => u.id === assigneeId) || null;
-  };
-
-  // Helper to resolve card assignees from assigneeIds or fallback to assigneeId
-  const getCardAssignees = (card: CardType): User[] => {
-    if (card.assigneeIds && card.assigneeIds.length > 0) {
-      return card.assigneeIds
-        .map((id) => mockUsers.find((u) => u.id === id))
-        .filter((u): u is User => Boolean(u));
-    }
-    if (card.assigneeId) {
-      const single = mockUsers.find((u) => u.id === card.assigneeId);
-      return single ? [single] : [];
-    }
-    return [];
+  const openProject = (projectId: string) => {
+    router.push({
+      pathname: '/(tabs)/spaces/project',
+      params: { projectId },
+    });
   };
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.paper }]}>
       <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
       >
-        {/* Header with Theme Mode Switcher */}
-        <View style={styles.header}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: spacing[2],
-            }}
+        {/* Header */}
+        <View style={styles.headerRow}>
+          <View style={styles.headerText}>
+            <Text variant="heading" bold>
+              {getGreeting()}, {mockCurrentUser.name.split(' ')[0]} 👋
+            </Text>
+            <Text variant="caption" muted style={styles.dateLabel}>
+              {todayLabel}
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={() => router.push('/(tabs)/profile')}
+            accessibilityRole="button"
+            accessibilityLabel="Open profile"
+            style={({ pressed }) => [
+              styles.avatarButton,
+              pressed && styles.avatarButtonPressed,
+            ]}
           >
-            <View style={{ flex: 1, marginRight: spacing[2] }}>
-              <Text variant="heading" bold>
-                Fieldnotes Issues
-              </Text>
-              <Text variant="caption" muted style={{ marginTop: 2 }}>
-                Logged in as {mockCurrentUser.name}
-              </Text>
-            </View>
-
-            {/* Theme Mode Selector Pills */}
-            <View
-              style={{
-                flexDirection: 'row',
-                backgroundColor: colors.surface,
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor: colors.line,
-                padding: 3,
-                gap: 2,
-              }}
-            >
-              {(['light', 'dark', 'system'] as ThemeMode[]).map((themeOption) => {
-                const isSelected = mode === themeOption;
-                const iconName =
-                  themeOption === 'light'
-                    ? 'sunny'
-                    : themeOption === 'dark'
-                    ? 'moon'
-                    : 'phone-portrait-outline';
-                const label =
-                  themeOption === 'light'
-                    ? 'Light'
-                    : themeOption === 'dark'
-                    ? 'Dark'
-                    : 'System';
-
-                return (
-                  <Pressable
-                    key={themeOption}
-                    onPress={() => setThemeMode(themeOption)}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 4,
-                      paddingHorizontal: 8,
-                      paddingVertical: 4,
-                      borderRadius: 16,
-                      backgroundColor: isSelected ? colors.accent : 'transparent',
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Switch to ${label} theme`}
-                  >
-                    <Ionicons
-                      name={iconName as any}
-                      size={12}
-                      color={isSelected ? '#FFFFFF' : colors.inkMuted}
-                    />
-                    <Text
-                      variant="caption"
-                      bold={isSelected}
-                      style={{
-                        fontSize: 11,
-                        color: isSelected ? '#FFFFFF' : colors.inkMuted,
-                      }}
-                    >
-                      {label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        </View>
-
-        {/* AssigneeSelect Design Showcase */}
-        <View style={[styles.showcaseCard, { backgroundColor: colors.surface, borderColor: colors.line }]}>
-          <AssigneeSelect
-            label="Multi-Assignee Select (Design Preview)"
-            placeholder="No one assigned"
-            multiple={true}
-            selectedUserIds={demoMultiAssigneeIds}
-            users={mockUsers}
-            onSelectMultiple={(userIds) => {
-              setDemoMultiAssigneeIds(userIds);
-              setToastMessage(`Updated to ${userIds.length} assignees`);
-              setToastVisible(true);
-            }}
-          />
-        </View>
-
-        {/* ConfirmDialog Design Showcase */}
-        <View style={[styles.showcaseCard, { backgroundColor: colors.surface, borderColor: colors.line }]}>
-          <Text variant="label" style={{ marginBottom: spacing[1] }}>
-            Confirm Dialog (Design Preview)
-          </Text>
-          <Text variant="caption" muted style={{ marginBottom: spacing[3] }}>
-            Preview modal confirmation variants for destructive & critical workflows
-          </Text>
-          <View style={{ flexDirection: 'row', gap: spacing[2], flexWrap: 'wrap' }}>
-            <Button
-              size="sm"
-              variant="danger"
-              label="Test Danger"
-              onPress={() => {
-                setDemoConfirmVariant('danger');
-                setDemoConfirmVisible(true);
-              }}
+            <Avatar
+              name={mockCurrentUser.name}
+              imageUrl={mockCurrentUser.avatarUrl}
+              size="md"
+              bordered
+              borderColor={colors.paper}
             />
-            <Button
-              size="sm"
-              variant="secondary"
-              label="Test Warning"
-              onPress={() => {
-                setDemoConfirmVariant('warning');
-                setDemoConfirmVisible(true);
-              }}
-            />
-            <Button
-              size="sm"
-              variant="ghost"
-              label="Test Info"
-              onPress={() => {
-                setDemoConfirmVariant('info');
-                setDemoConfirmVisible(true);
-              }}
-            />
-          </View>
+          </Pressable>
         </View>
 
-        {/* CommentSection Design Showcase */}
-        <View style={[styles.showcaseCard, { backgroundColor: colors.surface, borderColor: colors.line }]}>
-          <CommentSection
-            title="Discussion Thread (Design Preview)"
-            comments={comments.slice(0, 2)}
-            users={mockUsers}
-            currentUser={mockCurrentUser}
-            onAddComment={(content) => handleAddComment(content, 'card-1')}
-            onDeleteComment={handleDeleteComment}
-          />
-        </View>
-
-        {/* Full Kanban Board Component Showcase */}
-        <View style={{ marginBottom: spacing[4] }}>
-          <Text variant="label" style={{ marginBottom: spacing[1] }}>
-            Full Kanban Board Component
-          </Text>
-          <Text variant="caption" muted style={{ marginBottom: spacing[3] }}>
-            Unified board with column snapping, column jump tabs, and inline card creation
-          </Text>
-          <Board
-            columns={mockColumns}
-            cards={cards}
-            users={mockUsers}
-            currentUserId={mockCurrentUser.id}
-            boardTitle="Sprint 14 Kanban"
-            projectKey="FIELD"
-            showFilterBar={false}
-            showColumnTabs={true}
-            onCardPress={handleCardPress}
-            onCardMove={handleCardMovePress}
-            onCreateCard={handleCreateCard}
-            onCardAssigneeChange={(userId, targetCard) => {
-              setCards((prev) =>
-                prev.map((c) =>
-                  c.id === targetCard.id
-                    ? {
-                        ...c,
-                        assigneeId: userId,
-                        assigneeIds: userId ? [userId] : [],
-                      }
-                    : c
-                )
-              );
-              const user = mockUsers.find((u) => u.id === userId);
-              setToastMessage(
-                user
-                  ? `Reassigned ${targetCard.key} to ${user.name}`
-                  : `Unassigned ${targetCard.key}`
-              );
-              setToastVisible(true);
-            }}
-            onCardAssigneesChange={(userIds, targetCard) => {
-              setCards((prev) =>
-                prev.map((c) =>
-                  c.id === targetCard.id
-                    ? {
-                        ...c,
-                        assigneeId: userIds[0] || null,
-                        assigneeIds: userIds,
-                      }
-                    : c
-                )
-              );
-              setToastMessage(
-                `Updated ${targetCard.key} to ${userIds.length} assignees`
-              );
-              setToastVisible(true);
-            }}
-          />
-        </View>
-
-        {/* Cards Section */}
-        <BoardFilterBar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          assignedToMe={assignedToMe}
-          onToggleAssignedToMe={() => setAssignedToMe((prev) => !prev)}
-          createdByMe={createdByMe}
-          onToggleCreatedByMe={() => setCreatedByMe((prev) => !prev)}
-          hasComments={hasCommentsFilter}
-          onToggleHasComments={() => setHasCommentsFilter((prev) => !prev)}
-          selectedUserIds={selectedFilterUserIds}
-          onToggleUserId={handleToggleFilterUserId}
-          users={mockUsers}
-          currentUser={mockCurrentUser}
-          matchCount={filteredCards.length}
-          totalCount={cards.length}
-          onClearFilters={handleClearFilters}
-        />
-
-        <View style={styles.cardList}>
-          {filteredCards.map((card) => {
-            const role = getCardRole(mockCurrentUser.id, card);
-            const cardAssignees = getCardAssignees(card);
-            const assignee = cardAssignees[0] || null;
-
+        {/* Theme switcher */}
+        <View style={[styles.themeSwitcher, { backgroundColor: colors.paper }]}>
+          {THEME_MODES.map((m) => {
+            const active = mode === m;
             return (
-              <Card
-                key={card.id}
-                card={card}
-                assignee={assignee}
-                assignees={cardAssignees}
-                users={mockUsers}
-                currentUserRole={role}
-                showRoleBadge
-                onPress={handleCardPress}
-                onMove={handleCardMovePress}
-                onAssigneeChange={(userId, targetCard) => {
-                  setCards((prev) =>
-                    prev.map((c) =>
-                      c.id === targetCard.id
-                        ? {
-                            ...c,
-                            assigneeId: userId,
-                            assigneeIds: userId ? [userId] : [],
-                          }
-                        : c
-                    )
-                  );
-                  const user = mockUsers.find((u) => u.id === userId);
-                  setToastMessage(
-                    user
-                      ? `Reassigned ${targetCard.key} to ${user.name}`
-                      : `Unassigned ${targetCard.key}`
-                  );
-                  setToastVisible(true);
-                }}
-                onAssigneesChange={(userIds, targetCard) => {
-                  setCards((prev) =>
-                    prev.map((c) =>
-                      c.id === targetCard.id
-                        ? {
-                            ...c,
-                            assigneeId: userIds[0] || null,
-                            assigneeIds: userIds,
-                          }
-                        : c
-                    )
-                  );
-                  setToastMessage(
-                    `Updated ${targetCard.key} to ${userIds.length} assignees`
-                  );
-                  setToastVisible(true);
-                }}
-              />
+              <Pressable
+                key={m}
+                onPress={() => setThemeMode(m)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`${THEME_MODE_LABELS[m]} theme`}
+                style={({ pressed }) => [
+                  styles.themeChip,
+                  active
+                    ? { backgroundColor: colors.accentSoft }
+                    : pressed
+                    ? { backgroundColor: colors.line }
+                    : undefined,
+                ]}
+              >
+                <Text
+                  variant="caption"
+                  bold
+                  color={active ? colors.accent : colors.inkMuted}
+                >
+                  {THEME_MODE_LABELS[m]}
+                </Text>
+              </Pressable>
             );
           })}
-
-          {filteredCards.length === 0 && (
+        </View>
+        {/* Quick stats */}
+        <View style={styles.statsRow}>
+          {[
+            { label: 'Assigned', count: assignedCount },
+            { label: 'Created', count: createdCount },
+            { label: 'Projects', count: mockProjects.length },
+          ].map((stat) => (
             <View
+              key={stat.label}
               style={[
-                styles.filterEmptyState,
+                styles.statChip,
                 { backgroundColor: colors.surface, borderColor: colors.line },
               ]}
             >
-              <Ionicons
-                name="search-outline"
-                size={32}
-                color={colors.inkMuted}
-                style={{ marginBottom: spacing[1] }}
-              />
-              <Text variant="bodySmall" bold style={{ color: colors.ink }}>
-                No cards match your filters
+              <Text variant="heading" bold>
+                {stat.count}
+              </Text>
+              <Text variant="caption" muted>
+                {stat.label}
+              </Text>
+            </View>
+          ))}
+        </View>
+
+        {/* My work */}
+        <Text variant="sectionLabel" muted style={styles.sectionTitle}>
+          MY WORK ({myWork.length})
+        </Text>
+        {myWork.map((card) => (
+          <Pressable
+            key={card.id}
+            onPress={() => openCard(card.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Open card ${card.key}: ${card.title}`}
+            style={({ pressed }) => [
+              styles.workRow,
+              {
+                backgroundColor: pressed ? colors.paper : colors.surface,
+                borderColor: pressed ? colors.accent : colors.line,
+              },
+            ]}
+          >
+            <View style={styles.workText}>
+              <Text variant="monoKey" muted>
+                {card.key}
               </Text>
               <Text
-                variant="caption"
-                muted
-                style={{ textAlign: 'center', marginTop: 2, marginBottom: spacing[2] }}
+                variant="bodySmall"
+                bold
+                numberOfLines={2}
+                style={styles.workTitle}
               >
-                Try adjusting your search terms or clearing active filters.
+                {card.title}
               </Text>
-              <Button
-                variant="ghost"
+            </View>
+
+            <View style={styles.workMeta}>
+              <StatusBar status={getStatus(card.columnId)} size="sm" />
+              <PriorityBadge
+                priority={card.priority}
                 size="sm"
-                label="Reset Filters"
-                onPress={handleClearFilters}
+                showLabel={false}
               />
             </View>
-          )}
-        </View>
+          </Pressable>
+        ))}
+        {/* Projects */}
+        <Text variant="sectionLabel" muted style={styles.sectionTitle}>
+          YOUR PROJECTS ({mockProjects.length})
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.projectsScroll}
+        >
+          {mockProjects.map((project) => (
+            <Pressable
+              key={project.id}
+              onPress={() => openProject(project.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`Open project ${project.name}`}
+              style={({ pressed }) => [
+                styles.projectChip,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: pressed ? colors.accent : colors.line,
+                },
+              ]}
+            >
+              <Badge label={project.key} variant="mono" />
+              <Text
+                variant="caption"
+                bold
+                numberOfLines={1}
+                style={styles.projectChipName}
+              >
+                {project.name}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+
+        {/* Recent activity */}
+        <ActivityLog
+          logs={mockActivityLogs}
+          users={mockUsers}
+          title="RECENT ACTIVITY"
+          maxItems={6}
+        />
       </ScrollView>
-
-      {/* Card Detail Modal Sheet */}
-      <CardDetail
-        visible={detailVisible}
-        card={selectedCard}
-        columns={mockColumns}
-        users={mockUsers}
-        activityLogs={mockActivityLogs}
-        comments={selectedCard ? comments.filter((c) => c.cardId === selectedCard.id) : []}
-        currentUserId={mockCurrentUser.id}
-        onAddComment={handleAddComment}
-        onDeleteComment={handleDeleteComment}
-        onClose={() => setDetailVisible(false)}
-        onSave={handleCardSave}
-        onDelete={handleCardDelete}
-      />
-
-      {/* Card Quick Move Menu */}
-      <CardMoveMenu
-        visible={moveMenuVisible}
-        card={moveMenuCard}
-        columns={mockColumns}
-        currentUserId={mockCurrentUser.id}
-        onClose={() => {
-          setMoveMenuVisible(false);
-          setMoveMenuCard(null);
-        }}
-        onMoveColumn={handleMoveColumn}
-      />
-
-      {/* Demo Confirm Dialog */}
-      <ConfirmDialog
-        visible={demoConfirmVisible}
-        title={
-          demoConfirmVariant === 'danger'
-            ? 'Delete Issue?'
-            : demoConfirmVariant === 'warning'
-            ? 'Discard Unsaved Changes?'
-            : 'Archive Completed Sprint?'
-        }
-        itemKey="FIELD-42"
-        message={
-          demoConfirmVariant === 'danger'
-            ? 'Are you sure you want to delete this issue? All comments, attachments, and activity logs will be permanently removed.'
-            : demoConfirmVariant === 'warning'
-            ? 'You have unsaved changes in this card description. Leaving now will discard any unsaved text.'
-            : 'Archiving will move all completed tasks to the project historical archive.'
-        }
-        variant={demoConfirmVariant}
-        confirmLabel={
-          demoConfirmVariant === 'danger'
-            ? 'Delete Issue'
-            : demoConfirmVariant === 'warning'
-            ? 'Discard'
-            : 'Archive'
-        }
-        cancelLabel={demoConfirmVariant === 'warning' ? 'Keep Editing' : 'Cancel'}
-        onConfirm={() => {
-          setDemoConfirmVisible(false);
-          setToastMessage(`Confirmed ${demoConfirmVariant} action`);
-          setToastVisible(true);
-        }}
-        onCancel={() => setDemoConfirmVisible(false)}
-      />
-
-      {/* Toast Feedback */}
-      <Toast
-        visible={toastVisible}
-        message={toastMessage}
-        variant="success"
-        duration={2500}
-        onDismiss={() => setToastVisible(false)}
-      />
     </View>
   );
 }
@@ -620,31 +279,97 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  container: {
-    flex: 1,
-  },
   content: {
     padding: spacing[4],
     paddingBottom: spacing[6],
+    gap: spacing[4],
   },
-  header: {
-    marginBottom: spacing[4],
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing[3],
   },
-  showcaseCard: {
-    marginBottom: spacing[4],
-    padding: spacing[3],
-    borderRadius: 12,
-    borderWidth: 1,
+  headerText: {
+    flex: 1,
   },
-  cardList: {
-    gap: spacing[1],
+  dateLabel: {
+    marginTop: spacing[1],
   },
-  filterEmptyState: {
+  avatarButton: {
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing[6],
-    paddingHorizontal: spacing[4],
-    borderRadius: 12,
+  },
+  avatarButtonPressed: {
+    opacity: 0.8,
+  },
+  themeSwitcher: {
+    flexDirection: 'row',
+    borderRadius: radius.pill,
+    padding: 2,
+    gap: 2,
+    alignItems: 'center',
+  },
+  themeChip: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing[2],
+    borderRadius: radius.pill - 2,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: spacing[2],
+  },
+  statChip: {
+    flex: 1,
+    borderRadius: radius.card,
     borderWidth: 1,
+    paddingVertical: spacing[3],
+    alignItems: 'center',
+    gap: spacing[1],
+  },
+  sectionTitle: {
+    letterSpacing: 0.8,
+    marginBottom: spacing[1],
+  },
+  workRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    borderRadius: radius.card,
+    borderWidth: 1,
+    padding: spacing[3],
+  },
+  workText: {
+    flex: 1,
+  },
+  workTitle: {
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  workMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[1],
+  },
+  projectsScroll: {
+    gap: spacing[2],
+    paddingBottom: spacing[1],
+    alignItems: 'center',
+  },
+  projectChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+  },
+  projectChipName: {
+    maxWidth: 130,
+    color: '#1C1E1B',
   },
 });

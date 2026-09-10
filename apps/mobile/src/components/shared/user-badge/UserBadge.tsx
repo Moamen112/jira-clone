@@ -36,6 +36,7 @@ export const UserBadge: React.FC<UserBadgeProps> = ({
   onPress,
   style,
 }) => {
+  const { colors } = useTheme();
   const avatarSize = AVATAR_SIZE_BY_SIZE[size];
   const nameVariant = size === 'lg' ? 'body' : 'bodySmall';
   const subVariant = size === 'lg' ? 'bodySmall' : 'caption';
