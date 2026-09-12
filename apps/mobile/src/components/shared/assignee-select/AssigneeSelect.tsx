@@ -6,7 +6,13 @@ import {
   ScrollView,
   ViewStyle,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  SearchIcon,
+  CloseCircleOutlineIcon,
+  CheckmarkIcon,
+  PersonIcon,
+  ChevronDownIcon,
+} from '../../../../assets/icon';
 import { User } from '@jira-clone/shared';
 import { Text } from '../../base/typography/Text';
 import { Avatar, AvatarSize } from '../../base/avatar/Avatar';
@@ -160,8 +166,7 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
           onChangeText={setSearch}
           placeholder="Search by name or email..."
           leftIcon={
-            <Ionicons
-              name="search-outline"
+            <SearchIcon
               size={16}
               color={colors.inkMuted}
             />
@@ -185,8 +190,7 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
             ]}
           >
             <View style={[styles.unassignedIconSmall, { backgroundColor: colors.paper, borderColor: colors.line }]}>
-              <Ionicons
-                name="close-circle-outline"
+              <CloseCircleOutlineIcon
                 size={18}
                 color={colors.inkMuted}
               />
@@ -200,8 +204,7 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
               </Text>
             </View>
             {localSelectedIds.length === 0 && (
-              <Ionicons
-                name="checkmark"
+              <CheckmarkIcon
                 size={18}
                 color={colors.accent}
               />
@@ -236,8 +239,7 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
                   </Text>
                 </View>
                 {isSelected && (
-                  <Ionicons
-                    name="checkmark"
+                  <CheckmarkIcon
                     size={18}
                     color={colors.accent}
                   />
@@ -288,8 +290,7 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
             />
           ) : (
             <View style={[styles.unassignedIconXs, { backgroundColor: colors.paper, borderColor: colors.line }]}>
-              <Ionicons
-                name="person-outline"
+              <PersonIcon
                 size={12}
                 color={colors.inkMuted}
               />
@@ -340,8 +341,7 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
             />
           ) : (
             <View style={[styles.unassignedIcon, { backgroundColor: colors.paper, borderColor: colors.line }]}>
-              <Ionicons
-                name="person-outline"
+              <PersonIcon
                 size={16}
                 color={colors.inkMuted}
               />
@@ -377,8 +377,7 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
         </View>
 
         {!disabled && (
-          <Ionicons
-            name="chevron-down"
+          <ChevronDownIcon
             size={18}
             color={colors.inkMuted}
             style={styles.chevron}

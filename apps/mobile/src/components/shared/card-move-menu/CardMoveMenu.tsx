@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Pressable, ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  LockClosedIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  CheckmarkCircleIcon,
+  ArrowForwardIcon,
+} from '../../../../assets/icon';
 import {
   Card as CardType,
   BoardColumn,
@@ -129,8 +135,7 @@ export const CardMoveMenu: React.FC<CardMoveMenuProps> = ({
         {/* Permission Notice */}
         {!canMove && (
           <View style={[styles.permissionBanner, { backgroundColor: colors.warnSoft }]}>
-            <Ionicons
-              name="lock-closed-outline"
+            <LockClosedIcon
               size={16}
               color={colors.warn}
             />
@@ -155,8 +160,7 @@ export const CardMoveMenu: React.FC<CardMoveMenuProps> = ({
                   targetPosition === 'bottom' && { backgroundColor: colors.ink, borderColor: colors.ink },
                 ]}
               >
-                <Ionicons
-                  name="arrow-down-outline"
+                <ArrowDownIcon
                   size={14}
                   color={
                     targetPosition === 'bottom'
@@ -186,8 +190,7 @@ export const CardMoveMenu: React.FC<CardMoveMenuProps> = ({
                   targetPosition === 'top' && { backgroundColor: colors.ink, borderColor: colors.ink },
                 ]}
               >
-                <Ionicons
-                  name="arrow-up-outline"
+                <ArrowUpIcon
                   size={14}
                   color={
                     targetPosition === 'top'
@@ -272,14 +275,12 @@ export const CardMoveMenu: React.FC<CardMoveMenuProps> = ({
                   {/* Right Status / Arrow Icon */}
                   <View style={styles.columnRight}>
                     {isCurrent ? (
-                      <Ionicons
-                        name="checkmark-circle"
+                      <CheckmarkCircleIcon
                         size={18}
                         color={colors.accent}
                       />
                     ) : (
-                      <Ionicons
-                        name="arrow-forward"
+                      <ArrowForwardIcon
                         size={16}
                         color={colors.inkMuted}
                       />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { HomeIcon, GridIcon, NotificationsIcon, PersonIcon } from '../../assets/icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/tokens';
 
@@ -12,31 +12,27 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.inkMuted,
-        tabBarStyle: {
-          backgroundColor: colors.paper,
-          borderTopWidth: 0,
-          borderWidth: 0,
-          elevation: 0,
-          shadowOpacity: 0,
-          height: 52 + bottomInset,
-          paddingBottom: bottomInset,
-          paddingTop: 6,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-        },
+        headerShown: true,
         headerStyle: {
-          backgroundColor: colors.paper,
-          borderBottomColor: colors.line,
-          borderBottomWidth: 1,
+          backgroundColor: colors.surface,
         },
         headerTintColor: colors.ink,
         headerTitleStyle: {
           fontWeight: '700',
           fontSize: 18,
+        },
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.line,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.inkMuted,
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '500',
         },
       }}
     >
@@ -47,11 +43,7 @@ export default function TabLayout() {
           title: 'Home',
           headerTitle: 'Jira Clone',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'home' : 'home-outline'}
-              size={24}
-              color={color}
-            />
+            <HomeIcon size={24} color={color} focused={focused} />
           ),
         }}
       />
@@ -63,11 +55,7 @@ export default function TabLayout() {
           title: 'Spaces',
           headerTitle: 'Spaces',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'grid' : 'grid-outline'}
-              size={24}
-              color={color}
-            />
+            <GridIcon size={24} color={color} focused={focused} />
           ),
         }}
       />
@@ -79,11 +67,7 @@ export default function TabLayout() {
           title: 'Notifications',
           headerTitle: 'Notifications',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'notifications' : 'notifications-outline'}
-              size={24}
-              color={color}
-            />
+            <NotificationsIcon size={24} color={color} focused={focused} />
           ),
         }}
       />
@@ -95,11 +79,7 @@ export default function TabLayout() {
           title: 'Profile',
           headerTitle: 'Profile',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'person' : 'person-outline'}
-              size={24}
-              color={color}
-            />
+            <PersonIcon size={24} color={color} focused={focused} />
           ),
         }}
       />

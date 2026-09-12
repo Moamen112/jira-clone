@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Text, Spinner } from '../src/components/base';
-import { useTheme, spacing, radius } from '../src/tokens';
+import React, { useEffect } from "react";
+import { View, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+import { Text, Spinner } from "../src/components/base";
+import { useTheme, spacing, radius } from "../src/tokens";
 
 const SPLASH_DURATION_MS = 2000;
 
@@ -16,7 +16,7 @@ export default function SplashScreen() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.replace('/auth');
+      router.replace("/(tabs)");
     }, SPLASH_DURATION_MS);
 
     return () => clearTimeout(timer);
@@ -51,16 +51,16 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: spacing[4],
   },
   logoMark: {
     width: 72,
     height: 72,
     borderRadius: radius.card,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
     marginTop: spacing[4],

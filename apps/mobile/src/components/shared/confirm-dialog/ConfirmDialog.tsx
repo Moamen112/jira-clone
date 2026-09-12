@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { TrashIcon, WarningIcon, InfoIcon } from '../../../../assets/icon';
 import { Modal } from '../../base/modal/Modal';
 import { Text } from '../../base/typography/Text';
 import { Button } from '../../base/button/Button';
@@ -65,7 +65,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   // Variant theme configs
   const variantConfig = {
     danger: {
-      iconName: 'trash-outline' as const,
+      Icon: TrashIcon,
       iconColor: colors.warn,
       badgeBg: colors.warnSoft,
       badgeBorder: colors.warn,
@@ -73,7 +73,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       defaultConfirmText: 'Delete',
     },
     warning: {
-      iconName: 'warning-outline' as const,
+      Icon: WarningIcon,
       iconColor: isDark ? '#F6AD55' : '#C05621', // Dark amber
       badgeBg: isDark ? '#4A3215' : '#FEEBC8',   // Light amber
       badgeBorder: isDark ? '#7B4A1D' : '#FBD38D',
@@ -81,7 +81,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       defaultConfirmText: 'Proceed',
     },
     info: {
-      iconName: 'information-circle-outline' as const,
+      Icon: InfoIcon,
       iconColor: colors.accent,
       badgeBg: colors.accentSoft,
       badgeBorder: colors.accent,
@@ -138,8 +138,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           ]}
         >
           {icon || (
-            <Ionicons
-              name={variantConfig.iconName}
+            <variantConfig.Icon
               size={24}
               color={variantConfig.iconColor}
             />

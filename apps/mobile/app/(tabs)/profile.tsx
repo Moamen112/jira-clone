@@ -5,7 +5,7 @@ import {
   ScrollView,
   Pressable,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { CameraIcon } from '../../assets/icon';
 import { launchImageLibraryAsync } from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { mockCurrentUser } from '@jira-clone/shared';
@@ -77,7 +77,7 @@ export default function ProfileScreen() {
                 { backgroundColor: colors.accent, borderColor: colors.paper },
               ]}
             >
-              <Ionicons name="camera" size={14} color="#FFFFFF" />
+              <CameraIcon size={14} color="#FFFFFF" />
             </View>
           </Pressable>
 

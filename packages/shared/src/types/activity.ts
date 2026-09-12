@@ -1,10 +1,11 @@
-﻿export type ActivityActionType =
+export type ActivityActionType =
   | 'CARD_CREATED'
   | 'STATUS_CHANGED'
   | 'ASSIGNEE_CHANGED'
   | 'TITLE_UPDATED'
   | 'DESCRIPTION_UPDATED'
-  | 'COMMENT_ADDED';
+  | 'COMMENT_ADDED'
+  | 'WORK_LOGGED';
 
 export interface ActivityLog {
   id: string;

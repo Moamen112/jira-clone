@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { ArrowForwardIcon, TimeIcon } from '../../../../assets/icon';
 import { ActivityLog, User, formatActivityMessage } from '@jira-clone/shared';
 import { Text } from '../../base/typography/Text';
 import { Avatar } from '../../base/avatar/Avatar';
@@ -63,6 +63,7 @@ export const ActivityLogItem: React.FC<ActivityLogItemProps> = ({
               {log.action === 'TITLE_UPDATED' && 'renamed this card'}
               {log.action === 'DESCRIPTION_UPDATED' && 'updated the description'}
               {log.action === 'COMMENT_ADDED' && 'commented'}
+              {log.action === 'WORK_LOGGED' && 'logged work'}
             </Text>
           </Text>
 
@@ -75,8 +76,7 @@ export const ActivityLogItem: React.FC<ActivityLogItemProps> = ({
         {log.action === 'STATUS_CHANGED' && log.details.from && log.details.to && (
           <View style={styles.transitionRow}>
             <Badge label={log.details.from} variant="neutral" size="sm" />
-            <Ionicons
-              name="arrow-forward"
+            <ArrowForwardIcon
               size={12}
               color={colors.inkMuted}
               style={{ marginHorizontal: 4 }}
@@ -110,6 +110,19 @@ export const ActivityLogItem: React.FC<ActivityLogItemProps> = ({
               size="sm"
               style={{ marginLeft: 6 }}
             />
+          </View>
+        )}
+
+        {log.action === 'WORK_LOGGED' && log.details.message && (
+          <View style={styles.transitionRow}>
+            <TimeIcon
+              size={13}
+              color={colors.accent}
+              style={{ marginRight: 4 }}
+            />
+            <Text variant="caption" muted>
+              {log.details.message}
+            </Text>
           </View>
         )}
       </View>

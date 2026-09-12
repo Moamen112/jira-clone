@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Pressable, ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { EllipsisHorizontalIcon, ChatEllipsesIcon } from '../../../../assets/icon';
 import { Card as CardType, CardRole, User } from '@jira-clone/shared';
 import { Text } from '../../base/typography/Text';
 import { Badge } from '../../base/badge/Badge';
@@ -104,7 +104,7 @@ export const Card: React.FC<CardProps> = ({
 
           {onMove && (
             <IconButton
-              icon={<Ionicons name="ellipsis-horizontal" size={16} color={colors.inkMuted} />}
+              icon={<EllipsisHorizontalIcon size={16} color={colors.inkMuted} />}
               size="sm"
               variant="ghost"
               accessibilityLabel="Card actions"
@@ -134,8 +134,7 @@ export const Card: React.FC<CardProps> = ({
           {/* Comment Count Pill */}
           {card.commentCount > 0 && (
             <View style={[styles.commentChip, { backgroundColor: colors.paper }]}>
-              <Ionicons
-                name="chatbubble-ellipses-outline"
+              <ChatEllipsesIcon
                 size={12}
                 color={colors.inkMuted}
                 style={{ marginRight: 3 }}

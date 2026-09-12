@@ -1,4 +1,4 @@
-﻿import { ActivityLog } from '../types/activity';
+import { ActivityLog } from '../types/activity';
 
 export function formatActivityMessage(log: ActivityLog, actorName: string): string {
   switch (log.action) {
@@ -16,6 +16,8 @@ export function formatActivityMessage(log: ActivityLog, actorName: string): stri
       return `${actorName} updated the description`;
     case 'COMMENT_ADDED':
       return `${actorName} left a comment`;
+    case 'WORK_LOGGED':
+      return `${actorName} logged work${log.details.message ? `: ${log.details.message}` : ''}`;
     default:
       return `${actorName} updated this card`;
   }

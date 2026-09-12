@@ -8,3 +8,4 @@ export * from './card-move-menu';
 export * from './board-filter-bar';
 export * from './board-column';
 export * from './board';
+export * from './accordion';

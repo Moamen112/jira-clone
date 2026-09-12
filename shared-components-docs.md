@@ -304,6 +304,8 @@ export interface CardDetailProps {
 #### `ActivityLogProps`
 
 ```typescript
+export type ActivityLogFilter = 'all' | 'history' | 'working';
+
 export interface ActivityLogProps {
   /** Array of activity log events */
   logs: ActivityLogType[];
@@ -322,6 +324,18 @@ export interface ActivityLogProps {
 
   /** Custom container style */
   style?: ViewStyle;
+
+  /** Controlled active filter */
+  filter?: ActivityLogFilter;
+
+  /** Default filter if uncontrolled (default: 'all') */
+  defaultFilter?: ActivityLogFilter;
+
+  /** Callback fired when filter tab changes */
+  onFilterChange?: (filter: ActivityLogFilter) => void;
+
+  /** Whether to show the filter pills (default: true) */
+  showFilters?: boolean;
 }
 ```
 

@@ -6,7 +6,7 @@ import {
   ViewStyle,
   Dimensions,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AddIcon, LayersIcon } from '../../../../assets/icon';
 import {
   BoardColumn as BoardColumnType,
   Card as CardType,
@@ -156,7 +156,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
           <IconButton
             variant="ghost"
             size="sm"
-            icon={<Ionicons name="add" size={18} color={colors.ink} />}
+            icon={<AddIcon size={18} color={colors.ink} />}
             accessibilityLabel={`Add card to ${column.title}`}
             onPress={() => setIsCreating(true)}
           />
@@ -197,8 +197,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
               { borderColor: colors.line, backgroundColor: colors.paper },
             ]}
           >
-            <Ionicons
-              name="layers-outline"
+            <LayersIcon
               size={24}
               color={colors.inkMuted}
               style={{ marginBottom: spacing[1] }}
@@ -271,7 +270,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
           accessibilityRole="button"
           accessibilityLabel={`Add card to ${column.title}`}
         >
-          <Ionicons name="add" size={16} color={colors.inkMuted} />
+          <AddIcon size={16} color={colors.inkMuted} />
           <Text variant="caption" bold muted style={{ marginLeft: spacing[1] }}>
             Add card
           </Text>

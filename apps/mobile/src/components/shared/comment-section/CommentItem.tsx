@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Comment, User } from '@jira-clone/shared';
+import { TrashIcon } from '../../../../assets/icon';
 import { Text } from '../../base/typography/Text';
 import { Avatar } from '../../base/avatar/Avatar';
 import { IconButton } from '../../base/icon-button/IconButton';
@@ -66,8 +66,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               variant="ghost"
               size="sm"
               icon={
-                <Ionicons
-                  name="trash-outline"
+                <TrashIcon
                   size={14}
                   color={colors.inkMuted}
                 />

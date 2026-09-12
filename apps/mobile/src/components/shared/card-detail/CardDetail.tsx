@@ -1,6 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  DocumentTextIcon,
+  PeopleIcon,
+  PulseIcon,
+  ChatBubblesIcon,
+  ChevronBackIcon,
+  TrashIcon,
+} from '../../../../assets/icon';
 import {
   Card as CardType,
   CardRole,
@@ -24,13 +31,14 @@ import { ActivityLog } from '../activity-log/ActivityLog';
 import { AssigneeSelect } from '../assignee-select/AssigneeSelect';
 import { ConfirmDialog } from '../confirm-dialog/ConfirmDialog';
 import { CommentSection } from '../comment-section/CommentSection';
+import { Accordion } from '../accordion';
 import { useTheme } from '../../../tokens';
 import { radius } from '../../../tokens/radius';
 import { spacing } from '../../../tokens/spacing';
 
 export interface CardDetailProps {
-  /** Visibility toggle */
-  visible: boolean;
+  /** Visibility toggle (only used when fullScreen is false) */
+  visible?: boolean;
   /** The card entity to view or edit */
   card: CardType | null;
   /** Available board columns */
@@ -49,14 +57,18 @@ export interface CardDetailProps {
   currentUserId?: string;
   /** Explicit role override (if precomputed) */
   currentUserRole?: CardRole;
-  /** Close callback */
-  onClose: () => void;
+  /** Close or back callback */
+  onClose?: () => void;
   /** Callback fired when user saves changes */
   onSave?: (updatedCard: CardType) => void;
   /** Callback fired when user deletes the card */
   onDelete?: (cardId: string) => void;
   /** Loading state for save action */
   loading?: boolean;
+  /** Whether to render as full screen (default: true) instead of modal */
+  fullScreen?: boolean;
+  /** Style override */
+  style?: any;
 }
 
 const PRIORITIES: { label: string; value: CardPriority }[] = [
@@ -68,7 +80,7 @@ const PRIORITIES: { label: string; value: CardPriority }[] = [
 ];
 
 export const CardDetail: React.FC<CardDetailProps> = ({
-  visible,
+  visible = true,
   card,
   columns = [],
   users = [],
@@ -82,6 +94,8 @@ export const CardDetail: React.FC<CardDetailProps> = ({
   onSave,
   onDelete,
   loading = false,
+  fullScreen = true,
+  style,
 }) => {
   const { colors } = useTheme();
 
@@ -132,6 +146,12 @@ export const CardDetail: React.FC<CardDetailProps> = ({
   const publisher = users.find((u) => u.id === card.publisherId);
   const currentAssignee = users.find((u) => u.id === assigneeId);
   const currentUser = users.find((u) => u.id === currentUserId) || null;
+
+  const relevantLogs = useMemo(() => {
+    if (!activityLogs) return [];
+    const matched = activityLogs.filter((log) => log.cardId === card.id);
+    return matched.length > 0 ? matched : activityLogs;
+  }, [activityLogs, card.id]);
 
   const handleTitleChange = (text: string) => {
     setTitle(text);
@@ -213,109 +233,82 @@ export const CardDetail: React.FC<CardDetailProps> = ({
     },
   }[role];
 
-  return (
-    <>
-      <Modal
-        visible={visible}
-        onClose={onClose}
-        presentation="bottomSheet"
-        title={card.key}
-        subtitle="Issue Details"
-        maxHeightRatio={0.9}
-        footer={
-          <View style={styles.footerActions}>
-            {canDeleteCard && (
-              <Button
-                label="Delete"
-                variant="danger"
-                size="sm"
-                onPress={handleDeletePress}
-                style={{ marginRight: 'auto' }}
-              />
-            )}
-
-          <Button
-            label="Cancel"
-            variant="ghost"
+  const cardBody = (
+    <View style={styles.content}>
+      {/* Role & Permissions Banner */}
+      <View style={[styles.roleBanner, { backgroundColor: colors.surface, borderColor: colors.line }]}>
+        <View style={styles.roleBannerTop}>
+          <Text variant="caption" muted style={{ fontWeight: '600' }}>
+            Your Role:
+          </Text>
+          <Badge
+            label={roleConfig.label}
+            variant={roleConfig.variant}
             size="sm"
-            onPress={onClose}
           />
+        </View>
+        <Text variant="caption" muted style={{ marginTop: 4 }}>
+          {roleConfig.hint}
+        </Text>
+      </View>
 
-          {(canEditTitle || canEditDescription || canMoveStatus || canChangeAssignee) && (
-            <Button
-              label="Save Changes"
-              variant="primary"
-              size="sm"
-              loading={loading}
-              disabled={!hasChanges}
-              onPress={handleSave}
-            />
+      <Divider style={{ marginVertical: spacing[3] }} />
+
+      {/* Status / Column Selector */}
+      {columns.length > 0 && (
+        <View style={styles.fieldSection}>
+          <Text variant="label" style={[styles.fieldLabel, { color: colors.ink }]}>
+            Status
+          </Text>
+          <View style={styles.pillRow}>
+            {columns.map((col) => {
+              const isSelected = col.id === columnId;
+              return (
+                <Pressable
+                  key={col.id}
+                  disabled={!canMoveStatus}
+                  onPress={() => handleColumnSelect(col.id)}
+                  style={[
+                    styles.statusPill,
+                    { backgroundColor: colors.surface, borderColor: colors.line },
+                    isSelected && { backgroundColor: colors.accent, borderColor: colors.accent },
+                    !canMoveStatus && styles.disabledField,
+                  ]}
+                >
+                  <Text
+                    variant="caption"
+                    bold={isSelected}
+                    style={{
+                      color: isSelected ? colors.paper : colors.ink,
+                    }}
+                  >
+                    {col.title}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {!canMoveStatus && (
+            <Text variant="caption" muted style={styles.helperText}>
+              Only the publisher or assignee can move card status.
+            </Text>
           )}
         </View>
-      }
-    >
-      <View style={styles.content}>
-        {/* Role & Permissions Banner */}
-        <View style={[styles.roleBanner, { backgroundColor: colors.surface, borderColor: colors.line }]}>
-          <View style={styles.roleBannerTop}>
-            <Text variant="caption" muted style={{ fontWeight: '600' }}>
-              Your Role:
-            </Text>
-            <Badge
-              label={roleConfig.label}
-              variant={roleConfig.variant}
-              size="sm"
-            />
-          </View>
-          <Text variant="caption" muted style={{ marginTop: 4 }}>
-            {roleConfig.hint}
-          </Text>
-        </View>
+      )}
 
-        <Divider style={{ marginVertical: spacing[3] }} />
-
-        {/* Status / Column Selector */}
-        {columns.length > 0 && (
-          <View style={styles.fieldSection}>
-            <Text variant="label" style={[styles.fieldLabel, { color: colors.ink }]}>
-              Status
-            </Text>
-            <View style={styles.pillRow}>
-              {columns.map((col) => {
-                const isSelected = col.id === columnId;
-                return (
-                  <Pressable
-                    key={col.id}
-                    disabled={!canMoveStatus}
-                    onPress={() => handleColumnSelect(col.id)}
-                    style={[
-                      styles.statusPill,
-                      { backgroundColor: colors.surface, borderColor: colors.line },
-                      isSelected && { backgroundColor: colors.accent, borderColor: colors.accent },
-                      !canMoveStatus && styles.disabledField,
-                    ]}
-                  >
-                    <Text
-                      variant="caption"
-                      bold={isSelected}
-                      style={{
-                        color: isSelected ? colors.paper : colors.ink,
-                      }}
-                    >
-                      {col.title}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            {!canMoveStatus && (
-              <Text variant="caption" muted style={styles.helperText}>
-                Only the publisher or assignee can move card status.
-              </Text>
-            )}
-          </View>
-        )}
-
+      {/* Accordion: Title & Description */}
+      <Accordion
+        title="Title & Description"
+        subtitle="Summary and details"
+        icon={
+          <DocumentTextIcon
+            size={18}
+            color={colors.accent}
+          />
+        }
+        defaultExpanded={true}
+        style={{ marginBottom: spacing[3] }}
+      >
         {/* Title Field */}
         <View style={styles.fieldSection}>
           <Input
@@ -333,7 +326,7 @@ export const CardDetail: React.FC<CardDetailProps> = ({
         </View>
 
         {/* Description Field */}
-        <View style={styles.fieldSection}>
+        <View style={[styles.fieldSection, { marginBottom: 0 }]}>
           <Textarea
             label="Description"
             value={description}
@@ -348,125 +341,159 @@ export const CardDetail: React.FC<CardDetailProps> = ({
             </Text>
           )}
         </View>
+      </Accordion>
 
-        {/* Priority Selector */}
-        <View style={styles.fieldSection}>
-          <Text variant="label" style={[styles.fieldLabel, { color: colors.ink }]}>
-            Priority
-          </Text>
-          <View style={styles.pillRow}>
-            {PRIORITIES.map((p) => {
-              const isSelected = p.value === priority;
-              return (
-                <Pressable
-                  key={p.value}
-                  disabled={!canEditTitle}
-                  onPress={() => handlePrioritySelect(p.value)}
-                  style={[
-                    styles.priorityPill,
-                    { backgroundColor: colors.surface, borderColor: colors.line },
-                    isSelected && { backgroundColor: colors.ink, borderColor: colors.ink },
-                    !canEditTitle && styles.disabledField,
-                  ]}
+      {/* Priority Selector */}
+      <View style={styles.fieldSection}>
+        <Text variant="label" style={[styles.fieldLabel, { color: colors.ink }]}>
+          Priority
+        </Text>
+        <View style={styles.pillRow}>
+          {PRIORITIES.map((p) => {
+            const isSelected = p.value === priority;
+            return (
+              <Pressable
+                key={p.value}
+                disabled={!canEditTitle}
+                onPress={() => handlePrioritySelect(p.value)}
+                style={[
+                  styles.priorityPill,
+                  { backgroundColor: colors.surface, borderColor: colors.line },
+                  isSelected && { backgroundColor: colors.ink, borderColor: colors.ink },
+                  !canEditTitle && styles.disabledField,
+                ]}
+              >
+                <Text
+                  variant="caption"
+                  bold={isSelected}
+                  style={{
+                    color: isSelected ? colors.paper : colors.ink,
+                  }}
                 >
-                  <Text
-                    variant="caption"
-                    bold={isSelected}
-                    style={{
-                      color: isSelected ? colors.paper : colors.ink,
-                    }}
-                  >
-                    {p.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        <Divider style={{ marginVertical: spacing[3] }} />
-
-        {/* People Section */}
-        <View style={[styles.peopleSection, { backgroundColor: colors.surface, borderColor: colors.line }]}>
-          <Text variant="sectionLabel" muted style={styles.sectionHeading}>
-            PEOPLE & AUDIT
-          </Text>
-
-          {/* Assignee Selection */}
-          <AssigneeSelect
-            label="Assignees"
-            multiple={true}
-            selectedUserId={assigneeId}
-            selectedUserIds={assigneeIds}
-            users={users}
-            disabled={!canChangeAssignee}
-            helperText={
-              !canChangeAssignee
-                ? 'Only the publisher can reassign this card.'
-                : undefined
-            }
-            onSelect={(newUserId) => handleAssigneeSelect(newUserId)}
-            onSelectMultiple={(newUserIds) => handleAssigneesChange(newUserIds)}
-          />
-
-          {/* Reporter / Publisher */}
-          <View style={[styles.personRow, { marginTop: spacing[3] }]}>
-            <View>
-              <Text variant="caption" muted>
-                Reporter (Publisher)
-              </Text>
-              <View style={styles.userDisplay}>
-                <Avatar
-                  name={publisher?.name || 'Unknown'}
-                  imageUrl={publisher?.avatarUrl}
-                  size="xs"
-                />
-                <Text variant="bodySmall" bold style={{ marginLeft: spacing[2] }}>
-                  {publisher?.name || 'Creator'}
+                  {p.label}
                 </Text>
-              </View>
-            </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
 
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text variant="caption" muted>
-                Created
-              </Text>
-              <Text variant="caption" muted style={{ marginTop: 2 }}>
-                {card.createdAt.split('T')[0]}
+      {/* Accordion: People & Audit */}
+      <Accordion
+        title="People & Audit"
+        subtitle="Assignees, reporter, and creation details"
+        icon={
+          <PeopleIcon
+            size={18}
+            color={colors.accent}
+          />
+        }
+        badge={assigneeIds.length > 0 ? assigneeIds.length : (assigneeId ? 1 : undefined)}
+        defaultExpanded={true}
+        style={{ marginBottom: spacing[3] }}
+      >
+        {/* Assignee Selection */}
+        <AssigneeSelect
+          label="Assignees"
+          multiple={true}
+          selectedUserId={assigneeId}
+          selectedUserIds={assigneeIds}
+          users={users}
+          disabled={!canChangeAssignee}
+          helperText={
+            !canChangeAssignee
+              ? 'Only the publisher can reassign this card.'
+              : undefined
+          }
+          onSelect={(newUserId) => handleAssigneeSelect(newUserId)}
+          onSelectMultiple={(newUserIds) => handleAssigneesChange(newUserIds)}
+        />
+
+        {/* Reporter / Publisher */}
+        <View style={[styles.personRow, { marginTop: spacing[3] }]}>
+          <View>
+            <Text variant="caption" muted>
+              Reporter (Publisher)
+            </Text>
+            <View style={styles.userDisplay}>
+              <Avatar
+                name={publisher?.name || 'Unknown'}
+                imageUrl={publisher?.avatarUrl}
+                size="xs"
+              />
+              <Text variant="bodySmall" bold style={{ marginLeft: spacing[2] }}>
+                {publisher?.name || 'Creator'}
               </Text>
             </View>
+          </View>
+
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text variant="caption" muted>
+              Created
+            </Text>
+            <Text variant="caption" muted style={{ marginTop: 2 }}>
+              {card.createdAt.split('T')[0]}
+            </Text>
           </View>
         </View>
+      </Accordion>
 
-        {/* Comments Discussion Section */}
-        {comments && (
-          <View style={{ marginTop: spacing[3] }}>
-            <CommentSection
-              cardId={card.id}
-              comments={comments}
-              users={users}
-              currentUser={currentUser}
-              onAddComment={onAddComment}
-              onDeleteComment={onDeleteComment}
+      {/* Accordion: Activity Audit Timeline */}
+      {activityLogs && (
+        <Accordion
+          title="Activity Timeline"
+          subtitle="Audit log of status changes and edits"
+          icon={
+            <PulseIcon
+              size={18}
+              color={colors.accent}
             />
-          </View>
-        )}
+          }
+          badge={relevantLogs.length > 0 ? relevantLogs.length : undefined}
+          defaultExpanded={false}
+          style={{ marginBottom: spacing[3] }}
+        >
+          <ActivityLog
+            logs={relevantLogs}
+            users={users}
+            cardId={card.id}
+            title=""
+            style={{ borderWidth: 0, padding: 0, backgroundColor: 'transparent' }}
+          />
+        </Accordion>
+      )}
 
-        {/* Activity Audit Timeline */}
-        {activityLogs && (
-          <View style={{ marginTop: spacing[3] }}>
-            <ActivityLog
-              logs={activityLogs}
-              users={users}
-              cardId={card.id}
-              title="ACTIVITY TIMELINE"
+      {/* Accordion: Comments Discussion (Last Section) */}
+      {comments && (
+        <Accordion
+          title="Comments"
+          subtitle="Card discussion and notes"
+          icon={
+            <ChatBubblesIcon
+              size={18}
+              color={colors.accent}
             />
-          </View>
-        )}
-      </View>
-    </Modal>
+          }
+          badge={comments.length > 0 ? comments.length : undefined}
+          defaultExpanded={true}
+          style={{ marginBottom: spacing[3] }}
+        >
+          <CommentSection
+            cardId={card.id}
+            comments={comments}
+            users={users}
+            currentUser={currentUser}
+            onAddComment={onAddComment}
+            onDeleteComment={onDeleteComment}
+            title=""
+            style={{ borderWidth: 0, padding: 0, backgroundColor: 'transparent' }}
+          />
+        </Accordion>
+      )}
+    </View>
+  );
 
-    {/* Delete Confirmation Dialog */}
+  const confirmDialog = (
     <ConfirmDialog
       visible={deleteConfirmVisible}
       title="Delete Issue?"
@@ -478,11 +505,190 @@ export const CardDetail: React.FC<CardDetailProps> = ({
       onConfirm={handleConfirmDelete}
       onCancel={() => setDeleteConfirmVisible(false)}
     />
-  </>
-);
+  );
+
+  // 1. Full Screen Layout (Default)
+  if (fullScreen) {
+    return (
+      <View style={[styles.screen, { backgroundColor: colors.paper }, style]}>
+        {/* Top Navigation Bar */}
+        <View style={[styles.topBar, { backgroundColor: colors.paper, borderBottomColor: colors.line }]}>
+          <Pressable
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            style={({ pressed }) => [
+              styles.backButton,
+              { backgroundColor: pressed ? colors.surface : 'transparent' },
+            ]}
+          >
+            <ChevronBackIcon size={22} color={colors.ink} />
+            <Text variant="bodySmall" bold style={{ color: colors.ink }}>
+              Back
+            </Text>
+          </Pressable>
+
+          <View style={styles.topBarCenter}>
+            <Badge label={card.key} variant="mono" />
+          </View>
+
+          <View style={styles.topBarRight}>
+            {canDeleteCard && (
+              <Pressable
+                onPress={handleDeletePress}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Delete issue"
+                style={({ pressed }) => [
+                  styles.iconActionBtn,
+                  { backgroundColor: pressed ? colors.warnSoft : 'transparent' },
+                ]}
+              >
+                <TrashIcon size={20} color={colors.warn} />
+              </Pressable>
+            )}
+          </View>
+        </View>
+
+        {/* Scrollable Form Body */}
+        <ScrollView
+          style={styles.scrollBody}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {cardBody}
+        </ScrollView>
+
+        {/* Bottom Actions Bar */}
+        {(canEditTitle || canEditDescription || canMoveStatus || canChangeAssignee) && (
+          <View style={[styles.bottomBar, { borderTopColor: colors.line, backgroundColor: colors.surface }]}>
+            {onClose && (
+              <Button
+                label="Cancel"
+                variant="ghost"
+                size="sm"
+                onPress={onClose}
+              />
+            )}
+            <Button
+              label="Save Changes"
+              variant="primary"
+              size="sm"
+              loading={loading}
+              disabled={!hasChanges}
+              onPress={handleSave}
+            />
+          </View>
+        )}
+
+        {confirmDialog}
+      </View>
+    );
+  }
+
+  // 2. Modal Layout (Fallback)
+  return (
+    <>
+      <Modal
+        visible={Boolean(visible)}
+        onClose={onClose || (() => {})}
+        presentation="bottomSheet"
+        title={card.key}
+        subtitle="Issue Details"
+        maxHeightRatio={0.9}
+        footer={
+          <View style={styles.footerActions}>
+            {canDeleteCard && (
+              <Button
+                label="Delete"
+                variant="danger"
+                size="sm"
+                onPress={handleDeletePress}
+                style={{ marginRight: 'auto' }}
+              />
+            )}
+
+            {onClose && (
+              <Button
+                label="Cancel"
+                variant="ghost"
+                size="sm"
+                onPress={onClose}
+              />
+            )}
+
+            {(canEditTitle || canEditDescription || canMoveStatus || canChangeAssignee) && (
+              <Button
+                label="Save Changes"
+                variant="primary"
+                size="sm"
+                loading={loading}
+                disabled={!hasChanges}
+                onPress={handleSave}
+              />
+            )}
+          </View>
+        }
+      >
+        {cardBody}
+      </Modal>
+
+      {confirmDialog}
+    </>
+  );
 };
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[1],
+    borderRadius: radius.pill,
+    gap: 2,
+  },
+  topBarCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 44,
+    justifyContent: 'flex-end',
+  },
+  iconActionBtn: {
+    padding: spacing[2],
+    borderRadius: radius.pill,
+  },
+  scrollBody: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: spacing[4],
+    paddingBottom: spacing[8],
+  },
+  bottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: spacing[2],
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    borderTopWidth: 1,
+  },
   content: {
     paddingBottom: spacing[4],
   },

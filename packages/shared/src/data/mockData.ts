@@ -150,4 +150,12 @@ export const mockActivityLogs: ActivityLog[] = [
     details: { from: 'In Progress', to: 'Done' },
     createdAt: '2026-09-04T16:30:00.000Z',
   },
+  {
+    id: 'log-4',
+    cardId: 'card-1',
+    actorId: 'user-2',
+    action: 'WORK_LOGGED',
+    details: { message: 'Logged 3h 30m of implementation work' },
+    createdAt: '2026-09-04T17:00:00.000Z',
+  },
 ];

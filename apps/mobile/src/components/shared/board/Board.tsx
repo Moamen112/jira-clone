@@ -10,7 +10,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { GridIcon } from '../../../../assets/icon';
 import {
   BoardColumn as BoardColumnType,
   Card as CardType,
@@ -293,8 +293,7 @@ export const Board: React.FC<BoardProps> = ({
             { backgroundColor: colors.surface, borderColor: colors.line },
           ]}
         >
-          <Ionicons
-            name="grid-outline"
+          <GridIcon
             size={40}
             color={colors.inkMuted}
             style={{ marginBottom: spacing[2] }}

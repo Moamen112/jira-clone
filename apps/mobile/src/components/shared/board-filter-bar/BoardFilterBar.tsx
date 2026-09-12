@@ -6,7 +6,14 @@ import {
   Pressable,
   ViewStyle,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  SearchIcon,
+  CloseCircleIcon,
+  PersonIcon,
+  CreateIcon,
+  ChatBubbleIcon,
+  CloseCircleOutlineIcon,
+} from '../../../../assets/icon';
 import { Card as CardType, User } from '@jira-clone/shared';
 import { Input } from '../../base/input/Input';
 import { Text } from '../../base/typography/Text';
@@ -152,8 +159,7 @@ export const BoardFilterBar: React.FC<BoardFilterBarProps> = ({
             onChangeText={onSearchChange}
             placeholder="Filter cards by title or key..."
             leftIcon={
-              <Ionicons
-                name="search-outline"
+              <SearchIcon
                 size={16}
                 color={colors.inkMuted}
               />
@@ -165,8 +171,7 @@ export const BoardFilterBar: React.FC<BoardFilterBarProps> = ({
                   hitSlop={8}
                   accessibilityLabel="Clear search text"
                 >
-                  <Ionicons
-                    name="close-circle"
+                  <CloseCircleIcon
                     size={16}
                     color={colors.inkMuted}
                   />
@@ -208,8 +213,7 @@ export const BoardFilterBar: React.FC<BoardFilterBarProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Filter by only my issues"
           >
-            <Ionicons
-              name="person"
+            <PersonIcon
               size={13}
               color={assignedToMe ? colors.paper : colors.inkMuted}
             />
@@ -240,8 +244,7 @@ export const BoardFilterBar: React.FC<BoardFilterBarProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Filter by cards created by me"
           >
-            <Ionicons
-              name="create-outline"
+            <CreateIcon
               size={13}
               color={createdByMe ? colors.paper : colors.inkMuted}
             />
@@ -272,8 +275,7 @@ export const BoardFilterBar: React.FC<BoardFilterBarProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Filter by cards with comments"
           >
-            <Ionicons
-              name="chatbubble-outline"
+            <ChatBubbleIcon
               size={13}
               color={hasComments ? colors.paper : colors.inkMuted}
             />
@@ -340,8 +342,7 @@ export const BoardFilterBar: React.FC<BoardFilterBarProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Clear all filters"
           >
-            <Ionicons
-              name="close-circle-outline"
+            <CloseCircleOutlineIcon
               size={14}
               color={colors.warn}
             />

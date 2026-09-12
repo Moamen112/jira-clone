@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Comment, User } from '@jira-clone/shared';
+import { ChatEllipsesIcon } from '../../../../assets/icon';
 import { Text } from '../../base/typography/Text';
 import { Avatar } from '../../base/avatar/Avatar';
 import { Button } from '../../base/button/Button';
@@ -88,19 +88,21 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   return (
     <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.line }, style]} testID={testID}>
       {/* Section Header */}
-      <View style={styles.headerRow}>
-        <Text variant="sectionLabel" muted style={styles.headingText}>
-          {title}
-        </Text>
-        {comments.length > 0 && (
-          <Badge
-            label={String(comments.length)}
-            variant="neutral"
-            size="sm"
-            rounded
-          />
-        )}
-      </View>
+      {title ? (
+        <View style={styles.headerRow}>
+          <Text variant="sectionLabel" muted style={styles.headingText}>
+            {title}
+          </Text>
+          {comments.length > 0 && (
+            <Badge
+              label={String(comments.length)}
+              variant="neutral"
+              size="sm"
+              rounded
+            />
+          )}
+        </View>
+      ) : null}
 
       {/* Comment List */}
       {comments.length > 0 ? (
@@ -123,8 +125,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       ) : (
         /* Empty State */
         <View style={styles.emptyState}>
-          <Ionicons
-            name="chatbubble-ellipses-outline"
+          <ChatEllipsesIcon
             size={24}
             color={colors.inkMuted}
             style={{ marginBottom: spacing[1] }}
