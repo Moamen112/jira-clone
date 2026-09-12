@@ -1,0 +1,18 @@
+/* Spinner — CSS spin animation shared by the Spinner component */
+.jira-spinner {
+  display: inline-block;
+  border-style: solid;
+  border-color: transparent;
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: jira-spinner-spin 0.8s linear infinite;
+}
+
+@keyframes jira-spinner-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

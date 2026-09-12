@@ -1,0 +1,15 @@
+/* Skeleton — pulse animation shared by the Skeleton component */
+.jira-skeleton {
+  display: inline-block;
+  animation: jira-skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes jira-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}

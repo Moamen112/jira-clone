@@ -10,14 +10,21 @@ import { launchImageLibraryAsync } from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { mockCurrentUser } from '@jira-clone/shared';
 import { Text, Avatar, Badge, Divider, Button } from '../../src/components/base';
-import { useTheme, spacing, radius } from '../../src/tokens';
+import { useTheme, spacing, radius, ThemeMode } from '../../src/tokens';
+
+const THEME_MODES: ThemeMode[] = ['light', 'dark', 'system'];
+const THEME_MODE_LABELS: Record<ThemeMode, string> = {
+  light: 'Light',
+  dark: 'Dark',
+  system: 'System',
+};
 
 /**
  * Profile tab — shows the signed-in (mock) user's details and lets them
  * pick a profile photo from the device media library (demo: local URI only).
  */
 export default function ProfileScreen() {
-  const { colors } = useTheme();
+  const { colors, mode, setThemeMode } = useTheme();
   const router = useRouter();
   const user = mockCurrentUser;
 
@@ -102,6 +109,41 @@ export default function ProfileScreen() {
             {user.email}
           </Text>
           <Badge label="Signed in" variant="done" size="sm" rounded style={styles.signedIn} />
+        </View>
+
+        {/* Appearance: dark / light mode switcher */}
+        <Text variant="sectionLabel" muted style={styles.appearanceTitle}>
+          APPEARANCE
+        </Text>
+        <View style={[styles.themeSwitcher, { backgroundColor: colors.paper }]}>
+          {THEME_MODES.map((m) => {
+            const active = mode === m;
+            return (
+              <Pressable
+                key={m}
+                onPress={() => setThemeMode(m)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`${THEME_MODE_LABELS[m]} theme`}
+                style={({ pressed }) => [
+                  styles.themeChip,
+                  active
+                    ? { backgroundColor: colors.accentSoft }
+                    : pressed
+                    ? { backgroundColor: colors.line }
+                    : undefined,
+                ]}
+              >
+                <Text
+                  variant="caption"
+                  bold
+                  color={active ? colors.accent : colors.inkMuted}
+                >
+                  {THEME_MODE_LABELS[m]}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
         {/* Details Card */}
@@ -201,6 +243,26 @@ const styles = StyleSheet.create({
   },
   signedIn: {
     marginTop: spacing[3],
+  },
+  appearanceTitle: {
+    letterSpacing: 0.8,
+    alignSelf: 'flex-start',
+    marginTop: spacing[4],
+  },
+  themeSwitcher: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    borderRadius: radius.pill,
+    padding: 2,
+    gap: 2,
+    alignItems: 'center',
+  },
+  themeChip: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing[2],
+    borderRadius: radius.pill - 2,
   },
   detailsCard: {
     alignSelf: 'stretch',

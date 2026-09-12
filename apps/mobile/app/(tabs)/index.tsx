@@ -15,14 +15,7 @@ import { Text, Badge, Avatar } from '../../src/components/base';
 import { StatusBar } from '../../src/components/shared/status-bar';
 import { PriorityBadge } from '../../src/components/shared/priority-badge';
 import { ActivityLog } from '../../src/components/shared/activity-log';
-import { useTheme, spacing, radius, ThemeMode } from '../../src/tokens';
-
-const THEME_MODES: ThemeMode[] = ['light', 'dark', 'system'];
-const THEME_MODE_LABELS: Record<ThemeMode, string> = {
-  light: 'Light',
-  dark: 'Dark',
-  system: 'System',
-};
+import { useTheme, spacing, radius } from '../../src/tokens';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -54,7 +47,7 @@ function isAssignedToUser(card: CardType, userId: string): boolean {
  * project shortcuts, and recent activity. Deep-links into the Spaces stack.
  */
 export default function HomeScreen() {
-  const { colors, mode, setThemeMode } = useTheme();
+  const { colors } = useTheme();
   const router = useRouter();
 
   const todayLabel = new Date().toLocaleDateString(undefined, {
@@ -130,37 +123,6 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {/* Theme switcher */}
-        <View style={[styles.themeSwitcher, { backgroundColor: colors.paper }]}>
-          {THEME_MODES.map((m) => {
-            const active = mode === m;
-            return (
-              <Pressable
-                key={m}
-                onPress={() => setThemeMode(m)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={`${THEME_MODE_LABELS[m]} theme`}
-                style={({ pressed }) => [
-                  styles.themeChip,
-                  active
-                    ? { backgroundColor: colors.accentSoft }
-                    : pressed
-                    ? { backgroundColor: colors.line }
-                    : undefined,
-                ]}
-              >
-                <Text
-                  variant="caption"
-                  bold
-                  color={active ? colors.accent : colors.inkMuted}
-                >
-                  {THEME_MODE_LABELS[m]}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
         {/* Quick stats */}
         <View style={styles.statsRow}>
           {[
@@ -303,20 +265,6 @@ const styles = StyleSheet.create({
   },
   avatarButtonPressed: {
     opacity: 0.8,
-  },
-  themeSwitcher: {
-    flexDirection: 'row',
-    borderRadius: radius.pill,
-    padding: 2,
-    gap: 2,
-    alignItems: 'center',
-  },
-  themeChip: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing[2],
-    borderRadius: radius.pill - 2,
   },
   statsRow: {
     flexDirection: 'row',
