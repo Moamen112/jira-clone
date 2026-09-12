@@ -1,0 +1,236 @@
+﻿/* ==========================================================================
+   Jira Clone - Fieldnotes Design Tokens (globals.css)
+   Converted from TypeScript design tokens for universal CSS reuse.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Root Variables (Light Theme & Shared Tokens)
+   -------------------------------------------------------------------------- */
+:root {
+  /* Color Palette - Light Theme */
+  --color-paper: #EDEBE4;       /* App background */
+  --color-surface: #F7F6F2;     /* Cards, sheets, input fields */
+  --color-ink: #1C1E1B;         /* Primary text, icons */
+  --color-ink-muted: #6B6A63;   /* Secondary text, placeholders */
+  --color-line: #D8D5CB;        /* Borders, dividers */
+  --color-accent: #1E6F5C;      /* Primary actions, links, selected states */
+  --color-accent-soft: #DCEAE6; /* Accent backgrounds (chips, highlights) */
+  --color-warn: #B8460E;        /* Errors, destructive actions */
+  --color-warn-soft: #F5DFD3;   /* Error backgrounds */
+
+  /* Typography - Font Families */
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', Menlo, Monaco, Consolas, 'Courier New', monospace;
+
+  /* Typography - Font Weights */
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-bolder: 800;
+
+  /* Spacing Scale (base unit: 4px) */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 24px;
+  --spacing-6: 32px;
+  --spacing-8: 48px;
+
+  /* Border Radii */
+  --radius-input: 6px;   /* buttons, inputs */
+  --radius-card: 8px;    /* cards, list rows */
+  --radius-sheet: 12px;  /* modals, bottom sheets */
+  --radius-pill: 9999px; /* fully rounded (avatars, tags) */
+
+  /* Layout */
+  --layout-screen-margin: 16px;
+  --layout-tap-target: 44px; /* minimum tap target height */
+
+  /* Motion & Animation */
+  --motion-screen-transition-ms: 200ms;
+  --motion-button-press-ms: 100ms;
+  --motion-sheet-open-ms: 250ms;
+  --motion-ease-out: cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* --------------------------------------------------------------------------
+   Dark Theme Palette
+   -------------------------------------------------------------------------- */
+[data-theme='dark'] {
+  --color-paper: #16181A;
+  --color-surface: #1F2220;
+  --color-ink: #EDEBE4;
+  --color-ink-muted: #8F8D84;
+  --color-line: #33352F;
+  --color-accent: #4FB89B;
+  --color-accent-soft: #1E3530;
+  --color-warn: #E37650;
+  --color-warn-soft: #3A241C;
+}
+
+/* Automatic dark theme preference fallback */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-paper: #16181A;
+    --color-surface: #1F2220;
+    --color-ink: #EDEBE4;
+    --color-ink-muted: #8F8D84;
+    --color-line: #33352F;
+    --color-accent: #4FB89B;
+    --color-accent-soft: #1E3530;
+    --color-warn: #E37650;
+    --color-warn-soft: #3A241C;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Global Reset & Base Defaults
+   -------------------------------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* --------------------------------------------------------------------------
+   Typography Scale Utility Classes
+   -------------------------------------------------------------------------- */
+.text-display {
+  font-family: var(--font-sans);
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: var(--font-weight-bolder);
+}
+
+.text-heading {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: var(--font-weight-bold);
+}
+
+.text-subheading {
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 22px;
+  font-weight: var(--font-weight-bold);
+}
+
+.text-section-label {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.text-issue-title {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: var(--font-weight-medium);
+}
+
+.text-body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: var(--font-weight-regular);
+}
+
+.text-body-small {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: var(--font-weight-regular);
+}
+
+.text-label {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: var(--font-weight-medium);
+}
+
+.text-button {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: var(--font-weight-medium);
+}
+
+.text-input {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: var(--font-weight-regular);
+}
+
+.text-placeholder {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: var(--font-weight-regular);
+  color: var(--color-ink-muted);
+}
+
+.text-link {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-accent);
+}
+
+.text-caption {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: var(--font-weight-regular);
+}
+
+.text-error {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-warn);
+}
+
+.text-badge {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 14px;
+  font-weight: var(--font-weight-medium);
+}
+
+.text-mono-data {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: var(--font-weight-regular);
+}
+
+.text-mono-key {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: var(--font-weight-regular);
+}
+
+.text-mono-small {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 14px;
+  font-weight: var(--font-weight-regular);
+}

@@ -1,13 +1,7 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "jsx": "react-jsx",
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"],
-      "@jira-clone/shared": ["../../packages/shared/src"],
-      "@jira-clone/shared/*": ["../../packages/shared/src/*"]
-    }
-  },
-  "include": ["src", "vite.config.ts"]
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
 }
