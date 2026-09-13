@@ -17,6 +17,10 @@ export interface TextareaProps {
   defaultValue?: string;
   /** Placeholder text */
   placeholder?: string;
+  /** Number of visible text lines (default: 3) */
+  rows?: number;
+  /** Minimum height constraint */
+  minHeight?: number | string;
   /** Maximum character length */
   maxLength?: number;
   /** Whether the field accepts input */
@@ -47,6 +51,8 @@ export const Textarea: FC<TextareaProps> = ({
   value,
   defaultValue,
   placeholder,
+  rows = 3,
+  minHeight,
   maxLength,
   editable = true,
   disabled,
@@ -70,6 +76,9 @@ export const Textarea: FC<TextareaProps> = ({
       ? 'var(--color-accent)'
       : 'var(--color-line)';
 
+  const resolvedMinHeight =
+    minHeight ?? (style?.minHeight !== undefined ? style.minHeight : rows ? undefined : 54);
+
   return (
     <label
       style={{
@@ -90,10 +99,10 @@ export const Textarea: FC<TextareaProps> = ({
           display: 'block',
           border: `1px solid ${borderColor}`,
           borderRadius: 'var(--radius-input)',
-          padding: 12,
+          padding: '8px 12px',
           boxSizing: 'border-box',
-          minHeight: 100,
           backgroundColor: readOnly ? 'var(--color-paper)' : 'var(--color-surface)',
+          transition: 'border-color 150ms ease',
           ...inputWrapperStyle,
         }}
       >
@@ -105,7 +114,7 @@ export const Textarea: FC<TextareaProps> = ({
           readOnly={readOnly}
           maxLength={maxLength}
           autoFocus={autoFocus}
-          rows={4}
+          rows={rows}
           onChange={(event) => {
             setCurrentLength(event.target.value.length);
             onChangeText?.(event.target.value);
@@ -121,16 +130,17 @@ export const Textarea: FC<TextareaProps> = ({
           style={{
             display: 'block',
             width: '100%',
-            minHeight: 80,
+            minHeight: resolvedMinHeight,
             padding: 0,
             border: 'none',
             outline: 'none',
             resize: 'vertical',
             fontFamily: 'var(--font-sans)',
-            fontSize: 15,
-            lineHeight: 22,
+            fontSize: 14,
+            lineHeight: '20px',
             color: 'var(--color-ink)',
             background: 'transparent',
+            boxSizing: 'border-box',
             ...style,
           }}
         />
