@@ -12,12 +12,16 @@ import { CardDetail } from '@/components/shared/card-detail';
 import { ActivityLog } from '@/components/shared/activity-log';
 import { BoardFilterBar, filterCards } from '@/components/shared/board-filter-bar';
 import { CardMoveMenu, type CardPosition } from '@/components/shared/card-move-menu';
-import type {
-  User,
-  BoardColumn as BoardColumnType,
-  Card as CardType,
-  Comment,
-  ActivityLog as ActivityLogType,
+import { Sidenav, type SidenavPage } from '@/components/shared/sidenav';
+import { ProjectCard } from '@/components/shared/project-card';
+import {
+  mockProjects,
+  type User,
+  type Project,
+  type BoardColumn as BoardColumnType,
+  type Card as CardType,
+  type Comment,
+  type ActivityLog as ActivityLogType,
 } from '@jira-clone/shared';
 
 const MOCK_USERS: User[] = [
@@ -270,6 +274,12 @@ export const App = () => {
   // Standalone CardMoveMenu state
   const [demoMoveCard, setDemoMoveCard] = useState<CardType | null>(null);
   const [demoMoveRole, setDemoMoveRole] = useState<'publisher' | 'viewer'>('publisher');
+
+  // Sidenav interactive states
+  const [activeSidenavPage, setActiveSidenavPage] = useState<SidenavPage>('board');
+  const [sidenavCollapsed, setSidenavCollapsed] = useState(false);
+  const [sidenavCurrentProject, setSidenavCurrentProject] = useState<Project>(mockProjects[0]);
+  const [sidenavUnreadCount, setSidenavUnreadCount] = useState(3);
 
   // Avatar tester state
   const [testName, setTestName] = useState('Alex Morgan');
@@ -547,6 +557,438 @@ export const App = () => {
       </header>
 
       <div className={styles.showcaseGrid}>
+        {/* ================================================================= */}
+        {/* SIDENAV & POST-LOGIN PAGES SHOWCASE */}
+        {/* ================================================================= */}
+        <div className={styles.sectionCard}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <Text variant="subheading" bold>
+                Sidenav Component (Post-Login Shell Navigation)
+              </Text>
+              <div>
+                <Text variant="caption" muted>
+                  Collapsible workspace sidebar with brand header, quick issue creation, project context switcher, and all post-login pages (Board, Backlog, Your Work, Projects, Activity, Notifications, and Settings).
+                </Text>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Badge label={activeSidenavPage.toUpperCase()} variant="accent" size="sm" />
+              <Badge label="New Component" variant="neutral" size="sm" />
+            </div>
+          </div>
+
+          {/* Quick Interactive Controls */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 12,
+              padding: '10px 14px',
+              backgroundColor: 'var(--color-surface)',
+              border: '1px solid var(--color-line)',
+              borderRadius: 'var(--radius-card)',
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <Text variant="caption" bold>
+                Quick Jump:
+              </Text>
+              {(
+                [
+                  { id: 'board', label: 'Kanban Board' },
+                  { id: 'backlog', label: 'Backlog' },
+                  { id: 'home', label: 'My Work' },
+                  { id: 'projects', label: 'All Projects' },
+                  { id: 'activity', label: 'Activity' },
+                  { id: 'notifications', label: `Notifications (${sidenavUnreadCount})` },
+                  { id: 'settings', label: 'Settings' },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveSidenavPage(tab.id)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: 'var(--radius-pill)',
+                    border: `1px solid ${activeSidenavPage === tab.id ? 'var(--color-accent)' : 'var(--color-line)'}`,
+                    backgroundColor: activeSidenavPage === tab.id ? 'var(--color-accent)' : 'var(--color-paper)',
+                    color: activeSidenavPage === tab.id ? '#ffffff' : 'var(--color-ink)',
+                    fontSize: 12,
+                    fontWeight: activeSidenavPage === tab.id ? 600 : 400,
+                    cursor: 'pointer',
+                    transition: 'all 150ms ease',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Button
+                label={sidenavCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+                variant="secondary"
+                size="sm"
+                onPress={() => setSidenavCollapsed((v) => !v)}
+              />
+              <Button
+                label={sidenavUnreadCount > 0 ? 'Clear Unread Badges' : 'Simulate 3 Notifications'}
+                variant="ghost"
+                size="sm"
+                onPress={() => setSidenavUnreadCount((v) => (v > 0 ? 0 : 3))}
+              />
+            </div>
+          </div>
+
+          {/* Interactive Sidenav + Page Preview Frame */}
+          <div
+            style={{
+              display: 'flex',
+              border: '1px solid var(--color-line)',
+              borderRadius: 'var(--radius-card)',
+              overflow: 'hidden',
+              minHeight: 560,
+              backgroundColor: 'var(--color-paper)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+            }}
+          >
+            {/* Left: The Sidenav Component */}
+            <Sidenav
+              activePage={activeSidenavPage}
+              onNavigate={(page) => setActiveSidenavPage(page)}
+              projects={mockProjects}
+              currentProject={sidenavCurrentProject}
+              onSelectProject={(id) => {
+                const found = mockProjects.find((p) => p.id === id);
+                if (found) setSidenavCurrentProject(found);
+              }}
+              currentUser={MOCK_USERS[0]}
+              unreadNotificationsCount={sidenavUnreadCount}
+              onCreateIssue={() => {
+                const newTitle = prompt('Enter new card title:') || 'New Quick Task';
+                handleCreateCardInBoard(newTitle, 'col-todo');
+                setActiveSidenavPage('board');
+              }}
+              collapsed={sidenavCollapsed}
+              onToggleCollapse={(col) => setSidenavCollapsed(col)}
+              isDark={isDark}
+              onToggleTheme={toggleTheme}
+              onLogout={() => alert('Logout action triggered.')}
+            />
+
+            {/* Right: Dynamic Post-Login Page View Container */}
+            <div
+              style={{
+                flex: 1,
+                minWidth: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                overflowY: 'auto',
+                padding: '20px 24px',
+                gap: 20,
+              }}
+            >
+              {/* Page Breadcrumb / Title Bar */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderBottom: '1px solid var(--color-line)',
+                  paddingBottom: 14,
+                  gap: 12,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Text variant="caption" muted>
+                    Projects / {sidenavCurrentProject.name} /
+                  </Text>
+                  <Text variant="bodySmall" bold>
+                    {activeSidenavPage === 'board' && 'Kanban Board'}
+                    {activeSidenavPage === 'backlog' && 'Project Backlog'}
+                    {activeSidenavPage === 'home' && 'Your Work / Dashboard'}
+                    {activeSidenavPage === 'projects' && 'All Projects & Spaces'}
+                    {activeSidenavPage === 'activity' && 'Activity Stream'}
+                    {activeSidenavPage === 'notifications' && 'Notifications'}
+                    {activeSidenavPage === 'settings' && 'Project Settings'}
+                  </Text>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Badge label={sidenavCurrentProject.key} variant="mono" size="sm" />
+                </div>
+              </div>
+
+              {/* Dynamic Page Content Renderer */}
+              {activeSidenavPage === 'board' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <Text variant="heading" bold>
+                      {sidenavCurrentProject.name} Board
+                    </Text>
+                    <Text variant="caption" muted style={{ display: 'block', marginTop: 2 }}>
+                      Track work items, drag status transitions, and manage sprint progress.
+                    </Text>
+                  </div>
+                  <Board
+                    boardTitle={sidenavCurrentProject.name}
+                    projectKey={sidenavCurrentProject.key}
+                    columns={INITIAL_COLUMNS}
+                    cards={boardCards}
+                    users={MOCK_USERS}
+                    currentUserId="user-1"
+                    columnWidth={260}
+                    columnGap={14}
+                    onCreateCard={handleCreateCardInBoard}
+                    onCardPress={(card) => setInspectedCard(card)}
+                    onCardMove={handleMoveCard}
+                    onCardAssigneeChange={handleCardAssigneeChange}
+                  />
+                </div>
+              )}
+
+              {activeSidenavPage === 'backlog' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <Text variant="heading" bold>
+                        Sprint 14 Backlog
+                      </Text>
+                      <Text variant="caption" muted style={{ display: 'block', marginTop: 2 }}>
+                        Prioritize user stories and plan upcoming sprint capacity.
+                      </Text>
+                    </div>
+                    <Button
+                      label="Add Story"
+                      variant="primary"
+                      size="sm"
+                      onPress={() => handleCreateCardInBoard('New Backlog Item', 'col-todo')}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {boardCards.map((c) => (
+                      <div
+                        key={c.id}
+                        onClick={() => setInspectedCard(c)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '10px 14px',
+                          borderRadius: 'var(--radius-card)',
+                          border: '1px solid var(--color-line)',
+                          backgroundColor: 'var(--color-surface)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <Badge label={c.key} variant="mono" size="sm" />
+                          <Text variant="bodySmall" bold>
+                            {c.title}
+                          </Text>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Badge
+                            label={INITIAL_COLUMNS.find((col) => col.id === c.columnId)?.title || c.columnId}
+                            variant="neutral"
+                            size="sm"
+                          />
+                          <Badge label={c.priority} variant="accent" size="sm" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeSidenavPage === 'home' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <Text variant="heading" bold>
+                      Welcome back, {MOCK_USERS[0].name}
+                    </Text>
+                    <Text variant="caption" muted style={{ display: 'block', marginTop: 2 }}>
+                      Here is what needs your attention today across your assigned issues.
+                    </Text>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                    <div style={{ padding: 16, borderRadius: 'var(--radius-card)', border: '1px solid var(--color-line)', backgroundColor: 'var(--color-surface)' }}>
+                      <Text variant="caption" bold muted style={{ textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                        ASSIGNED TO YOU
+                      </Text>
+                      <Text variant="heading" bold style={{ fontSize: 28, display: 'block', margin: '8px 0' }}>
+                        {boardCards.filter((c) => c.assigneeId === 'user-1' || c.assigneeIds?.includes('user-1')).length}
+                      </Text>
+                      <Text variant="caption" muted>
+                        Active cards requiring your progress
+                      </Text>
+                    </div>
+                    <div style={{ padding: 16, borderRadius: 'var(--radius-card)', border: '1px solid var(--color-line)', backgroundColor: 'var(--color-surface)' }}>
+                      <Text variant="caption" bold muted style={{ textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                        REPORTED BY YOU
+                      </Text>
+                      <Text variant="heading" bold style={{ fontSize: 28, display: 'block', margin: '8px 0' }}>
+                        {boardCards.filter((c) => c.publisherId === 'user-1').length}
+                      </Text>
+                      <Text variant="caption" muted>
+                        Issues created by your account
+                      </Text>
+                    </div>
+                    <div style={{ padding: 16, borderRadius: 'var(--radius-card)', border: '1px solid var(--color-line)', backgroundColor: 'var(--color-surface)' }}>
+                      <Text variant="caption" bold muted style={{ textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                        WORKSPACES
+                      </Text>
+                      <Text variant="heading" bold style={{ fontSize: 28, display: 'block', margin: '8px 0' }}>
+                        {mockProjects.length}
+                      </Text>
+                      <Text variant="caption" muted>
+                        Projects you are collaborating in
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeSidenavPage === 'projects' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <Text variant="heading" bold>
+                      All Projects &amp; Spaces
+                    </Text>
+                    <Text variant="caption" muted style={{ display: 'block', marginTop: 2 }}>
+                      Explore team projects, boards, and delivery spaces.
+                    </Text>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
+                    {mockProjects.map((p) => (
+                      <ProjectCard
+                        key={p.id}
+                        project={p}
+                        members={MOCK_USERS.slice(0, 3)}
+                        issueCounts={{
+                          todo: 2,
+                          inProgress: 3,
+                          done: 4,
+                        }}
+                        onPress={() => {
+                          setSidenavCurrentProject(p);
+                          setActiveSidenavPage('board');
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeSidenavPage === 'activity' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <Text variant="heading" bold>
+                      Project Activity Stream
+                    </Text>
+                    <Text variant="caption" muted style={{ display: 'block', marginTop: 2 }}>
+                      Real-time chronological log of updates, work logs, assignments, and status transitions.
+                    </Text>
+                  </div>
+                  <ActivityLog logs={boardActivityLogs} users={MOCK_USERS} title="LIVE AUDIT STREAM" />
+                </div>
+              )}
+
+              {activeSidenavPage === 'notifications' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <Text variant="heading" bold>
+                        Notifications ({sidenavUnreadCount} unread)
+                      </Text>
+                      <Text variant="caption" muted style={{ display: 'block', marginTop: 2 }}>
+                        Recent mentions, status changes, and card assignments.
+                      </Text>
+                    </div>
+                    {sidenavUnreadCount > 0 && (
+                      <Button
+                        label="Mark All as Read"
+                        variant="secondary"
+                        size="sm"
+                        onPress={() => setSidenavUnreadCount(0)}
+                      />
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ padding: 14, borderRadius: 'var(--radius-card)', border: '1px solid var(--color-line)', backgroundColor: 'var(--color-surface)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar name="Sarah Connor" size="sm" />
+                      <div style={{ flex: 1 }}>
+                        <Text variant="bodySmall" bold>
+                          Sarah Connor moved FIELD-1 to Done
+                        </Text>
+                        <Text variant="caption" muted style={{ display: 'block' }}>
+                          10 minutes ago · Fieldnotes Core
+                        </Text>
+                      </div>
+                      <Badge label="New" variant="accent" size="sm" />
+                    </div>
+                    <div style={{ padding: 14, borderRadius: 'var(--radius-card)', border: '1px solid var(--color-line)', backgroundColor: 'var(--color-surface)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar name="David Kim" size="sm" />
+                      <div style={{ flex: 1 }}>
+                        <Text variant="bodySmall" bold>
+                          David Kim assigned FIELD-3 to you
+                        </Text>
+                        <Text variant="caption" muted style={{ display: 'block' }}>
+                          1 hour ago · Fieldnotes Core
+                        </Text>
+                      </div>
+                      <Badge label="New" variant="accent" size="sm" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeSidenavPage === 'settings' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <Text variant="heading" bold>
+                      Project Settings — {sidenavCurrentProject.name}
+                    </Text>
+                    <Text variant="caption" muted style={{ display: 'block', marginTop: 2 }}>
+                      Manage project details, default columns, and team members.
+                    </Text>
+                  </div>
+                  <div style={{ padding: 18, borderRadius: 'var(--radius-card)', border: '1px solid var(--color-line)', backgroundColor: 'var(--color-surface)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div>
+                      <Text variant="caption" bold muted style={{ textTransform: 'uppercase' }}>
+                        PROJECT KEY
+                      </Text>
+                      <Text variant="bodySmall" bold style={{ display: 'block', marginTop: 4 }}>
+                        {sidenavCurrentProject.key}
+                      </Text>
+                    </div>
+                    <div>
+                      <Text variant="caption" bold muted style={{ textTransform: 'uppercase' }}>
+                        DESCRIPTION
+                      </Text>
+                      <Text variant="bodySmall" style={{ display: 'block', marginTop: 4 }}>
+                        {sidenavCurrentProject.description}
+                      </Text>
+                    </div>
+                    <div>
+                      <Text variant="caption" bold muted style={{ textTransform: 'uppercase' }}>
+                        TEAM MEMBERS
+                      </Text>
+                      <div style={{ marginTop: 6 }}>
+                        <AvatarGroup users={MOCK_USERS} max={5} size="sm" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* ================================================================= */}
         {/* CARD & CARD DETAIL SHOWCASE */}
         {/* ================================================================= */}
