@@ -1,0 +1,8 @@
+/* UserChip — active (pressed) feedback; pseudo-classes cannot be inlined */
+[role='button'].jira-user-chip:active {
+  opacity: 0.7;
+}
+
+button.jira-user-chip-remove:active {
+  background-color: var(--color-warn-soft);
+}

@@ -1,4 +1,4 @@
-import { CardRole } from '../types/card';
+import type { CardRole } from '../types/card';
 
 export function getCardRole(
   currentUserId: string,

@@ -1,4 +1,4 @@
-﻿import { BoardColumn } from '../types/board';
+﻿import type { BoardColumn } from '../types/board';
 
 export const DEFAULT_COLUMNS: Omit<BoardColumn, 'id' | 'projectId'>[] = [
   { title: 'To Do', order: 0, color: '#6B6A63' },

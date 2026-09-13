@@ -1,4 +1,4 @@
-import { ActivityLog } from '../types/activity';
+import type { ActivityLog } from '../types/activity';
 
 export function formatActivityMessage(log: ActivityLog, actorName: string): string {
   switch (log.action) {

@@ -1,9 +1,9 @@
-import { User } from '../types/user';
-import { Project } from '../types/project';
-import { Board, BoardColumn } from '../types/board';
-import { Card } from '../types/card';
-import { Comment } from '../types/comment';
-import { ActivityLog } from '../types/activity';
+import type { User } from '../types/user';
+import type { Project } from '../types/project';
+import type { Board, BoardColumn } from '../types/board';
+import type { Card } from '../types/card';
+import type { Comment } from '../types/comment';
+import type { ActivityLog } from '../types/activity';
 
 export const mockUsers: User[] = [
   { id: 'user-1', name: 'Alex Morgan', email: 'alex@fieldnotes.dev', initials: 'AM' },
