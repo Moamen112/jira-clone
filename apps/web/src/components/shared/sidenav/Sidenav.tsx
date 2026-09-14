@@ -1,47 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import type { FC, ReactNode } from 'react';
-import { Text, Badge, Button, Divider } from '../../base';
+import { Text, Badge, Divider } from '../../base';
 import { Avatar } from '../avatar';
 import type { SidenavProps, SidenavPage } from './types';
 
 // ============================================================================
 // ICONS
 // ============================================================================
-
-const JiraLogoIcon: FC<{ size?: number }> = ({ size = 20 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 }}
-  >
-    <path
-      d="M11.5 2.5C7.36 6.64 7.36 13.36 11.5 17.5L7 22C0.92 15.92 0.92 6.08 7 0L11.5 2.5Z"
-      fill="var(--color-accent)"
-    />
-    <path
-      d="M12.5 6.5C14.71 8.71 14.71 12.29 12.5 14.5L17 19C21.42 14.58 21.42 7.42 17 3L12.5 6.5Z"
-      fill="var(--color-ink)"
-    />
-  </svg>
-);
-
-const PlusIcon: FC<{ size?: number }> = ({ size = 16 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="12" y1="5" x2="12" y2="19" />
-    <line x1="5" y1="12" x2="19" y2="12" />
-  </svg>
-);
 
 const KanbanIcon: FC<{ size?: number }> = ({ size = 17 }) => (
   <svg
@@ -161,7 +126,7 @@ const SettingsIcon: FC<{ size?: number }> = ({ size = 17 }) => (
   </svg>
 );
 
-const ChevronLeftIcon: FC<{ size?: number }> = ({ size = 16 }) => (
+const PanelLeftCloseIcon: FC<{ size?: number }> = ({ size = 16 }) => (
   <svg
     width={size}
     height={size}
@@ -171,12 +136,15 @@ const ChevronLeftIcon: FC<{ size?: number }> = ({ size = 16 }) => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 }}
   >
-    <polyline points="15 18 9 12 15 6" />
+    <rect width="18" height="18" x="3" y="3" rx="2" />
+    <path d="M9 3v18" />
+    <path d="m16 15-3-3 3-3" />
   </svg>
 );
 
-const ChevronRightIcon: FC<{ size?: number }> = ({ size = 16 }) => (
+const PanelLeftOpenIcon: FC<{ size?: number }> = ({ size = 16 }) => (
   <svg
     width={size}
     height={size}
@@ -186,8 +154,11 @@ const ChevronRightIcon: FC<{ size?: number }> = ({ size = 16 }) => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 }}
   >
-    <polyline points="9 18 15 12 9 6" />
+    <rect width="18" height="18" x="3" y="3" rx="2" />
+    <path d="M9 3v18" />
+    <path d="m13 15 3-3-3-3" />
   </svg>
 );
 
@@ -273,7 +244,6 @@ export const Sidenav: FC<SidenavProps> = ({
   onSelectProject,
   currentUser,
   unreadNotificationsCount = 0,
-  onCreateIssue,
   collapsed = false,
   onToggleCollapse,
   isDark = false,
@@ -297,6 +267,26 @@ export const Sidenav: FC<SidenavProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [projectMenuOpen]);
+
+  // Keyboard shortcut: toggle sidebar on '['
+  useEffect(() => {
+    if (!onToggleCollapse) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement)?.isContentEditable
+      ) {
+        return;
+      }
+      if (e.key === '[' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        onToggleCollapse(!collapsed);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [collapsed, onToggleCollapse]);
 
   const width = collapsed ? 68 : 248;
 
@@ -414,109 +404,6 @@ export const Sidenav: FC<SidenavProps> = ({
         ...style,
       }}
     >
-      {/* ================================================================= */}
-      {/* TOP HEADER: BRAND & COLLAPSE TOGGLE */}
-      {/* ================================================================= */}
-      <div
-        style={{
-          padding: collapsed ? '16px 12px 12px' : '16px 14px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'space-between',
-          borderBottom: '1px solid var(--color-line)',
-          gap: 8,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-          <JiraLogoIcon size={22} />
-          {!collapsed && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-              <Text variant="subheading" bold style={{ whiteSpace: 'nowrap' }}>
-                Jira Clone
-              </Text>
-              <Badge label="Web" variant="neutral" size="sm" />
-            </div>
-          )}
-        </div>
-
-        {/* Collapse / Expand Toggle Button */}
-        {onToggleCollapse && (
-          <button
-            type="button"
-            onClick={() => onToggleCollapse(!collapsed)}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 26,
-              height: 26,
-              borderRadius: 'var(--radius-pill)',
-              border: '1px solid var(--color-line)',
-              backgroundColor: 'var(--color-paper)',
-              color: 'var(--color-ink-muted)',
-              cursor: 'pointer',
-              flexShrink: 0,
-              transition: 'background-color 150ms ease, color 150ms ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--color-surface)';
-              e.currentTarget.style.color = 'var(--color-ink)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--color-paper)';
-              e.currentTarget.style.color = 'var(--color-ink-muted)';
-            }}
-          >
-            {collapsed ? <ChevronRightIcon size={14} /> : <ChevronLeftIcon size={14} />}
-          </button>
-        )}
-      </div>
-
-      {/* ================================================================= */}
-      {/* QUICK CREATE ISSUE ACTION */}
-      {/* ================================================================= */}
-      {onCreateIssue && (
-        <div style={{ padding: collapsed ? '12px 10px 6px' : '12px 12px 6px' }}>
-          {collapsed ? (
-            <button
-              type="button"
-              onClick={onCreateIssue}
-              title="Create Issue"
-              aria-label="Create Issue"
-              style={{
-                width: '100%',
-                height: 38,
-                borderRadius: 'var(--radius-card)',
-                border: 'none',
-                backgroundColor: 'var(--color-accent)',
-                color: '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'opacity 150ms ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.9')}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
-            >
-              <PlusIcon size={18} />
-            </button>
-          ) : (
-            <Button
-              label="Create Issue"
-              leftIcon={<PlusIcon size={16} />}
-              variant="primary"
-              size="sm"
-              fullWidth
-              onPress={onCreateIssue}
-              style={{ justifyContent: 'center' }}
-            />
-          )}
-        </div>
-      )}
-
       {/* ================================================================= */}
       {/* CURRENT PROJECT CONTEXT & SWITCHER */}
       {/* ================================================================= */}
@@ -929,6 +816,78 @@ export const Sidenav: FC<SidenavProps> = ({
                 <LogOutIcon size={14} />
               </button>
             )}
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* BOTTOM COLLAPSE / EXPAND TOGGLE */}
+        {/* ================================================================= */}
+        {onToggleCollapse && (
+          <div
+            style={{
+              borderTop: '1px solid var(--color-line)',
+              paddingTop: 6,
+              marginTop: 2,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => onToggleCollapse(!collapsed)}
+              title={collapsed ? 'Expand sidebar ( [ )' : 'Collapse sidebar ( [ )'}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: collapsed ? 'center' : 'space-between',
+                gap: 10,
+                padding: collapsed ? '8px 0' : '8px 10px',
+                borderRadius: 'var(--radius-card)',
+                border: 'none',
+                backgroundColor: 'transparent',
+                color: 'var(--color-ink-muted)',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 500,
+                transition: 'background-color 150ms ease, color 150ms ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--color-paper)';
+                e.currentTarget.style.color = 'var(--color-ink)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--color-ink-muted)';
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                <span style={{ display: 'inline-flex', flexShrink: 0 }}>
+                  {collapsed ? <PanelLeftOpenIcon size={16} /> : <PanelLeftCloseIcon size={16} />}
+                </span>
+                {!collapsed && (
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Collapse sidebar
+                  </span>
+                )}
+              </div>
+              {!collapsed && (
+                <kbd
+                  style={{
+                    fontSize: 11,
+                    padding: '2px 5px',
+                    borderRadius: 'var(--radius-input)',
+                    backgroundColor: 'var(--color-paper)',
+                    border: '1px solid var(--color-line)',
+                    color: 'var(--color-ink-muted)',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    lineHeight: 1,
+                    flexShrink: 0,
+                  }}
+                >
+                  [
+                </kbd>
+              )}
+            </button>
           </div>
         )}
       </div>

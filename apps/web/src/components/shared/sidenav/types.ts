@@ -35,8 +35,6 @@ export interface SidenavProps {
   currentUser?: User | null;
   /** Unread notification badge count */
   unreadNotificationsCount?: number;
-  /** Quick create issue callback */
-  onCreateIssue?: () => void;
   /** Whether the sidebar is collapsed into an icon-only rail (default: false) */
   collapsed?: boolean;
   /** Callback fired when collapse state is toggled */

@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    Jira Clone - Fieldnotes Design Tokens (globals.css)
    Converted from TypeScript design tokens for universal CSS reuse.
    ========================================================================== */
@@ -48,6 +48,7 @@
   /* Layout */
   --layout-screen-margin: 16px;
   --layout-tap-target: 44px; /* minimum tap target height */
+  --navbar-height: 48px;
 
   /* Motion & Animation */
   --motion-screen-transition-ms: 200ms;

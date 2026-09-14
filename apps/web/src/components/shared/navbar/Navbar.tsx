@@ -103,10 +103,6 @@ const LANDING_LINKS: NavbarLink[] = [
   { label: "Docs", href: "#docs" },
 ];
 
-const HOME_LINKS: NavbarLink[] = [
-  { label: "Home", href: "/home", active: true },
-  { label: "Spaces", href: "/spaces" },
-];
 
 const MODE_LABELS: Record<NavbarMode, string> = {
   "guest-landing": "GUEST · LANDING",
@@ -118,7 +114,7 @@ const MODE_LABELS: Record<NavbarMode, string> = {
    Mode resolution — computes the conditional-render case
    -------------------------------------------------------------------------- */
 
-export function getNavbarMode(
+function getNavbarMode(
   user: User | null | undefined,
   page: NavbarPage,
 ): NavbarMode {
@@ -273,6 +269,25 @@ const SunIcon: FC<IconProps> = ({ size = 14 }) => (
   </svg>
 );
 
+const JiraLogoIcon: FC<{ size?: number }> = ({ size = 22 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }}
+  >
+    <path
+      d="M11.5 2.5C7.36 6.64 7.36 13.36 11.5 17.5L7 22C0.92 15.92 0.92 6.08 7 0L11.5 2.5Z"
+      fill="var(--color-accent)"
+    />
+    <path
+      d="M12.5 6.5C14.71 8.71 14.71 12.29 12.5 14.5L17 19C21.42 14.58 21.42 7.42 17 3L12.5 6.5Z"
+      fill="var(--color-ink)"
+    />
+  </svg>
+);
+
 /* --------------------------------------------------------------------------
    Navbar
    -------------------------------------------------------------------------- */
@@ -281,7 +296,7 @@ export const Navbar: FC<NavbarProps> = ({
   user,
   page = "landing",
   brand = "Jira Clone",
-  logoLabel = "J",
+  logoLabel: _logoLabel = "J",
   links,
   onNavigate,
   onLogIn,
@@ -305,7 +320,7 @@ export const Navbar: FC<NavbarProps> = ({
 }) => {
   const mode = getNavbarMode(user, page);
   const resolvedLinks =
-    links ?? (mode === "authenticated-home" ? HOME_LINKS : LANDING_LINKS);
+    links ?? (mode === "authenticated-home" ? [] : LANDING_LINKS);
 
   const handleBrandPress = () => onNavigate?.("/");
   const handleLinkPress = (link: NavbarLink) => onNavigate?.(link.href);
@@ -679,8 +694,9 @@ export const Navbar: FC<NavbarProps> = ({
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: 16,
-        minHeight: "var(--layout-tap-target)",
+        minHeight: "var(--navbar-height, 48px)",
+        height: "var(--navbar-height, 48px)",
+        flexShrink: 0,
         padding: "0 24px",
         boxSizing: "border-box",
         backgroundColor: "var(--color-surface)",
@@ -716,28 +732,7 @@ export const Navbar: FC<NavbarProps> = ({
             flexShrink: 0,
           }}
         >
-          <span
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: "var(--radius-card)",
-              backgroundColor: "var(--color-accent)",
-              color: "#FFFFFF",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              userSelect: "none",
-            }}
-          >
-            <Text
-              variant="label"
-              bold
-              color="#FFFFFF"
-              style={{ fontSize: 14, lineHeight: 1 }}
-            >
-              {logoLabel}
-            </Text>
-          </span>
+          <JiraLogoIcon size={24} />
           <Text variant="subheading" bold>
             {brand}
           </Text>

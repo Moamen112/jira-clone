@@ -1,0 +1,64 @@
+@import '../home/HomePage.module.css';
+
+.spacesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.spaceCard {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 150ms ease, transform 150ms ease;
+  cursor: pointer;
+}
+
+.spaceCard:hover {
+  border-color: var(--color-accent);
+  transform: translateY(-2px);
+}
+
+.spaceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.spaceKey {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+}
+
+.spaceName {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.spaceDesc {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.spaceMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line);
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
