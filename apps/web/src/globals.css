@@ -7,6 +7,7 @@
    Root Variables (Light Theme & Shared Tokens)
    -------------------------------------------------------------------------- */
 :root {
+  color-scheme: light;
   /* Color Palette - Light Theme */
   --color-paper: #EDEBE4;       /* App background */
   --color-surface: #F7F6F2;     /* Cards, sheets, input fields */
@@ -17,6 +18,9 @@
   --color-accent-soft: #DCEAE6; /* Accent backgrounds (chips, highlights) */
   --color-warn: #B8460E;        /* Errors, destructive actions */
   --color-warn-soft: #F5DFD3;   /* Error backgrounds */
+  --color-background: var(--color-paper);
+  --color-icon: var(--color-ink-muted);
+  --color-icon-active: var(--color-accent);
 
   /* Typography - Font Families */
   --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -61,6 +65,7 @@
    Dark Theme Palette
    -------------------------------------------------------------------------- */
 [data-theme='dark'] {
+  color-scheme: dark;
   --color-paper: #16181A;
   --color-surface: #1F2220;
   --color-ink: #EDEBE4;
@@ -70,11 +75,15 @@
   --color-accent-soft: #1E3530;
   --color-warn: #E37650;
   --color-warn-soft: #3A241C;
+  --color-background: var(--color-paper);
+  --color-icon: var(--color-ink-muted);
+  --color-icon-active: var(--color-accent);
 }
 
 /* Automatic dark theme preference fallback */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
+    color-scheme: dark;
     --color-paper: #16181A;
     --color-surface: #1F2220;
     --color-ink: #EDEBE4;
@@ -84,6 +93,9 @@
     --color-accent-soft: #1E3530;
     --color-warn: #E37650;
     --color-warn-soft: #3A241C;
+    --color-background: var(--color-paper);
+    --color-icon: var(--color-ink-muted);
+    --color-icon-active: var(--color-accent);
   }
 }
 
@@ -102,6 +114,85 @@ html, body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+svg {
+  color: inherit;
+}
+
+/* --------------------------------------------------------------------------
+   Native Date Input & Calendar Picker Indicator
+   -------------------------------------------------------------------------- */
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="time"] {
+  color-scheme: inherit;
+}
+
+[data-theme='dark'] input[type="date"],
+[data-theme='dark'] input[type="datetime-local"],
+[data-theme='dark'] input[type="month"],
+[data-theme='dark'] input[type="time"] {
+  color-scheme: dark;
+}
+
+[data-theme='light'] input[type="date"],
+[data-theme='light'] input[type="datetime-local"],
+[data-theme='light'] input[type="month"],
+[data-theme='light'] input[type="time"] {
+  color-scheme: light;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 150ms ease, filter 150ms ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+input[type="month"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+[data-theme='dark'] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme='dark'] input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+[data-theme='dark'] input[type="month"]::-webkit-calendar-picker-indicator,
+[data-theme='dark'] input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+}
+
+[data-theme='dark'] input[type="date"]::-webkit-calendar-picker-indicator:hover,
+[data-theme='dark'] input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+[data-theme='dark'] input[type="month"]::-webkit-calendar-picker-indicator:hover,
+[data-theme='dark'] input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  filter: invert(1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) input[type="date"]::-webkit-calendar-picker-indicator,
+  :root:not([data-theme='light']) input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  :root:not([data-theme='light']) input[type="month"]::-webkit-calendar-picker-indicator,
+  :root:not([data-theme='light']) input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.85);
+  }
+
+  :root:not([data-theme='light']) input[type="date"]::-webkit-calendar-picker-indicator:hover,
+  :root:not([data-theme='light']) input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+  :root:not([data-theme='light']) input[type="month"]::-webkit-calendar-picker-indicator:hover,
+  :root:not([data-theme='light']) input[type="time"]::-webkit-calendar-picker-indicator:hover {
+    filter: invert(1);
+  }
 }
 
 /* --------------------------------------------------------------------------

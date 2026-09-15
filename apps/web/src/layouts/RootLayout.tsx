@@ -2,16 +2,8 @@ import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Navbar, type NavbarPage } from '../components/shared/navbar';
 import { useAppDispatch, useAppSelector, selectThemeMode, toggleTheme } from '../store';
 import { ROUTES } from '../routes/paths';
-import type { User } from '@jira-clone/shared';
+import { mockCurrentUser } from '@jira-clone/shared';
 import styles from './RootLayout.module.css';
-
-const MOCK_USER: User = {
-  id: 'user-1',
-  name: 'Alex Morgan',
-  email: 'alex@fieldnotes.dev',
-  initials: 'AM',
-  avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-};
 
 export function RootLayout() {
   const mode = useAppSelector(selectThemeMode);
@@ -33,7 +25,7 @@ export function RootLayout() {
     <div className={styles.container}>
       {/* Universal Navbar for ALL pages */}
       <Navbar
-        user={isProtectedPath ? MOCK_USER : null}
+        user={isProtectedPath ? mockCurrentUser : null}
         page={pageMode}
         links={isProtectedPath ? [] : undefined}
         brand="Jira Clone"

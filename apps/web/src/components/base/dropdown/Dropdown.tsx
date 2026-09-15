@@ -98,10 +98,15 @@ export const Dropdown: FC<DropdownProps> = ({
           backgroundColor: disabled ? 'var(--color-paper)' : 'var(--color-surface)',
           opacity: disabled ? 0.5 : 1,
           cursor: disabled ? 'default' : 'pointer',
+          color: 'var(--color-ink)',
         }}
       >
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-          {selectedOption?.icon && selectedOption.icon}
+          {selectedOption?.icon && (
+            <span style={{ display: 'inline-flex', color: 'var(--color-ink-muted)' }}>
+              {selectedOption.icon}
+            </span>
+          )}
           <Text
             variant="body"
             numberOfLines={1}
@@ -111,9 +116,9 @@ export const Dropdown: FC<DropdownProps> = ({
             {selectedOption ? selectedOption.label : placeholder}
           </Text>
         </span>
-        <Text variant="caption" muted style={{ fontSize: 10 }}>
+        <span style={{ fontSize: 10, color: 'var(--color-ink-muted)' }} aria-hidden="true">
           ▼
-        </Text>
+        </span>
       </button>
 
       {error && (

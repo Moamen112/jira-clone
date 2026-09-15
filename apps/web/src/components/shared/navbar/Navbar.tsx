@@ -560,6 +560,7 @@ export const Navbar: FC<NavbarProps> = ({
       cursor: "pointer",
       borderRadius: "var(--radius-input)",
       textAlign: "left",
+      color: "var(--color-ink)",
     };
 
     return (
@@ -609,7 +610,9 @@ export const Navbar: FC<NavbarProps> = ({
           onClick={handleViewProfile}
           style={menuItem}
         >
-          <PersonIcon size={14} />
+          <span style={{ display: "inline-flex", color: "var(--color-ink-muted)" }}>
+            <PersonIcon size={14} />
+          </span>
           <Text variant="label" style={{ flex: 1 }}>
             View profile
           </Text>
@@ -635,7 +638,9 @@ export const Navbar: FC<NavbarProps> = ({
                 flex: 1,
               }}
             >
-              {isDark ? <SunIcon size={14} /> : <MoonIcon size={14} />}
+              <span style={{ display: "inline-flex", color: "var(--color-ink-muted)" }}>
+                {isDark ? <SunIcon size={14} /> : <MoonIcon size={14} />}
+              </span>
               <Text variant="label">{isDark ? "Light mode" : "Dark mode"}</Text>
             </span>
             <span
@@ -674,7 +679,9 @@ export const Navbar: FC<NavbarProps> = ({
           onClick={handleLogout}
           style={{ ...menuItem, marginTop: 4 }}
         >
-          <PersonIcon size={14} />
+          <span style={{ display: "inline-flex", color: "var(--color-warn)" }}>
+            <PersonIcon size={14} />
+          </span>
           <Text variant="label" color="var(--color-warn)" style={{ flex: 1 }}>
             Log out
           </Text>

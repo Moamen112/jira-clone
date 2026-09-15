@@ -79,14 +79,16 @@ export const CommentSection: FC<CommentSectionProps> = ({
       }}
     >
       {/* Section Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Text variant="subheading" bold>
-            {title}
-          </Text>
-          <Badge label={String(comments.length)} variant="neutral" size="sm" />
+      {title ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Text variant="subheading" bold>
+              {title}
+            </Text>
+            <Badge label={String(comments.length)} variant="neutral" size="sm" />
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {/* Composer */}
       {canComment && (

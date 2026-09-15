@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { CSSProperties, FC } from 'react';
+import { useState } from "react";
+import type { CSSProperties, FC } from "react";
 import {
   type Card as CardType,
   type CardRole,
@@ -10,17 +10,17 @@ import {
   type ActivityLog as ActivityLogType,
   getCardRole,
   cardPermissions,
-} from '@jira-clone/shared';
-import { Modal } from '../modal/Modal';
-import { Text, Input, Textarea, Button, Badge } from '../../base';
-import { PriorityBadge } from '../priority-badge';
-import { AssigneeSelect } from '../assignee-select';
-import { PublisherInfo } from '../publisher-info';
-import { StatusBar } from '../status-bar';
-import { CommentSection } from '../comment-section';
-import { ConfirmDialog } from '../confirm-dialog';
-import { Accordion } from '../accordion';
-import { ActivityLog } from '../activity-log';
+} from "@jira-clone/shared";
+import { Modal } from "../modal/Modal";
+import { Text, Input, Textarea, Button, Badge } from "../../base";
+import { PriorityBadge } from "../priority-badge";
+import { AssigneeSelect } from "../assignee-select";
+import { PublisherInfo } from "../publisher-info";
+import { StatusBar } from "../status-bar";
+import { CommentSection } from "../comment-section";
+import { ConfirmDialog } from "../confirm-dialog";
+import { Accordion } from "../accordion";
+import { ActivityLog } from "../activity-log";
 
 export interface CardDetailProps {
   /** Visibility toggle */
@@ -55,7 +55,30 @@ export interface CardDetailProps {
   style?: CSSProperties;
 }
 
-const PRIORITIES: CardPriority[] = ['lowest', 'low', 'medium', 'high', 'highest'];
+const PRIORITIES: CardPriority[] = [
+  "lowest",
+  "low",
+  "medium",
+  "high",
+  "highest",
+];
+
+const toDateInputValue = (dateStr?: string | null): string => {
+  if (!dateStr) return "";
+  return dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
+};
+
+const checkIsOverdue = (dueDateStr?: string | null): boolean => {
+  if (!dueDateStr) return false;
+  try {
+    const d = new Date(dueDateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return !isNaN(d.getTime()) && d < today;
+  } catch {
+    return false;
+  }
+};
 
 const PulseIcon: FC<{ size?: number }> = ({ size = 18 }) => (
   <svg
@@ -67,9 +90,25 @@ const PulseIcon: FC<{ size?: number }> = ({ size = 18 }) => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
-    style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 }}
+    style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }}
   >
     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+  </svg>
+);
+
+const ChatBubblesIcon: FC<{ size?: number }> = ({ size = 18 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }}
+  >
+    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
   </svg>
 );
 
@@ -91,18 +130,30 @@ export const CardDetail: FC<CardDetailProps> = ({
   style,
 }) => {
   // Controlled form draft state initialized directly from card
-  const [draftTitle, setDraftTitle] = useState(card?.title ?? '');
-  const [draftDescription, setDraftDescription] = useState(card?.description ?? '');
-  const [draftColumnId, setDraftColumnId] = useState(card?.columnId ?? '');
-  const [draftAssigneeId, setDraftAssigneeId] = useState<string | null>(card?.assigneeId ?? null);
+  const [draftTitle, setDraftTitle] = useState(card?.title ?? "");
+  const [draftDescription, setDraftDescription] = useState(
+    card?.description ?? "",
+  );
+  const [draftColumnId, setDraftColumnId] = useState(card?.columnId ?? "");
+  const [draftAssigneeId, setDraftAssigneeId] = useState<string | null>(
+    card?.assigneeId ?? null,
+  );
   const [draftAssigneeIds, setDraftAssigneeIds] = useState<string[]>(
     card?.assigneeIds && card.assigneeIds.length > 0
       ? card.assigneeIds
       : card?.assigneeId
         ? [card.assigneeId]
-        : []
+        : [],
   );
-  const [draftPriority, setDraftPriority] = useState<CardPriority>(card?.priority ?? 'medium');
+  const [draftPriority, setDraftPriority] = useState<CardPriority>(
+    card?.priority ?? "medium",
+  );
+  const [draftStartDate, setDraftStartDate] = useState(
+    toDateInputValue(card?.startDate),
+  );
+  const [draftDueDate, setDraftDueDate] = useState(
+    toDateInputValue(card?.dueDate),
+  );
   const [cardIdTracking, setCardIdTracking] = useState(card?.id);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -111,7 +162,7 @@ export const CardDetail: FC<CardDetailProps> = ({
   if (card && card.id !== cardIdTracking) {
     setCardIdTracking(card.id);
     setDraftTitle(card.title);
-    setDraftDescription(card.description ?? '');
+    setDraftDescription(card.description ?? "");
     setDraftColumnId(card.columnId);
     setDraftAssigneeId(card.assigneeId ?? null);
     setDraftAssigneeIds(
@@ -119,9 +170,11 @@ export const CardDetail: FC<CardDetailProps> = ({
         ? card.assigneeIds
         : card.assigneeId
           ? [card.assigneeId]
-          : []
+          : [],
     );
     setDraftPriority(card.priority);
+    setDraftStartDate(toDateInputValue(card.startDate));
+    setDraftDueDate(toDateInputValue(card.dueDate));
   }
 
   if (!card || !visible) return null;
@@ -129,19 +182,22 @@ export const CardDetail: FC<CardDetailProps> = ({
   // Derive permissions
   const role: CardRole =
     currentUserRole ||
-    (currentUserId ? getCardRole(currentUserId, card) : 'viewer');
+    (currentUserId ? getCardRole(currentUserId, card) : "viewer");
 
   const canEditTitle = cardPermissions.canEditTitle(role);
   const canEditDescription = cardPermissions.canEditDescription(role);
   const canChangeAssignee = cardPermissions.canChangeAssignee(role);
   const canMoveStatus = cardPermissions.canMoveStatus(role);
+  const canEditDates = cardPermissions.canEditDates(role);
   const canDeleteCard = cardPermissions.canDeleteCard(role);
+
+  const isOverdue = draftDueDate ? checkIsOverdue(draftDueDate) : false;
 
   const publisher = users.find((u) => u.id === card.publisherId) || {
     id: card.publisherId,
-    name: 'Unknown User',
-    email: '',
-    initials: '?',
+    name: "Unknown User",
+    email: "",
+    initials: "?",
   };
 
   const currentUser = users.find((u) => u.id === currentUserId) || null;
@@ -149,21 +205,29 @@ export const CardDetail: FC<CardDetailProps> = ({
   const relevantLogs = activityLogs
     ? activityLogs.filter((log) => log.cardId === card.id)
     : [];
+  const relevantComments = comments
+    ? comments.filter((c) => c.cardId === card.id)
+    : [];
 
   const roleLabel =
-    role === 'publisher'
-      ? 'Publisher'
-      : role === 'assignee'
-        ? 'Assignee'
-        : 'Viewer';
+    role === "publisher"
+      ? "Publisher"
+      : role === "assignee"
+        ? "Assignee"
+        : "Viewer";
 
   const hasChanges =
     draftTitle !== card.title ||
-    draftDescription !== (card.description ?? '') ||
+    draftDescription !== (card.description ?? "") ||
     draftColumnId !== card.columnId ||
     draftAssigneeId !== (card.assigneeId ?? null) ||
     draftPriority !== card.priority ||
-    JSON.stringify(draftAssigneeIds) !== JSON.stringify(card.assigneeIds || (card.assigneeId ? [card.assigneeId] : []));
+    draftStartDate !== toDateInputValue(card.startDate) ||
+    draftDueDate !== toDateInputValue(card.dueDate) ||
+    JSON.stringify(draftAssigneeIds) !==
+      JSON.stringify(
+        card.assigneeIds || (card.assigneeId ? [card.assigneeId] : []),
+      );
 
   const handleSave = async () => {
     if (!onSave || !hasChanges) return;
@@ -178,6 +242,8 @@ export const CardDetail: FC<CardDetailProps> = ({
         assigneeId: draftAssigneeId,
         assigneeIds: draftAssigneeIds,
         priority: draftPriority,
+        startDate: draftStartDate ? draftStartDate : undefined,
+        dueDate: draftDueDate ? draftDueDate : undefined,
         updatedAt: new Date().toISOString(),
       });
     } finally {
@@ -200,12 +266,19 @@ export const CardDetail: FC<CardDetailProps> = ({
         presentation="dialog"
         contentStyle={{
           maxWidth: 1040,
-          width: '95%',
-          maxHeight: '90vh',
+          width: "95%",
+          maxHeight: "90vh",
           ...style,
         }}
         footer={
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+            }}
+          >
             <div>
               {canDeleteCard && onDelete && (
                 <Button
@@ -217,7 +290,7 @@ export const CardDetail: FC<CardDetailProps> = ({
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <Button
                 label="Cancel"
                 variant="ghost"
@@ -236,29 +309,29 @@ export const CardDetail: FC<CardDetailProps> = ({
           </div>
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {/* Top Header Row */}
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
               gap: 12,
               paddingBottom: 12,
-              borderBottom: '1px solid var(--color-line)',
+              borderBottom: "1px solid var(--color-line)",
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Badge label={card.key} variant="mono" size="md" />
               <PriorityBadge priority={draftPriority} size="md" />
               {currentColumn && <StatusBar status={currentColumn} size="md" />}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <Badge
                 label={roleLabel}
-                variant={role === 'publisher' ? 'accent' : 'neutral'}
+                variant={role === "publisher" ? "accent" : "neutral"}
                 size="sm"
               />
             </div>
@@ -267,18 +340,23 @@ export const CardDetail: FC<CardDetailProps> = ({
           {/* Main 2-Column Grid Layout */}
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'minmax(0, 1fr) minmax(260px, 320px)',
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 1fr) minmax(260px, 320px)",
               gap: 28,
-              alignItems: 'flex-start',
+              alignItems: "flex-start",
             }}
           >
             {/* Left Column: Title, Description, Comments */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               {/* Title Input or Text */}
               <div>
-                <Text variant="caption" muted bold style={{ display: 'block', marginBottom: 4 }}>
-                  TITLE {canEditTitle ? '' : '(read-only)'}
+                <Text
+                  variant="caption"
+                  muted
+                  bold
+                  style={{ display: "block", marginBottom: 4 }}
+                >
+                  TITLE {canEditTitle ? "" : "(read-only)"}
                 </Text>
                 {canEditTitle ? (
                   <Input
@@ -288,7 +366,7 @@ export const CardDetail: FC<CardDetailProps> = ({
                     containerStyle={{ marginBottom: 0 }}
                   />
                 ) : (
-                  <Text variant="heading" bold style={{ display: 'block' }}>
+                  <Text variant="heading" bold style={{ display: "block" }}>
                     {draftTitle}
                   </Text>
                 )}
@@ -296,8 +374,13 @@ export const CardDetail: FC<CardDetailProps> = ({
 
               {/* Description Input or Text */}
               <div>
-                <Text variant="caption" muted bold style={{ display: 'block', marginBottom: 4 }}>
-                  DESCRIPTION {canEditDescription ? '' : '(read-only)'}
+                <Text
+                  variant="caption"
+                  muted
+                  bold
+                  style={{ display: "block", marginBottom: 4 }}
+                >
+                  DESCRIPTION {canEditDescription ? "" : "(read-only)"}
                 </Text>
                 {canEditDescription ? (
                   <Textarea
@@ -308,32 +391,30 @@ export const CardDetail: FC<CardDetailProps> = ({
                     containerStyle={{ marginBottom: 0 }}
                   />
                 ) : (
-                  <Text variant="bodySmall" style={{ display: 'block', whiteSpace: 'pre-wrap' }}>
-                    {draftDescription || 'No description provided.'}
+                  <Text
+                    variant="bodySmall"
+                    style={{ display: "block", whiteSpace: "pre-wrap" }}
+                  >
+                    {draftDescription || "No description provided."}
                   </Text>
                 )}
               </div>
 
-              {/* Discussion & Comments */}
-              <div style={{ paddingTop: 8, borderTop: '1px solid var(--color-line)' }}>
-                <CommentSection
-                  cardId={card.id}
-                  comments={comments.filter((c) => c.cardId === card.id)}
-                  users={users}
-                  currentUser={currentUser}
-                  onAddComment={onAddComment}
-                  onDeleteComment={onDeleteComment}
-                />
-              </div>
-
               {/* Activity Audit Timeline */}
               {activityLogs && (
-                <div style={{ paddingTop: 8, borderTop: '1px solid var(--color-line)' }}>
+                <div
+                  style={{
+                    paddingTop: 8,
+                    borderTop: "1px solid var(--color-line)",
+                  }}
+                >
                   <Accordion
                     title="Activity History"
                     subtitle="Audit log of status changes and edits"
                     icon={<PulseIcon size={18} />}
-                    badge={relevantLogs.length > 0 ? relevantLogs.length : undefined}
+                    badge={
+                      relevantLogs.length > 0 ? relevantLogs.length : undefined
+                    }
                     defaultExpanded={false}
                   >
                     <ActivityLog
@@ -347,17 +428,50 @@ export const CardDetail: FC<CardDetailProps> = ({
                   </Accordion>
                 </div>
               )}
+
+              {/* Discussion & Comments */}
+              <div
+                style={{
+                  paddingTop: 8,
+                  borderTop: "1px solid var(--color-line)",
+                }}
+              >
+                <Accordion
+                  title="Comments"
+                  subtitle="Card discussion and notes"
+                  icon={<ChatBubblesIcon size={18} />}
+                  badge={
+                    relevantComments.length > 0
+                      ? relevantComments.length
+                      : undefined
+                  }
+                  defaultExpanded={true}
+                >
+                  <div style={{ paddingTop: 4 }}>
+                    <CommentSection
+                      cardId={card.id}
+                      comments={relevantComments}
+                      users={users}
+                      currentUser={currentUser}
+                      title=""
+                      style={{ padding: 0 }}
+                      onAddComment={onAddComment}
+                      onDeleteComment={onDeleteComment}
+                    />
+                  </div>
+                </Accordion>
+              </div>
             </div>
 
             {/* Right Column: Properties & Metadata */}
             <div
               style={{
-                display: 'flex',
-                flexDirection: 'column',
+                display: "flex",
+                flexDirection: "column",
                 gap: 16,
-                backgroundColor: 'var(--color-paper)',
-                border: '1px solid var(--color-line)',
-                borderRadius: 'var(--radius-card)',
+                backgroundColor: "var(--color-paper)",
+                border: "1px solid var(--color-line)",
+                borderRadius: "var(--radius-card)",
                 padding: 16,
               }}
             >
@@ -382,17 +496,25 @@ export const CardDetail: FC<CardDetailProps> = ({
                     setDraftAssigneeIds(ids);
                     setDraftAssigneeId(ids[0] || null);
                   }}
-                  helperText={canChangeAssignee ? undefined : 'Only publishers can reassign this card.'}
+                  helperText={
+                    canChangeAssignee
+                      ? undefined
+                      : "Only publishers can reassign this card."
+                  }
                 />
               </div>
 
               {/* Status / Column Selector */}
               {columns.length > 0 && (
                 <div>
-                  <Text variant="label" bold style={{ display: 'block', marginBottom: 6 }}>
+                  <Text
+                    variant="label"
+                    bold
+                    style={{ display: "block", marginBottom: 6 }}
+                  >
                     Status
                   </Text>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {columns.map((col) => {
                       const isSelected = draftColumnId === col.id;
                       return (
@@ -402,14 +524,16 @@ export const CardDetail: FC<CardDetailProps> = ({
                           disabled={!canMoveStatus}
                           onClick={() => setDraftColumnId(col.id)}
                           style={{
-                            border: `1px solid ${isSelected ? 'var(--color-accent)' : 'var(--color-line)'}`,
-                            backgroundColor: isSelected ? 'var(--color-accent-soft)' : 'var(--color-surface)',
-                            borderRadius: 'var(--radius-pill)',
-                            padding: '4px 10px',
-                            cursor: canMoveStatus ? 'pointer' : 'not-allowed',
+                            border: `1px solid ${isSelected ? "var(--color-accent)" : "var(--color-line)"}`,
+                            backgroundColor: isSelected
+                              ? "var(--color-accent-soft)"
+                              : "var(--color-surface)",
+                            borderRadius: "var(--radius-pill)",
+                            padding: "4px 10px",
+                            cursor: canMoveStatus ? "pointer" : "not-allowed",
                             opacity: canMoveStatus ? 1 : 0.6,
-                            display: 'inline-flex',
-                            alignItems: 'center',
+                            display: "inline-flex",
+                            alignItems: "center",
                             gap: 6,
                           }}
                         >
@@ -417,14 +541,19 @@ export const CardDetail: FC<CardDetailProps> = ({
                             style={{
                               width: 8,
                               height: 8,
-                              borderRadius: 'var(--radius-pill)',
-                              backgroundColor: col.color || 'var(--color-accent)',
+                              borderRadius: "var(--radius-pill)",
+                              backgroundColor:
+                                col.color || "var(--color-accent)",
                             }}
                           />
                           <Text
                             variant="caption"
                             bold={isSelected}
-                            color={isSelected ? 'var(--color-accent)' : 'var(--color-ink)'}
+                            color={
+                              isSelected
+                                ? "var(--color-accent)"
+                                : "var(--color-ink)"
+                            }
                           >
                             {col.title}
                           </Text>
@@ -437,10 +566,14 @@ export const CardDetail: FC<CardDetailProps> = ({
 
               {/* Priority Selector */}
               <div>
-                <Text variant="label" bold style={{ display: 'block', marginBottom: 6 }}>
+                <Text
+                  variant="label"
+                  bold
+                  style={{ display: "block", marginBottom: 6 }}
+                >
                   Priority
                 </Text>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {PRIORITIES.map((p) => {
                     const isSelected = draftPriority === p;
                     return (
@@ -450,11 +583,13 @@ export const CardDetail: FC<CardDetailProps> = ({
                         disabled={!canEditTitle}
                         onClick={() => setDraftPriority(p)}
                         style={{
-                          border: `1px solid ${isSelected ? 'var(--color-accent)' : 'var(--color-line)'}`,
-                          backgroundColor: isSelected ? 'var(--color-accent-soft)' : 'var(--color-surface)',
-                          borderRadius: 'var(--radius-pill)',
-                          padding: '2px 4px',
-                          cursor: canEditTitle ? 'pointer' : 'not-allowed',
+                          border: `1px solid ${isSelected ? "var(--color-accent)" : "var(--color-line)"}`,
+                          backgroundColor: isSelected
+                            ? "var(--color-accent-soft)"
+                            : "var(--color-surface)",
+                          borderRadius: "var(--radius-pill)",
+                          padding: "2px 4px",
+                          cursor: canEditTitle ? "pointer" : "not-allowed",
                           opacity: canEditTitle ? 1 : 0.6,
                         }}
                       >
@@ -462,6 +597,143 @@ export const CardDetail: FC<CardDetailProps> = ({
                       </button>
                     );
                   })}
+                </div>
+              </div>
+
+              {/* Dates: Start Date & Due Date */}
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 12 }}
+              >
+                {/* Start Date */}
+                <div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <Text variant="label" bold>
+                      Start Date
+                    </Text>
+                    {canEditDates && draftStartDate && (
+                      <button
+                        type="button"
+                        onClick={() => setDraftStartDate("")}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          cursor: "pointer",
+                          fontSize: 11,
+                          color: "var(--color-ink-muted)",
+                          textDecoration: "underline",
+                        }}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  {canEditDates ? (
+                    <Input
+                      type="date"
+                      value={draftStartDate}
+                      onChangeText={setDraftStartDate}
+                      containerStyle={{ marginBottom: 0 }}
+                      inputWrapperStyle={{ minHeight: 36, paddingInline: 8 }}
+                      style={{ fontSize: 13 }}
+                    />
+                  ) : (
+                    <Text
+                      variant="bodySmall"
+                      color={
+                        draftStartDate
+                          ? "var(--color-ink)"
+                          : "var(--color-ink-muted)"
+                      }
+                    >
+                      {draftStartDate
+                        ? new Date(draftStartDate).toLocaleDateString(
+                            undefined,
+                            {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            },
+                          )
+                        : "None"}
+                    </Text>
+                  )}
+                </div>
+
+                {/* Due Date */}
+                <div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    >
+                      <Text variant="label" bold>
+                        Due Date
+                      </Text>
+                      {isOverdue && (
+                        <Badge label="Overdue" variant="warn" size="sm" />
+                      )}
+                    </div>
+                    {canEditDates && draftDueDate && (
+                      <button
+                        type="button"
+                        onClick={() => setDraftDueDate("")}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          cursor: "pointer",
+                          fontSize: 11,
+                          color: "var(--color-ink-muted)",
+                          textDecoration: "underline",
+                        }}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  {canEditDates ? (
+                    <Input
+                      type="date"
+                      value={draftDueDate}
+                      onChangeText={setDraftDueDate}
+                      containerStyle={{ marginBottom: 0 }}
+                      inputWrapperStyle={{ minHeight: 36, paddingInline: 8 }}
+                      style={{ fontSize: 13 }}
+                    />
+                  ) : (
+                    <Text
+                      variant="bodySmall"
+                      color={
+                        draftDueDate
+                          ? isOverdue
+                            ? "var(--color-warn)"
+                            : "var(--color-ink)"
+                          : "var(--color-ink-muted)"
+                      }
+                    >
+                      {draftDueDate
+                        ? new Date(draftDueDate).toLocaleDateString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : "None"}
+                    </Text>
+                  )}
                 </div>
               </div>
 

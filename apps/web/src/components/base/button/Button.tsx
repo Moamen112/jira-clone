@@ -81,6 +81,7 @@ export const Button: FC<ButtonProps> = ({
         backgroundColor: getBackground(),
         border: variant === 'secondary' ? '1px solid var(--color-line)' : 'none',
         borderRadius: 'var(--radius-input)',
+        color: getTextColor(),
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',

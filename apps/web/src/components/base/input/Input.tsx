@@ -103,7 +103,16 @@ export const Input: FC<InputProps> = ({
         }}
       >
         {leftIcon && (
-          <span style={{ display: 'inline-flex', marginRight: 8 }}>{leftIcon}</span>
+          <span
+            style={{
+              display: 'inline-flex',
+              marginRight: 8,
+              color: isFocused ? 'var(--color-accent)' : 'var(--color-ink-muted)',
+              transition: 'color 150ms ease',
+            }}
+          >
+            {leftIcon}
+          </span>
         )}
         <input
           type={type}
@@ -133,11 +142,21 @@ export const Input: FC<InputProps> = ({
             border: 'none',
             outline: 'none',
             background: 'transparent',
+            colorScheme: 'inherit',
             ...style,
           }}
         />
         {rightIcon && (
-          <span style={{ display: 'inline-flex', marginLeft: 8 }}>{rightIcon}</span>
+          <span
+            style={{
+              display: 'inline-flex',
+              marginLeft: 8,
+              color: isFocused ? 'var(--color-accent)' : 'var(--color-ink-muted)',
+              transition: 'color 150ms ease',
+            }}
+          >
+            {rightIcon}
+          </span>
         )}
       </span>
 

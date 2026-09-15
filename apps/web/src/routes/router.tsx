@@ -7,6 +7,7 @@ import { SignInPage } from '../features/auth/SignInPage';
 import { SignUpPage } from '../features/auth/SignUpPage';
 import { HomePage } from '../features/home/HomePage';
 import { SpacesPage } from '../features/spaces/SpacesPage';
+import { SpaceDetailPage } from '../features/spaces/SpaceDetailPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
 import { NotificationsPage } from '../features/notifications/NotificationsPage';
 import { ROUTES } from './paths';
@@ -43,6 +44,10 @@ export const router = createBrowserRouter([
               {
                 path: ROUTES.PROTECTED.SPACES,
                 element: <SpacesPage />,
+              },
+              {
+                path: ROUTES.PROTECTED.SPACE_DETAIL,
+                element: <SpaceDetailPage />,
               },
               {
                 path: ROUTES.PROTECTED.PROFILE,

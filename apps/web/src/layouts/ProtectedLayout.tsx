@@ -3,20 +3,12 @@ import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Sidenav, type SidenavPage } from '../components/shared/sidenav';
 import { useAppDispatch, useAppSelector, selectThemeMode, toggleTheme } from '../store';
 import { ROUTES } from '../routes/paths';
-import { mockProjects, type Project, type User } from '@jira-clone/shared';
+import { mockProjects, mockCurrentUser } from '@jira-clone/shared';
 import styles from './ProtectedLayout.module.css';
-
-const MOCK_USER: User = {
-  id: 'user-1',
-  name: 'Alex Morgan',
-  email: 'alex@fieldnotes.dev',
-  initials: 'AM',
-  avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-};
 
 export function ProtectedLayout() {
   const [collapsed, setCollapsed] = useState(false);
-  const [currentProject, setCurrentProject] = useState<Project>(mockProjects[0]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(mockProjects[0].id);
 
   const mode = useAppSelector(selectThemeMode);
   const isDark = mode === 'dark';
@@ -24,6 +16,19 @@ export function ProtectedLayout() {
 
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Derive active project from space detail route when present, otherwise user selection
+  const spaceMatch = location.pathname.match(/^\/spaces\/([^/]+)/);
+  const matchedProject = spaceMatch?.[1]
+    ? mockProjects.find(
+        (p) => p.id === spaceMatch[1] || p.key.toLowerCase() === spaceMatch[1].toLowerCase()
+      )
+    : undefined;
+
+  const currentProject =
+    matchedProject ??
+    mockProjects.find((p) => p.id === selectedProjectId) ??
+    mockProjects[0];
 
   // Map route to SidenavPage
   const getActivePage = (): SidenavPage => {
@@ -67,10 +72,10 @@ export function ProtectedLayout() {
           projects={mockProjects}
           currentProject={currentProject}
           onSelectProject={(id) => {
-            const found = mockProjects.find((p) => p.id === id);
-            if (found) setCurrentProject(found);
+            setSelectedProjectId(id);
+            navigate(`/spaces/${id}`);
           }}
-          currentUser={MOCK_USER}
+          currentUser={mockCurrentUser}
           unreadNotificationsCount={2}
           collapsed={collapsed}
           onToggleCollapse={(col) => setCollapsed(col)}

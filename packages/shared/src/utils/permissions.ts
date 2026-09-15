@@ -19,6 +19,7 @@ export const cardPermissions = {
   canEditDescription: (role: CardRole): boolean => role === 'publisher' || role === 'assignee',
   canChangeAssignee: (role: CardRole): boolean => role === 'publisher',
   canMoveStatus: (role: CardRole): boolean => role === 'publisher' || role === 'assignee',
+  canEditDates: (role: CardRole): boolean => role === 'publisher' || role === 'assignee',
   canDeleteCard: (role: CardRole): boolean => role === 'publisher',
   canComment: (_role: CardRole): boolean => true, // all authenticated members can comment
 };

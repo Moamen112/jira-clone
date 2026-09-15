@@ -7,6 +7,7 @@ export const ROUTES = {
   PROTECTED: {
     HOME: '/home',
     SPACES: '/spaces',
+    SPACE_DETAIL: '/spaces/:id',
     PROFILE: '/profile',
     NOTIFICATIONS: '/notifications',
   },

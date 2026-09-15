@@ -15,6 +15,8 @@ export interface Card {
   priority: CardPriority;
   order: number;
   commentCount: number;
+  startDate?: string;
+  dueDate?: string;
   createdAt: string;
   updatedAt: string;
 }

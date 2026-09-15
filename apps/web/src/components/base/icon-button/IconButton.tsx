@@ -52,6 +52,19 @@ export const IconButton: FC<IconButtonProps> = ({
     }
   };
 
+  const getTextColor = (): string => {
+    switch (variant) {
+      case 'primary':
+      case 'danger':
+        return '#FFFFFF';
+      case 'secondary':
+        return 'var(--color-ink)';
+      case 'ghost':
+      default:
+        return 'var(--color-ink-muted)';
+    }
+  };
+
   return (
     <button
       type="button"
@@ -64,12 +77,26 @@ export const IconButton: FC<IconButtonProps> = ({
         borderRadius: rounded ? 'var(--radius-pill)' : 'var(--radius-input)',
         backgroundColor: getBackground(),
         border: variant === 'secondary' ? '1px solid var(--color-line)' : 'none',
+        color: getTextColor(),
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
         opacity: disabled ? 0.4 : 1,
         cursor: disabled ? 'default' : 'pointer',
+        transition: 'color 150ms ease, background-color 150ms ease, border-color 150ms ease',
         ...style,
+      }}
+      onMouseEnter={(e) => {
+        if (!disabled && variant === 'ghost') {
+          e.currentTarget.style.color = 'var(--color-ink)';
+          e.currentTarget.style.backgroundColor = 'var(--color-paper)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!disabled && variant === 'ghost') {
+          e.currentTarget.style.color = getTextColor();
+          e.currentTarget.style.backgroundColor = 'transparent';
+        }
       }}
     >
       {icon}
