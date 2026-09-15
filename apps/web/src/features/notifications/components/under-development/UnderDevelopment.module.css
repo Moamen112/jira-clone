@@ -1,0 +1,139 @@
+/* ==========================================================================
+   UnderDevelopment — animated "work in progress" notice.
+   Styled with Fieldnotes design tokens only (globals.css) — theme-aware.
+   ========================================================================== */
+
+/* --- Banner variant ----------------------------------------------------- */
+
+.banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  padding: 28px 24px;
+  background-color: var(--color-surface);
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-card);
+}
+
+.iconWrap {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: jira-ud-bob 1.4s ease-in-out infinite;
+}
+
+.pill {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  animation: jira-ud-pulse 1.8s ease-in-out infinite;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.description {
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  color: var(--color-ink-muted);
+}
+
+.progressTrack {
+  position: relative;
+  width: 220px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-line);
+  overflow: hidden;
+}
+
+.progressBar {
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 40%;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-accent);
+  animation: jira-ud-progress 1.6s ease-in-out infinite;
+}
+
+/* --- Compact variant ---------------------------------------------------- */
+
+.compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.compactDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-accent);
+  animation: jira-ud-pulse 1.8s ease-in-out infinite;
+}
+
+/* --- Animations --------------------------------------------------------- */
+
+@keyframes jira-ud-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes jira-ud-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes jira-ud-progress {
+  from {
+    left: -40%;
+  }
+  to {
+    left: 105%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iconWrap,
+  .pill,
+  .progressBar,
+  .compactDot {
+    animation: none;
+  }
+}

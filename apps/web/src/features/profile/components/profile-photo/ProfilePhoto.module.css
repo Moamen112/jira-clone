@@ -1,0 +1,78 @@
+/* ==========================================================================
+   ProfilePhoto — avatar with corner photo-action badges (+ add / × remove).
+   Styled with Fieldnotes design tokens only (globals.css) — theme-aware.
+   ========================================================================== */
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.photoWrap {
+  position: relative;
+  display: inline-flex;
+  line-height: 0;
+}
+
+/* --- Corner action badges -------------------------------------------------- */
+
+.badge {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    opacity 150ms ease;
+}
+
+.addBadge {
+  right: -4px;
+  bottom: -4px;
+  background-color: var(--color-accent);
+  border: 2px solid var(--color-surface);
+  color: #ffffff;
+}
+
+.addBadge:hover {
+  transform: scale(1.12);
+}
+
+/* --- Manage-photo modal -------------------------------------------------- */
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.modalText {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-ink-muted);
+  margin: 0;
+  text-align: center;
+}
+
+.modalActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+/* --- Hint ---------------------------------------------------------------- */
+
+.hint {
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
