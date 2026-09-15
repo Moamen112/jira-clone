@@ -1,0 +1,103 @@
+/* ==========================================================================
+   HeroSection — landing page hero banner.
+   Styled with Fieldnotes design tokens only (globals.css) — theme-aware.
+   ========================================================================== */
+
+.section {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 80px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 24px;
+}
+
+.eyebrow {
+  display: inline-block;
+  padding: 5px 14px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.title {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.subtitle {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--color-ink-muted);
+  max-width: 640px;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: var(--radius-input);
+  background-color: var(--color-accent);
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+
+.primaryBtn:hover {
+  opacity: 0.9;
+}
+
+.secondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: var(--radius-input);
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 600;
+  border: 1px solid var(--color-line);
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.secondaryBtn:hover {
+  background-color: var(--color-line);
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 48px 16px;
+  }
+
+  .title {
+    font-size: 32px;
+  }
+}

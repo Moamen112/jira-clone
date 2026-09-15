@@ -1,0 +1,21 @@
+/* ==========================================================================
+   SignUpForm — name/email/password sign-up form.
+   Styled with Fieldnotes design tokens only (globals.css) — theme-aware.
+   ========================================================================== */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+}
+
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-input);
+  background-color: var(--color-warn-soft);
+  border: 1px solid var(--color-warn);
+}

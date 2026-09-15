@@ -4,36 +4,42 @@
   background-color: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
-  padding: 32px;
+  padding: 28px 24px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 22px;
 }
 
-.profileTop {
+/* --- Identity header ------------------------------------------------------- */
+
+.profileHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.profileIdentity {
   display: flex;
   align-items: center;
   gap: 20px;
+  flex: 1;
+  min-width: 0;
 }
 
-.largeAvatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background-color: var(--color-accent-soft);
-  color: var(--color-accent);
-  font-size: 22px;
-  font-weight: 800;
+.identityText {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--color-accent);
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
 .profileName {
   font-size: 20px;
   font-weight: 700;
-  margin: 0 0 4px 0;
+  color: var(--color-ink);
+  margin: 0;
 }
 
 .profileEmail {
@@ -41,6 +47,74 @@
   color: var(--color-ink-muted);
   margin: 0;
 }
+
+.chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chipMuted {
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-line);
+  color: var(--color-ink-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* --- Quick stats row ------------------------------------------------------ */
+
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+.statCard {
+  background-color: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statValue {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--color-accent);
+  margin: 0;
+}
+
+.statLabel {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--color-ink-muted);
+  margin: 0;
+}
+
+.statHint {
+  font-size: 12px;
+  color: var(--color-ink-muted);
+  margin: 0;
+}
+
+/* --- Account details grid ------------------------------------------------- */
 
 .detailsGrid {
   display: grid;
@@ -66,6 +140,14 @@
 }
 
 .detailValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-ink);
+  margin: 0;
+}
+
+.monoValue {
+  font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 600;
   color: var(--color-ink);

@@ -1,0 +1,165 @@
+/* ==========================================================================
+   LandingFooter — landing page footer.
+   Styled with Fieldnotes design tokens only (globals.css) — theme-aware.
+   ========================================================================== */
+
+.footer {
+  width: 100%;
+  background-color: var(--color-paper);
+  border-top: 1px solid var(--color-line);
+  color: var(--color-ink);
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  padding: 56px 24px 28px;
+}
+
+.topSection {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.brandLogo {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-card);
+  background-color: var(--color-accent);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brandName {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.tagline {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  color: var(--color-ink-muted);
+}
+
+.columns {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 24px;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.columnTitle {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.linkList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.link {
+  color: var(--color-ink-muted);
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.link:hover {
+  color: var(--color-ink);
+}
+
+.bottomBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-line);
+}
+
+.copyright {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+  margin: 0;
+}
+
+.bottomLinks {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.accentLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  border-radius: var(--radius-input);
+  background-color: var(--color-accent);
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+
+.accentLink:hover {
+  opacity: 0.9;
+}
+
+@media (max-width: 700px) {
+  .topSection {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .brand {
+    max-width: none;
+  }
+
+  .columns {
+    width: 100%;
+  }
+}

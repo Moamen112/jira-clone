@@ -1,0 +1,103 @@
+/* ==========================================================================
+   FeaturesOverview — landing page feature-highlight grid.
+   Styled with Fieldnotes design tokens only (globals.css) — theme-aware.
+   ========================================================================== */
+
+.section {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.eyebrow {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.3;
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.subtitle {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--color-ink-muted);
+  max-width: 640px;
+  margin: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 12px;
+  transition: border-color 150ms ease;
+}
+
+.card:hover {
+  border-color: var(--color-accent);
+}
+
+.iconBadge {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.cardDesc {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-ink-muted);
+  margin: 0;
+}
