@@ -24,6 +24,8 @@ export interface BoardColumnProps {
   onCardAssigneeChange?: (userId: string | null, card: CardType) => void;
   /** Card multi-assignees change callback */
   onCardAssigneesChange?: (userIds: string[], card: CardType) => void;
+  /** Callback fired when the '+' add card button is clicked */
+  onAddCardPress?: (columnId: string) => void;
   /** Quick inline card creation callback */
   onCreateCard?: (title: string, columnId: string) => void | Promise<void>;
   /** Custom render prop for card items */
@@ -62,6 +64,7 @@ export const BoardColumn: FC<BoardColumnProps> = ({
   onCardMove,
   onCardAssigneeChange,
   onCardAssigneesChange,
+  onAddCardPress,
   onCreateCard,
   renderCard,
   canCreateCard = true,
@@ -127,13 +130,19 @@ export const BoardColumn: FC<BoardColumnProps> = ({
           <Badge label={String(cards.length)} variant="neutral" size="sm" />
         </div>
 
-        {canCreateCard && onCreateCard && !showInlineCreate && (
+        {canCreateCard && (onAddCardPress || onCreateCard) && !showInlineCreate && (
           <IconButton
             variant="ghost"
             size="sm"
             label={`Add card to ${column.title}`}
             icon={<AddIcon size={16} />}
-            onPress={() => setShowInlineCreate(true)}
+            onPress={() => {
+              if (onAddCardPress) {
+                onAddCardPress(column.id);
+              } else {
+                setShowInlineCreate(true);
+              }
+            }}
           />
         )}
       </div>
@@ -178,10 +187,16 @@ export const BoardColumn: FC<BoardColumnProps> = ({
             <Text variant="caption" muted>
               No cards in {column.title}
             </Text>
-            {canCreateCard && onCreateCard && (
+            {canCreateCard && (onAddCardPress || onCreateCard) && (
               <button
                 type="button"
-                onClick={() => setShowInlineCreate(true)}
+                onClick={() => {
+                  if (onAddCardPress) {
+                    onAddCardPress(column.id);
+                  } else {
+                    setShowInlineCreate(true);
+                  }
+                }}
                 style={{
                   marginTop: 4,
                   background: 'transparent',
@@ -199,13 +214,16 @@ export const BoardColumn: FC<BoardColumnProps> = ({
         )}
 
         {/* Inline Card Creation */}
-        {canCreateCard && onCreateCard && (
+        {canCreateCard && (onAddCardPress || onCreateCard) && (
           <CreateCardInline
             columnId={column.id}
             placeholder="What needs to be done?"
             autoExpand={showInlineCreate}
+            onTriggerPress={onAddCardPress ? () => onAddCardPress(column.id) : undefined}
             onCreate={async ({ title }) => {
-              await onCreateCard(title, column.id);
+              if (onCreateCard) {
+                await onCreateCard(title, column.id);
+              }
               setShowInlineCreate(false);
             }}
           />

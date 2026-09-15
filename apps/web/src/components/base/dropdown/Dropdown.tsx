@@ -10,6 +10,12 @@ export interface DropdownOption {
   description?: string;
 }
 
+export interface DropdownAction {
+  label: string;
+  onPress: () => void;
+  icon?: ReactNode;
+}
+
 export interface DropdownProps {
   /** Field label placed above the trigger */
   label?: string;
@@ -19,6 +25,8 @@ export interface DropdownProps {
   options: DropdownOption[];
   /** Callback fired when an option is chosen */
   onSelect: (value: string) => void;
+  /** Optional action button rendered at the bottom of the options list */
+  action?: DropdownAction;
   /** Placeholder when unselected */
   placeholder?: string;
   /** Error message displayed below the trigger */
@@ -36,6 +44,7 @@ export const Dropdown: FC<DropdownProps> = ({
   value,
   options,
   onSelect,
+  action,
   placeholder = 'Select an option...',
   error,
   disabled = false,
@@ -221,6 +230,52 @@ export const Dropdown: FC<DropdownProps> = ({
               >
                 No matching options found.
               </Text>
+            )}
+
+            {action && (
+              <div
+                style={{
+                  borderTop: '1px solid var(--color-line)',
+                  paddingTop: 4,
+                  marginTop: 4,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsOpen(false);
+                    action.onPress();
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    width: '100%',
+                    padding: '8px 10px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: 'var(--radius-input)',
+                    cursor: 'pointer',
+                    color: 'var(--color-accent)',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    textAlign: 'left',
+                    transition: 'background-color 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--color-accent-soft)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  {action.icon ?? (
+                    <span style={{ fontSize: 16, lineHeight: 1, fontWeight: 'bold' }}>+</span>
+                  )}
+                  <span>{action.label}</span>
+                </button>
+              </div>
             )}
           </div>
         </>

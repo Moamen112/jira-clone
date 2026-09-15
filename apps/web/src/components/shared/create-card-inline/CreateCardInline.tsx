@@ -11,6 +11,8 @@ export interface CreateCardInlineProps {
   autoExpand?: boolean;
   /** Invoked when the user confirms a new card. Supports sync or async handlers. */
   onCreate: (input: { title: string; columnId?: string }) => void | Promise<void>;
+  /** Optional custom trigger handler when the collapsed row is clicked */
+  onTriggerPress?: () => void;
   /** Show a spinner in the Add button while the parent persists the card */
   loading?: boolean;
   /** Disable the entire composer (collapsed row and inputs) */
@@ -30,6 +32,7 @@ export const CreateCardInline: FC<CreateCardInlineProps> = ({
   placeholder = DEFAULT_PLACEHOLDER,
   autoExpand = false,
   onCreate,
+  onTriggerPress,
   loading = false,
   disabled = false,
   style,
@@ -94,7 +97,13 @@ export const CreateCardInline: FC<CreateCardInlineProps> = ({
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setExpanded(true)}
+        onClick={() => {
+          if (onTriggerPress) {
+            onTriggerPress();
+          } else {
+            setExpanded(true);
+          }
+        }}
         aria-label={placeholder}
         style={{
           display: 'flex',

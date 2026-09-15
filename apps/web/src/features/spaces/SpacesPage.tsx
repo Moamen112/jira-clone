@@ -46,25 +46,76 @@ const PlusIcon: FC<{ size?: number }> = ({ size = 15 }) => (
 
 import {
   mockSpaces,
-  mockSpaceTypeOptions,
-  mockSpaceOwnerOptions,
+  // mockSpaceTypeOptions,
+  // mockSpaceOwnerOptions,
   mockSpaceSortOptions,
+  mockCurrentUser,
 } from '@jira-clone/shared';
-
+import type { SpaceItem } from '@jira-clone/shared';
+import { CreateSpaceModal } from './components/create-space-modal';
+import type { CreateSpaceInput } from './components/create-space-modal';
 
 export function SpacesPage() {
   const navigate = useNavigate();
+  const [spaces, setSpaces] = useState<SpaceItem[]>(mockSpaces);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedType, setSelectedType] = useState('all');
-  const [selectedOwner, setSelectedOwner] = useState('all');
+  // Filter dropdown states hidden until backend filter specifications are finalized
+  // const [selectedType, setSelectedType] = useState('all');
+  // const [selectedOwner, setSelectedOwner] = useState('all');
   const [selectedSort, setSelectedSort] = useState('updated');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
+  const pageSize = 36;
 
-  const totalItems = mockSpaces.length;
+  const filteredSpaces = spaces.filter((item) => {
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchName = item.project.name.toLowerCase().includes(q);
+      const matchKey = item.project.key.toLowerCase().includes(q);
+      if (!matchName && !matchKey) return false;
+    }
+    // Filter dropdown checks hidden until backend filter specifications are finalized
+    // if (selectedType !== 'all' && item.category !== selectedType) {
+    //   return false;
+    // }
+    // if (selectedOwner !== 'all' && item.project.ownerId !== selectedOwner) {
+    //   return false;
+    // }
+    return true;
+  });
+
+  const totalItems = filteredSpaces.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
-  const visibleSpaces = mockSpaces.slice(startIndex, startIndex + pageSize);
+  const visibleSpaces = filteredSpaces.slice(startIndex, startIndex + pageSize);
+
+  const handleCreateSpace = (input: CreateSpaceInput) => {
+    const newSpace: SpaceItem = {
+      project: {
+        id: `proj-${Date.now()}`,
+        name: input.name,
+        key: input.key,
+        description: input.description,
+        ownerId: mockCurrentUser.id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      members:
+        input.members.length > 0
+          ? input.members
+          : [
+              {
+                id: mockCurrentUser.id,
+                name: mockCurrentUser.name,
+                avatarUrl: mockCurrentUser.avatarUrl,
+              },
+            ],
+      issueCounts: { todo: 0, inProgress: 0, done: 0 },
+      category: 'software',
+    };
+    setSpaces((prev) => [newSpace, ...prev]);
+    setCurrentPage(1);
+  };
 
   return (
     <div className={styles.container}>
@@ -81,6 +132,7 @@ export function SpacesPage() {
           variant="primary"
           size="md"
           leftIcon={<PlusIcon size={16} />}
+          onPress={() => setIsCreateModalOpen(true)}
         />
       </header>
 
@@ -99,7 +151,8 @@ export function SpacesPage() {
             />
           </div>
 
-          {/* Type Filter */}
+          {/* Filter dropdowns (hidden until backend filters are finalized) */}
+          {/*
           <div className={styles.filterDropdown}>
             <Dropdown
               value={selectedType}
@@ -109,7 +162,6 @@ export function SpacesPage() {
             />
           </div>
 
-          {/* Owner Filter */}
           <div className={styles.filterDropdown}>
             <Dropdown
               value={selectedOwner}
@@ -118,6 +170,7 @@ export function SpacesPage() {
               placeholder="Owner"
             />
           </div>
+          */}
         </div>
 
         {/* Sort Dropdown */}
@@ -154,14 +207,16 @@ export function SpacesPage() {
           totalPages={totalPages}
           totalItems={totalItems}
           pageSize={pageSize}
-          pageSizeOptions={[6, 12, 18, 24]}
           onPageChange={setCurrentPage}
-          onPageSizeChange={(newSize) => {
-            setPageSize(newSize);
-            setCurrentPage(1);
-          }}
         />
       </footer>
+
+      {/* Create Space Modal */}
+      <CreateSpaceModal
+        visible={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreate={handleCreateSpace}
+      />
     </div>
   );
 }

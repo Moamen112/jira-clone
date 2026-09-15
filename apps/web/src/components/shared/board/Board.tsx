@@ -35,6 +35,8 @@ export interface BoardProps {
   onCardAssigneesChange?: (userIds: string[], card: CardType) => void;
   /** Quick inline card creation callback */
   onCreateCard?: (title: string, columnId: string) => void | Promise<void>;
+  /** Callback fired when the '+' add card button in column is clicked */
+  onAddCardPress?: (columnId: string) => void;
   /** Custom render prop for card items */
   renderCard?: (card: CardType) => ReactNode;
   /** Whether card creation is permitted (default: true) */
@@ -65,6 +67,7 @@ export const Board: FC<BoardProps> = ({
   onCardMove,
   onCardAssigneeChange,
   onCardAssigneesChange,
+  onAddCardPress,
   onCreateCard,
   renderCard,
   canCreateCard = true,
@@ -187,6 +190,7 @@ export const Board: FC<BoardProps> = ({
               }}
               onCardAssigneeChange={onCardAssigneeChange}
               onCardAssigneesChange={onCardAssigneesChange}
+              onAddCardPress={onAddCardPress}
               onCreateCard={onCreateCard}
               renderCard={renderCard}
               canCreateCard={canCreateCard}

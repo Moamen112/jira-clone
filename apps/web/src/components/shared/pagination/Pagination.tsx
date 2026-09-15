@@ -87,9 +87,7 @@ export const Pagination: FC<PaginationProps> = ({
   totalPages = 1,
   totalItems,
   pageSize,
-  pageSizeOptions,
   onPageChange,
-  onPageSizeChange,
   style,
   className,
   testID,
@@ -110,7 +108,7 @@ export const Pagination: FC<PaginationProps> = ({
       className={`${styles.paginationContainer} ${className ?? ''}`}
       style={style}
     >
-      {/* Summary info & Page size selector */}
+      {/* Summary info */}
       <div className={styles.summaryArea}>
         <div className={styles.summary}>
           {totalItems !== undefined && startItem !== undefined && endItem !== undefined ? (
@@ -123,24 +121,6 @@ export const Pagination: FC<PaginationProps> = ({
             </span>
           )}
         </div>
-
-        {pageSizeOptions && onPageSizeChange && pageSize !== undefined && (
-          <div className={styles.pageSizeSelector}>
-            <span className={styles.pageSizeLabel}>Per page:</span>
-            <select
-              value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className={styles.pageSizeSelect}
-              aria-label="Items per page"
-            >
-              {pageSizeOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
 
       {/* Navigation Controls */}

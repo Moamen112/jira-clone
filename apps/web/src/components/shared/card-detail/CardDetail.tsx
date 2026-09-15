@@ -12,7 +12,8 @@ import {
   cardPermissions,
 } from "@jira-clone/shared";
 import { Modal } from "../modal/Modal";
-import { Text, Input, Textarea, Button, Badge } from "../../base";
+import { Text, Input, Textarea, Button, Badge, Dropdown } from "../../base";
+import type { DropdownOption } from "../../base";
 import { PriorityBadge } from "../priority-badge";
 import { AssigneeSelect } from "../assignee-select";
 import { PublisherInfo } from "../publisher-info";
@@ -43,6 +44,8 @@ export interface CardDetailProps {
   currentUserId?: string;
   /** Explicit role override (if precomputed) */
   currentUserRole?: CardRole;
+  /** Callback fired when a new status column is added */
+  onAddStatus?: (column: BoardColumn) => void;
   /** Close or back callback */
   onClose?: () => void;
   /** Callback fired when user saves changes */
@@ -54,6 +57,30 @@ export interface CardDetailProps {
   /** Style override */
   style?: CSSProperties;
 }
+
+export interface CardTypeOption {
+  id: string;
+  label: string;
+  color: string;
+}
+
+const DEFAULT_CARD_TYPES: CardTypeOption[] = [
+  { id: "task", label: "Task", color: "#3B82F6" },
+  { id: "bug", label: "Bug", color: "#EF4444" },
+  { id: "story", label: "Story", color: "#10B981" },
+  { id: "epic", label: "Epic", color: "#8B5CF6" },
+];
+
+const PRESET_COLORS = [
+  "#3B82F6",
+  "#10B981",
+  "#F59E0B",
+  "#EF4444",
+  "#8B5CF6",
+  "#EC4899",
+  "#06B6D4",
+  "#64748B",
+];
 
 const PRIORITIES: CardPriority[] = [
   "lowest",
@@ -123,6 +150,7 @@ export const CardDetail: FC<CardDetailProps> = ({
   onDeleteComment,
   currentUserId,
   currentUserRole,
+  onAddStatus,
   onClose,
   onSave,
   onDelete,
@@ -148,6 +176,8 @@ export const CardDetail: FC<CardDetailProps> = ({
   const [draftPriority, setDraftPriority] = useState<CardPriority>(
     card?.priority ?? "medium",
   );
+  const [cardTypes, setCardTypes] = useState<CardTypeOption[]>(DEFAULT_CARD_TYPES);
+  const [draftType, setDraftType] = useState<string>(card?.type || "task");
   const [draftStartDate, setDraftStartDate] = useState(
     toDateInputValue(card?.startDate),
   );
@@ -157,6 +187,21 @@ export const CardDetail: FC<CardDetailProps> = ({
   const [cardIdTracking, setCardIdTracking] = useState(card?.id);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Dynamic custom columns & modals
+  const [customColumns, setCustomColumns] = useState<BoardColumn[]>([]);
+
+  // Add status modal state
+  const [isAddStatusOpen, setIsAddStatusOpen] = useState(false);
+  const [newStatusTitle, setNewStatusTitle] = useState("");
+  const [newStatusColor, setNewStatusColor] = useState("#3B82F6");
+  const [statusError, setStatusError] = useState<string | undefined>(undefined);
+
+  // Add type modal state
+  const [isAddTypeOpen, setIsAddTypeOpen] = useState(false);
+  const [newTypeTitle, setNewTypeTitle] = useState("");
+  const [newTypeColor, setNewTypeColor] = useState("#6366F1");
+  const [typeError, setTypeError] = useState<string | undefined>(undefined);
 
   // Sync state when a different card is opened without cascading effects
   if (card && card.id !== cardIdTracking) {
@@ -173,6 +218,7 @@ export const CardDetail: FC<CardDetailProps> = ({
           : [],
     );
     setDraftPriority(card.priority);
+    setDraftType(card.type || "task");
     setDraftStartDate(toDateInputValue(card.startDate));
     setDraftDueDate(toDateInputValue(card.dueDate));
   }
@@ -216,12 +262,66 @@ export const CardDetail: FC<CardDetailProps> = ({
         ? "Assignee"
         : "Viewer";
 
+  const allColumns = [
+    ...columns,
+    ...customColumns.filter((c) => !columns.some((col) => col.id === c.id)),
+  ];
+
+  const statusOptions: DropdownOption[] = allColumns.map((col) => ({
+    label: col.title,
+    value: col.id,
+    icon: (
+      <span
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: "var(--radius-pill)",
+          backgroundColor:
+            col.color ||
+            (col.id.includes("done")
+              ? "#10B981"
+              : col.id.includes("review")
+                ? "var(--color-accent)"
+                : col.id.includes("progress")
+                  ? "#3B82F6"
+                  : "var(--color-ink-muted)"),
+          display: "inline-block",
+          flexShrink: 0,
+        }}
+      />
+    ),
+  }));
+
+  const typeOptions: DropdownOption[] = cardTypes.map((t) => ({
+    label: t.label,
+    value: t.id,
+    icon: (
+      <span
+        style={{
+          width: 10,
+          height: 10,
+          borderRadius: t.id === "bug" ? 999 : 2,
+          backgroundColor: t.color,
+          display: "inline-block",
+          flexShrink: 0,
+        }}
+      />
+    ),
+  }));
+
+  const priorityOptions: DropdownOption[] = PRIORITIES.map((p) => ({
+    label: p.charAt(0).toUpperCase() + p.slice(1),
+    value: p,
+    icon: <PriorityBadge priority={p} size="sm" />,
+  }));
+
   const hasChanges =
     draftTitle !== card.title ||
     draftDescription !== (card.description ?? "") ||
     draftColumnId !== card.columnId ||
     draftAssigneeId !== (card.assigneeId ?? null) ||
     draftPriority !== card.priority ||
+    draftType !== (card.type || "task") ||
     draftStartDate !== toDateInputValue(card.startDate) ||
     draftDueDate !== toDateInputValue(card.dueDate) ||
     JSON.stringify(draftAssigneeIds) !==
@@ -242,6 +342,7 @@ export const CardDetail: FC<CardDetailProps> = ({
         assigneeId: draftAssigneeId,
         assigneeIds: draftAssigneeIds,
         priority: draftPriority,
+        type: draftType,
         startDate: draftStartDate ? draftStartDate : undefined,
         dueDate: draftDueDate ? draftDueDate : undefined,
         updatedAt: new Date().toISOString(),
@@ -249,6 +350,51 @@ export const CardDetail: FC<CardDetailProps> = ({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleAddStatus = () => {
+    const trimmed = newStatusTitle.trim();
+    if (!trimmed) {
+      setStatusError("Status name cannot be empty.");
+      return;
+    }
+
+    const newColId = `col-${Date.now()}`;
+    const newCol: BoardColumn = {
+      id: newColId,
+      projectId: card.projectId,
+      title: trimmed,
+      color: newStatusColor,
+      order: allColumns.length,
+    };
+
+    setCustomColumns((prev) => [...prev, newCol]);
+    setDraftColumnId(newColId);
+    onAddStatus?.(newCol);
+    setIsAddStatusOpen(false);
+    setNewStatusTitle("");
+    setStatusError(undefined);
+  };
+
+  const handleAddType = () => {
+    const trimmed = newTypeTitle.trim();
+    if (!trimmed) {
+      setTypeError("Type name cannot be empty.");
+      return;
+    }
+
+    const newTypeId = trimmed.toLowerCase().replace(/\s+/g, "-");
+    const newType: CardTypeOption = {
+      id: newTypeId,
+      label: trimmed,
+      color: newTypeColor,
+    };
+
+    setCardTypes((prev) => [...prev, newType]);
+    setDraftType(newTypeId);
+    setIsAddTypeOpen(false);
+    setNewTypeTitle("");
+    setTypeError(undefined);
   };
 
   const handleDelete = async () => {
@@ -505,100 +651,55 @@ export const CardDetail: FC<CardDetailProps> = ({
               </div>
 
               {/* Status / Column Selector */}
-              {columns.length > 0 && (
-                <div>
-                  <Text
-                    variant="label"
-                    bold
-                    style={{ display: "block", marginBottom: 6 }}
-                  >
-                    Status
-                  </Text>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {columns.map((col) => {
-                      const isSelected = draftColumnId === col.id;
-                      return (
-                        <button
-                          key={col.id}
-                          type="button"
-                          disabled={!canMoveStatus}
-                          onClick={() => setDraftColumnId(col.id)}
-                          style={{
-                            border: `1px solid ${isSelected ? "var(--color-accent)" : "var(--color-line)"}`,
-                            backgroundColor: isSelected
-                              ? "var(--color-accent-soft)"
-                              : "var(--color-surface)",
-                            borderRadius: "var(--radius-pill)",
-                            padding: "4px 10px",
-                            cursor: canMoveStatus ? "pointer" : "not-allowed",
-                            opacity: canMoveStatus ? 1 : 0.6,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: "var(--radius-pill)",
-                              backgroundColor:
-                                col.color || "var(--color-accent)",
-                            }}
-                          />
-                          <Text
-                            variant="caption"
-                            bold={isSelected}
-                            color={
-                              isSelected
-                                ? "var(--color-accent)"
-                                : "var(--color-ink)"
-                            }
-                          >
-                            {col.title}
-                          </Text>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+              {allColumns.length > 0 && (
+                <Dropdown
+                  label="Status"
+                  value={draftColumnId}
+                  options={statusOptions}
+                  onSelect={(val) => setDraftColumnId(val)}
+                  disabled={!canMoveStatus}
+                  placeholder="Select status..."
+                  style={{ marginBottom: 0 }}
+                  action={{
+                    label: "Add a new status",
+                    onPress: () => {
+                      setNewStatusTitle("");
+                      setStatusError(undefined);
+                      setIsAddStatusOpen(true);
+                    },
+                  }}
+                />
               )}
 
+              {/* Type Selector */}
+              <Dropdown
+                label="Type"
+                value={draftType}
+                options={typeOptions}
+                onSelect={(val) => setDraftType(val)}
+                disabled={!canEditTitle}
+                placeholder="Select type..."
+                style={{ marginBottom: 0 }}
+                action={{
+                  label: "Add a new type",
+                  onPress: () => {
+                    setNewTypeTitle("");
+                    setTypeError(undefined);
+                    setIsAddTypeOpen(true);
+                  },
+                }}
+              />
+
               {/* Priority Selector */}
-              <div>
-                <Text
-                  variant="label"
-                  bold
-                  style={{ display: "block", marginBottom: 6 }}
-                >
-                  Priority
-                </Text>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {PRIORITIES.map((p) => {
-                    const isSelected = draftPriority === p;
-                    return (
-                      <button
-                        key={p}
-                        type="button"
-                        disabled={!canEditTitle}
-                        onClick={() => setDraftPriority(p)}
-                        style={{
-                          border: `1px solid ${isSelected ? "var(--color-accent)" : "var(--color-line)"}`,
-                          backgroundColor: isSelected
-                            ? "var(--color-accent-soft)"
-                            : "var(--color-surface)",
-                          borderRadius: "var(--radius-pill)",
-                          padding: "2px 4px",
-                          cursor: canEditTitle ? "pointer" : "not-allowed",
-                          opacity: canEditTitle ? 1 : 0.6,
-                        }}
-                      >
-                        <PriorityBadge priority={p} size="sm" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <Dropdown
+                label="Priority"
+                value={draftPriority}
+                options={priorityOptions}
+                onSelect={(val) => setDraftPriority(val as CardPriority)}
+                disabled={!canEditTitle}
+                placeholder="Select priority..."
+                style={{ marginBottom: 0 }}
+              />
 
               {/* Dates: Start Date & Due Date */}
               <div
@@ -757,6 +858,190 @@ export const CardDetail: FC<CardDetailProps> = ({
         onConfirm={handleDelete}
         onCancel={() => setDeleteConfirmVisible(false)}
       />
+
+      {/* Add New Status Modal */}
+      <Modal
+        visible={isAddStatusOpen}
+        onClose={() => setIsAddStatusOpen(false)}
+        title="Add a new status"
+        subtitle="Create a new status column for your workspace"
+        presentation="dialog"
+        contentStyle={{ maxWidth: 440 }}
+        footer={
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <Button
+              label="Cancel"
+              variant="secondary"
+              size="sm"
+              onPress={() => setIsAddStatusOpen(false)}
+            />
+            <Button
+              label="Add Status"
+              variant="primary"
+              size="sm"
+              disabled={!newStatusTitle.trim()}
+              onPress={handleAddStatus}
+            />
+          </div>
+        }
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleAddStatus();
+          }}
+          style={{ display: "flex", flexDirection: "column", gap: 16 }}
+        >
+          <Input
+            label="Status name"
+            placeholder="e.g. In QA, Blocked, Ready"
+            value={newStatusTitle}
+            onChangeText={(text) => {
+              setNewStatusTitle(text);
+              if (statusError) setStatusError(undefined);
+            }}
+            error={statusError}
+            autoFocus
+            containerStyle={{ marginBottom: 0 }}
+          />
+
+          <div>
+            <Text variant="label" style={{ display: "block", marginBottom: 8 }}>
+              Status Color
+            </Text>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {PRESET_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setNewStatusColor(c)}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "var(--radius-pill)",
+                    backgroundColor: c,
+                    border:
+                      newStatusColor === c
+                        ? "2px solid var(--color-ink)"
+                        : "2px solid transparent",
+                    cursor: "pointer",
+                    padding: 0,
+                    outline: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  aria-label={`Color ${c}`}
+                >
+                  {newStatusColor === c && (
+                    <span
+                      style={{
+                        color: "#fff",
+                        fontSize: 12,
+                        fontWeight: "bold",
+                      }}
+                    >
+                      ✓
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Add New Type Modal */}
+      <Modal
+        visible={isAddTypeOpen}
+        onClose={() => setIsAddTypeOpen(false)}
+        title="Add a new type"
+        subtitle="Create a custom card type"
+        presentation="dialog"
+        contentStyle={{ maxWidth: 440 }}
+        footer={
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <Button
+              label="Cancel"
+              variant="secondary"
+              size="sm"
+              onPress={() => setIsAddTypeOpen(false)}
+            />
+            <Button
+              label="Add Type"
+              variant="primary"
+              size="sm"
+              disabled={!newTypeTitle.trim()}
+              onPress={handleAddType}
+            />
+          </div>
+        }
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleAddType();
+          }}
+          style={{ display: "flex", flexDirection: "column", gap: 16 }}
+        >
+          <Input
+            label="Type name"
+            placeholder="e.g. Feature, Spike, Defect"
+            value={newTypeTitle}
+            onChangeText={(text) => {
+              setNewTypeTitle(text);
+              if (typeError) setTypeError(undefined);
+            }}
+            error={typeError}
+            autoFocus
+            containerStyle={{ marginBottom: 0 }}
+          />
+
+          <div>
+            <Text variant="label" style={{ display: "block", marginBottom: 8 }}>
+              Badge Color
+            </Text>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {PRESET_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setNewTypeColor(c)}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "var(--radius-pill)",
+                    backgroundColor: c,
+                    border:
+                      newTypeColor === c
+                        ? "2px solid var(--color-ink)"
+                        : "2px solid transparent",
+                    cursor: "pointer",
+                    padding: 0,
+                    outline: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  aria-label={`Color ${c}`}
+                >
+                  {newTypeColor === c && (
+                    <span
+                      style={{
+                        color: "#fff",
+                        fontSize: 12,
+                        fontWeight: "bold",
+                      }}
+                    >
+                      ✓
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 };

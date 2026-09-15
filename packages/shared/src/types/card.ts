@@ -13,6 +13,7 @@ export interface Card {
   assigneeId?: string | null;
   assigneeIds?: string[]; // for multi-assignee support
   priority: CardPriority;
+  type?: string;
   order: number;
   commentCount: number;
   startDate?: string;

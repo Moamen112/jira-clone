@@ -24,6 +24,23 @@ const SettingsIcon: FC<{ size?: number }> = ({ size = 14 }) => (
   </svg>
 );
 
+const PlusIcon: FC<{ size?: number }> = ({ size = 14 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
+
 export interface ProjectHeaderProps {
   /** Project to display */
   project: Project;
@@ -37,6 +54,10 @@ export interface ProjectHeaderProps {
   actionVariant?: ButtonVariant;
   /** Optional icon to render inside the action button */
   actionIcon?: ReactNode;
+  /** Fired when the Create card button is pressed */
+  onCreateCard?: () => void;
+  /** Custom label for the create card button (defaults to 'Create card') */
+  createCardLabel?: string;
   /** Custom action slot or extra buttons */
   extraActions?: ReactNode;
   /** Custom icon or avatar element to override default monogram */
@@ -58,6 +79,8 @@ export const ProjectHeader: FC<ProjectHeaderProps> = ({
   onAction,
   actionVariant = 'secondary',
   actionIcon,
+  onCreateCard,
+  createCardLabel = 'Create card',
   extraActions,
   icon,
   maxMembers = 3,
@@ -67,6 +90,7 @@ export const ProjectHeader: FC<ProjectHeaderProps> = ({
 }) => {
   const hasAction = Boolean(actionLabel && onAction);
   const hasMembers = Boolean(members && members.length > 0);
+  const showActionsSection = hasMembers || hasAction || extraActions || Boolean(onCreateCard);
 
   // Derive monogram (e.g. first 2-3 characters of the project key)
   const monogram = project.key
@@ -112,7 +136,7 @@ export const ProjectHeader: FC<ProjectHeaderProps> = ({
       </div>
 
       {/* Right: Team Avatars + Action Button */}
-      {(hasMembers || hasAction || extraActions) && (
+      {showActionsSection && (
         <div className={styles.rightSection}>
           {hasMembers && (
             <div className={styles.membersWrapper}>
@@ -120,12 +144,21 @@ export const ProjectHeader: FC<ProjectHeaderProps> = ({
             </div>
           )}
 
-          {hasMembers && (hasAction || extraActions) && (
+          {hasMembers && (hasAction || extraActions || onCreateCard) && (
             <div className={styles.divider} aria-hidden="true" />
           )}
 
           <div className={styles.actionsWrapper}>
             {extraActions}
+            {onCreateCard && (
+              <Button
+                label={createCardLabel}
+                variant="primary"
+                size="sm"
+                leftIcon={<PlusIcon size={14} />}
+                onPress={onCreateCard}
+              />
+            )}
             {hasAction && (
               <Button
                 label={actionLabel}

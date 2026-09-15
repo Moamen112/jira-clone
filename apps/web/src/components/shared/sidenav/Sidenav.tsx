@@ -8,6 +8,7 @@ import type { SidenavProps, SidenavPage } from './types';
 // ICONS
 // ============================================================================
 
+/*
 const KanbanIcon: FC<{ size?: number }> = ({ size = 17 }) => (
   <svg
     width={size}
@@ -44,6 +45,7 @@ const BacklogIcon: FC<{ size?: number }> = ({ size = 17 }) => (
     <line x1="3" y1="18" x2="3.01" y2="18" />
   </svg>
 );
+*/
 
 const HomeIcon: FC<{ size?: number }> = ({ size = 17 }) => (
   <svg
@@ -110,6 +112,7 @@ const BellIcon: FC<{ size?: number }> = ({ size = 17 }) => (
   </svg>
 );
 
+/*
 const SettingsIcon: FC<{ size?: number }> = ({ size = 17 }) => (
   <svg
     width={size}
@@ -125,6 +128,7 @@ const SettingsIcon: FC<{ size?: number }> = ({ size = 17 }) => (
     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
   </svg>
 );
+*/
 
 const PanelLeftCloseIcon: FC<{ size?: number }> = ({ size = 16 }) => (
   <svg
@@ -237,7 +241,7 @@ const LogOutIcon: FC<{ size?: number }> = ({ size = 15 }) => (
 // ============================================================================
 
 export const Sidenav: FC<SidenavProps> = ({
-  activePage = 'board',
+  activePage = 'home',
   onNavigate,
   projects = [],
   currentProject,
@@ -554,7 +558,8 @@ export const Sidenav: FC<SidenavProps> = ({
           gap: 16,
         }}
       >
-        {/* Section 1: PLANNING & PROJECT WORK */}
+        {/* Section 1: PLANNING & PROJECT WORK (commented out for now) */}
+        {/*
         <div>
           {!collapsed && (
             <Text
@@ -579,6 +584,7 @@ export const Sidenav: FC<SidenavProps> = ({
             {renderNavItem('backlog', 'Backlog', <BacklogIcon size={17} />)}
           </div>
         </div>
+        */}
 
         {/* Section 2: GENERAL WORKSPACE */}
         <div>
@@ -643,7 +649,8 @@ export const Sidenav: FC<SidenavProps> = ({
           </div>
         </div>
 
-        {/* Section 4: ADMINISTRATION */}
+        {/* Section 4: ADMINISTRATION (commented out for now) */}
+        {/*
         <div>
           {!collapsed && (
             <Text
@@ -667,6 +674,7 @@ export const Sidenav: FC<SidenavProps> = ({
             {renderNavItem('settings', 'Project Settings', <SettingsIcon size={17} />)}
           </div>
         </div>
+        */}
       </nav>
 
       {/* ================================================================= */}
