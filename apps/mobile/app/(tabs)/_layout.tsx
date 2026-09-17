@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, router } from 'expo-router';
 import { HomeIcon, GridIcon, NotificationsIcon, PersonIcon } from '../../assets/icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/tokens';
@@ -58,6 +58,12 @@ export default function TabLayout() {
             <GridIcon size={24} color={color} focused={focused} />
           ),
         }}
+        listeners={() => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            router.replace('/(tabs)/spaces');
+          },
+        })}
       />
 
       {/* 3. Notifications Tab */}

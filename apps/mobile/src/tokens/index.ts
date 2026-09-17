@@ -5,4 +5,4 @@ export * from './radius';
 export * from './layout';
 export * from './motion';
 export * from './theme';
-export * from './ThemeContext';
+export * from './useTheme';

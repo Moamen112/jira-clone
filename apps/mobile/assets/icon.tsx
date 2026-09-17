@@ -55,6 +55,9 @@ export const CloseCircleIcon = createIcon('close-circle');
 export const CloseCircleOutlineIcon = createIcon('close-circle-outline');
 export const SearchIcon = createIcon('search-outline');
 export const CameraIcon = createIcon('camera');
+export const SunnyIcon = createIcon('sunny-outline', 'sunny');
+export const SunIcon = SunnyIcon;
+export const MoonIcon = createIcon('moon-outline', 'moon');
 
 // ---------------------------------------------------------------------------
 // 3. Directional & Navigation
@@ -124,11 +127,14 @@ export const iconMap = {
   info: InfoIcon,
   layers: LayersIcon,
   lock: LockClosedIcon,
+  moon: MoonIcon,
   notifications: NotificationsIcon,
   people: PeopleIcon,
   person: PersonIcon,
   pulse: PulseIcon,
   search: SearchIcon,
+  sun: SunnyIcon,
+  sunny: SunnyIcon,
   time: TimeIcon,
   trash: TrashIcon,
   warning: WarningIcon,

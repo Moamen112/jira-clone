@@ -76,14 +76,14 @@ export default function HomeScreen() {
   const openCard = (cardId: string) => {
     router.push({
       pathname: '/(tabs)/spaces/card',
-      params: { cardId },
+      params: { cardId, from: 'home' },
     });
   };
 
   const openProject = (projectId: string) => {
     router.push({
       pathname: '/(tabs)/spaces/project',
-      params: { projectId },
+      params: { projectId, from: 'home' },
     });
   };
 

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { TimeIcon, GridIcon, SearchIcon } from '../../../assets/icon';
+import { TimeIcon, GridIcon, SearchIcon, SunnyIcon, MoonIcon } from '../../../assets/icon';
 import {
   mockProjects,
   mockCards,
@@ -78,7 +78,7 @@ function getProjectIssueCounts(projectId: string): ProjectIssueCounts {
  *   2. All Spaces container (with search filter)
  */
 export default function SpacesIndexScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark, toggleTheme } = useTheme();
   const router = useRouter();
 
   // Recently viewed space IDs (seeded with popular active spaces)
@@ -127,9 +127,29 @@ export default function SpacesIndexScreen() {
       >
         {/* Page Header */}
         <View style={styles.header}>
-          <Text variant="display" bold style={{ color: colors.ink }}>
-            Spaces
-          </Text>
+          <View style={styles.headerTop}>
+            <Text variant="display" bold style={{ color: colors.ink }}>
+              Spaces
+            </Text>
+            <Pressable
+              onPress={toggleTheme}
+              accessibilityRole="button"
+              accessibilityLabel={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+              style={({ pressed }) => [
+                styles.themeToggleBtn,
+                {
+                  backgroundColor: pressed ? colors.paper : colors.surface,
+                  borderColor: colors.line,
+                },
+              ]}
+            >
+              {isDark ? (
+                <SunnyIcon size={20} color={colors.accent} />
+              ) : (
+                <MoonIcon size={20} color={colors.ink} />
+              )}
+            </Pressable>
+          </View>
           <Text variant="bodySmall" muted style={styles.headerSubtitle}>
             Browse your team workspaces and project Kanban boards.
           </Text>
@@ -258,6 +278,19 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: spacing[1],
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  themeToggleBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerSubtitle: {
     marginTop: spacing[1],

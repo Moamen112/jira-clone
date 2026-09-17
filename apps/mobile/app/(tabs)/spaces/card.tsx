@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronBackIcon } from '../../../assets/icon';
+import { ChevronBackIcon, SunnyIcon, MoonIcon } from '../../../assets/icon';
 import {
   mockCards,
   mockColumns,
@@ -23,9 +23,9 @@ import { useTheme, spacing, radius } from '../../../src/tokens';
  * and renders the full-screen CardDetail interface.
  */
 export default function SpacesCardScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark, toggleTheme } = useTheme();
   const router = useRouter();
-  const { cardId } = useLocalSearchParams<{ cardId?: string }>();
+  const { cardId, from } = useLocalSearchParams<{ cardId?: string; from?: string }>();
 
   const [cards, setCards] = useState<CardType[]>(mockCards);
   const [comments, setComments] = useState<Comment[]>(mockComments);
@@ -36,18 +36,43 @@ export default function SpacesCardScreen() {
     return cards.find((c) => c.id === cardId) || null;
   }, [cards, cardId]);
 
+  // Back navigation handler
+  const handleBack = () => {
+    if (from === 'home') {
+      router.replace('/(tabs)');
+    } else if (from === 'project' && card?.projectId) {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace({
+          pathname: '/(tabs)/spaces/project',
+          params: { projectId: card.projectId },
+        });
+      }
+    } else if (router.canGoBack()) {
+      router.back();
+    } else if (card?.projectId) {
+      router.replace({
+        pathname: '/(tabs)/spaces/project',
+        params: { projectId: card.projectId },
+      });
+    } else {
+      router.replace('/(tabs)/spaces');
+    }
+  };
+
   // Save changes callback
   const handleSaveCard = (updatedCard: CardType) => {
     setCards((prev) =>
       prev.map((c) => (c.id === updatedCard.id ? updatedCard : c))
     );
-    router.back();
+    handleBack();
   };
 
   // Delete card callback
   const handleDeleteCard = (deletedCardId: string) => {
     setCards((prev) => prev.filter((c) => c.id !== deletedCardId));
-    router.back();
+    handleBack();
   };
 
   // Add comment callback
@@ -74,7 +99,7 @@ export default function SpacesCardScreen() {
       <View style={[styles.screen, { backgroundColor: colors.paper }]}>
         <View style={[styles.topBar, { borderBottomColor: colors.line }]}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => router.replace('/(tabs)/spaces')}
             accessibilityRole="button"
             accessibilityLabel="Back to spaces"
             style={({ pressed }) => [
@@ -87,12 +112,31 @@ export default function SpacesCardScreen() {
               Back
             </Text>
           </Pressable>
+
+          <Pressable
+            onPress={toggleTheme}
+            accessibilityRole="button"
+            accessibilityLabel={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+            style={({ pressed }) => [
+              styles.themeToggleBtn,
+              {
+                backgroundColor: pressed ? colors.paper : colors.surface,
+                borderColor: colors.line,
+              },
+            ]}
+          >
+            {isDark ? (
+              <SunnyIcon size={18} color={colors.accent} />
+            ) : (
+              <MoonIcon size={18} color={colors.ink} />
+            )}
+          </Pressable>
         </View>
         <EmptyState
           title="Card Not Found"
           description={`Could not find an issue with ID "${cardId}".`}
           actionLabel="Back to Spaces"
-          onAction={() => router.back()}
+          onAction={() => router.replace('/(tabs)/spaces')}
         />
       </View>
     );
@@ -111,7 +155,7 @@ export default function SpacesCardScreen() {
       activityLogs={cardActivityLogs.length > 0 ? cardActivityLogs : mockActivityLogs}
       onAddComment={handleAddComment}
       onDeleteComment={handleDeleteComment}
-      onClose={() => router.back()}
+      onClose={handleBack}
       onSave={handleSaveCard}
       onDelete={handleDeleteCard}
       fullScreen={true}
@@ -126,9 +170,18 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[2],
     borderBottomWidth: 1,
+  },
+  themeToggleBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   backButton: {
     flexDirection: 'row',
@@ -138,4 +191,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     gap: 2,
   },
-});
+});

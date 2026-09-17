@@ -7,6 +7,8 @@ import {
   ChatBubblesIcon,
   ChevronBackIcon,
   TrashIcon,
+  SunnyIcon,
+  MoonIcon,
 } from '../../../../assets/icon';
 import {
   Card as CardType,
@@ -97,7 +99,7 @@ export const CardDetail: React.FC<CardDetailProps> = ({
   fullScreen = true,
   style,
 }) => {
-  const { colors } = useTheme();
+  const { colors, isDark, toggleTheme } = useTheme();
 
   // Form draft state
   const [title, setTitle] = useState('');
@@ -533,6 +535,23 @@ export const CardDetail: React.FC<CardDetailProps> = ({
           </View>
 
           <View style={styles.topBarRight}>
+            <Pressable
+              onPress={toggleTheme}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+              style={({ pressed }) => [
+                styles.iconActionBtn,
+                { backgroundColor: pressed ? colors.surface : 'transparent' },
+              ]}
+            >
+              {isDark ? (
+                <SunnyIcon size={20} color={colors.accent} />
+              ) : (
+                <MoonIcon size={20} color={colors.ink} />
+              )}
+            </Pressable>
+
             {canDeleteCard && (
               <Pressable
                 onPress={handleDeletePress}
@@ -666,6 +685,7 @@ const styles = StyleSheet.create({
   topBarRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing[1],
     minWidth: 44,
     justifyContent: 'flex-end',
   },

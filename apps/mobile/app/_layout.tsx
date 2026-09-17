@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import { store } from '../src/store';
-import { ThemeProvider, useTheme } from '../src/tokens';
+import { useTheme } from '../src/tokens';
 
 function AppNavigator() {
   const { isDark } = useTheme();
@@ -24,11 +24,9 @@ function AppNavigator() {
 export default function RootLayout() {
   return (
     <Provider store={store}>
-      <ThemeProvider>
-        <SafeAreaProvider>
-          <AppNavigator />
-        </SafeAreaProvider>
-      </ThemeProvider>
+      <SafeAreaProvider>
+        <AppNavigator />
+      </SafeAreaProvider>
     </Provider>
   );
 }

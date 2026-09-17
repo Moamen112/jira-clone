@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronBackIcon } from '../../../assets/icon';
+import { ChevronBackIcon, SunnyIcon, MoonIcon } from '../../../assets/icon';
 import {
   mockProjects,
   mockColumns,
@@ -23,9 +23,9 @@ import { useTheme, spacing, radius } from '../../../src/tokens';
  * and embeds the Kanban Board with quick card actions.
  */
 export default function SpacesProjectScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark, toggleTheme } = useTheme();
   const router = useRouter();
-  const { projectId } = useLocalSearchParams<{ projectId?: string }>();
+  const { projectId, from } = useLocalSearchParams<{ projectId?: string; from?: string }>();
 
   // Resolve project entity (fall back to first project if unprovided)
   const project = useMemo(() => {
@@ -73,11 +73,22 @@ export default function SpacesProjectScreen() {
     return mockUsers.filter((u) => memberIdSet.has(u.id));
   }, [project]);
 
+  // Back navigation handler
+  const handleBack = () => {
+    if (from === 'home') {
+      router.replace('/(tabs)');
+    } else if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/spaces');
+    }
+  };
+
   // Navigation callbacks
   const handleCardPress = (card: CardType) => {
     router.push({
       pathname: '/(tabs)/spaces/card',
-      params: { cardId: card.id },
+      params: { cardId: card.id, from: 'project' },
     });
   };
 
@@ -125,7 +136,7 @@ export default function SpacesProjectScreen() {
       <View style={[styles.screen, { backgroundColor: colors.paper }]}>
         <View style={[styles.topBar, { borderBottomColor: colors.line }]}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={handleBack}
             style={({ pressed }) => [
               styles.backButton,
               { backgroundColor: pressed ? colors.surface : 'transparent' },
@@ -136,12 +147,31 @@ export default function SpacesProjectScreen() {
               Spaces
             </Text>
           </Pressable>
+
+          <Pressable
+            onPress={toggleTheme}
+            accessibilityRole="button"
+            accessibilityLabel={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+            style={({ pressed }) => [
+              styles.themeToggleBtn,
+              {
+                backgroundColor: pressed ? colors.paper : colors.surface,
+                borderColor: colors.line,
+              },
+            ]}
+          >
+            {isDark ? (
+              <SunnyIcon size={18} color={colors.accent} />
+            ) : (
+              <MoonIcon size={18} color={colors.ink} />
+            )}
+          </Pressable>
         </View>
         <EmptyState
           title="Project Not Found"
           description={`Could not locate a workspace project with ID "${projectId}".`}
           actionLabel="Back to Spaces"
-          onAction={() => router.back()}
+          onAction={() => router.replace('/(tabs)/spaces')}
         />
       </View>
     );
@@ -152,7 +182,7 @@ export default function SpacesProjectScreen() {
       {/* Top Back Navigation Bar */}
       <View style={[styles.topBar, { borderBottomColor: colors.line }]}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={handleBack}
           accessibilityRole="button"
           accessibilityLabel="Back to spaces"
           style={({ pressed }) => [
@@ -164,6 +194,25 @@ export default function SpacesProjectScreen() {
           <Text variant="bodySmall" bold style={{ color: colors.ink }}>
             Spaces
           </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={toggleTheme}
+          accessibilityRole="button"
+          accessibilityLabel={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+          style={({ pressed }) => [
+            styles.themeToggleBtn,
+            {
+              backgroundColor: pressed ? colors.paper : colors.surface,
+              borderColor: colors.line,
+            },
+          ]}
+        >
+          {isDark ? (
+            <SunnyIcon size={18} color={colors.accent} />
+          ) : (
+            <MoonIcon size={18} color={colors.ink} />
+          )}
         </Pressable>
       </View>
 
@@ -207,9 +256,18 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[2],
     borderBottomWidth: 1,
+  },
+  themeToggleBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   backButton: {
     flexDirection: 'row',

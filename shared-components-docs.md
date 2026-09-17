@@ -1043,7 +1043,7 @@ export const selectThemeMode = (state: { theme: ThemeState }) => state.theme.mod
 
 ### useTheme Hook & Dynamic Tokens
 
-**Location**: `apps/mobile/src/tokens/ThemeContext.tsx`  
+**Location**: `apps/mobile/src/tokens/useTheme.ts`  
 **Barrel Export**: `@/tokens`
 
 ```tsx
