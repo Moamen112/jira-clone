@@ -9,6 +9,8 @@ export interface AsyncStorageAdapter {
 export const STORAGE_KEYS = {
   THEME_MODE: 'jira-theme-mode',
   AUTH_TOKEN: 'jira-auth-token',
+  ACCESS_TOKEN: 'jira-access-token',
+  REFRESH_TOKEN: 'jira-refresh-token',
   CURRENT_USER: 'jira-current-user',
   RECENT_PROJECTS: 'jira-recent-projects',
 } as const;
