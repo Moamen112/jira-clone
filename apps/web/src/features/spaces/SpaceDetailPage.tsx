@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import type { FC } from 'react';
-import { useParams, useNavigate } from 'react-router';
-import { Button, Input } from '../../components/base';
-import { Modal } from '../../components/shared/modal';
-import { ProjectHeader } from '../../components/shared/project-header';
-import { Board } from '../../components/shared/board';
-import { CardDetail } from '../../components/shared/card-detail';
+import { useState } from "react";
+import type { FC } from "react";
+import { useParams, useNavigate } from "react-router";
+import { Button, Input } from "../../components/base";
+import { Modal } from "../../components/shared/modal";
+import { ProjectHeader } from "../../components/shared/project-header";
+import { Board } from "../../components/shared/board";
+import { CardDetail } from "../../components/shared/card-detail";
 import {
   mockSpaces,
   mockColumns,
@@ -16,9 +16,9 @@ import {
   mockCurrentUser,
   type Card,
   type BoardColumn,
-} from '@jira-clone/shared';
-import { ROUTES } from '../../routes/paths';
-import styles from './SpaceDetailPage.module.css';
+} from "@jira-clone/shared";
+import { ROUTES } from "../../routes/paths";
+import styles from "./SpaceDetailPage.module.css";
 
 const ArrowLeftIcon: FC<{ size?: number }> = ({ size = 15 }) => (
   <svg
@@ -45,17 +45,21 @@ export function SpaceDetailPage() {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [isCreateCardOpen, setIsCreateCardOpen] = useState(false);
   const [targetColumnId, setTargetColumnId] = useState<string | null>(null);
-  const [newCardTitle, setNewCardTitle] = useState('');
-  const [cardTitleError, setCardTitleError] = useState<string | undefined>(undefined);
+  const [newCardTitle, setNewCardTitle] = useState("");
+  const [cardTitleError, setCardTitleError] = useState<string | undefined>(
+    undefined,
+  );
 
   const space =
     mockSpaces.find(
-      (s) => s.project.id === id || s.project.key.toLowerCase() === id?.toLowerCase()
+      (s) =>
+        s.project.id === id ||
+        s.project.key.toLowerCase() === id?.toLowerCase(),
     ) ?? mockSpaces[0];
 
   const handleOpenCreateCard = (columnId?: string) => {
     setTargetColumnId(columnId || null);
-    setNewCardTitle('');
+    setNewCardTitle("");
     setCardTitleError(undefined);
     setIsCreateCardOpen(true);
   };
@@ -63,11 +67,11 @@ export function SpaceDetailPage() {
   const handleConfirmCreateCard = () => {
     const trimmed = newCardTitle.trim();
     if (!trimmed) {
-      setCardTitleError('Card name cannot be empty.');
+      setCardTitleError("Card name cannot be empty.");
       return;
     }
 
-    const chosenColumnId = targetColumnId || columns[0]?.id || 'col-todo';
+    const chosenColumnId = targetColumnId || columns[0]?.id || "col-todo";
     const newCard: Card = {
       id: `card-${Date.now()}`,
       key: `${space.project.key}-${cards.length + 1}`,
@@ -75,7 +79,7 @@ export function SpaceDetailPage() {
       projectId: space.project.id,
       columnId: chosenColumnId,
       publisherId: mockCurrentUser.id,
-      priority: 'medium',
+      priority: "medium",
       order: cards.filter((c) => c.columnId === chosenColumnId).length,
       commentCount: 0,
       createdAt: new Date().toISOString(),
@@ -84,7 +88,7 @@ export function SpaceDetailPage() {
 
     setCards((prev) => [...prev, newCard]);
     setIsCreateCardOpen(false);
-    setNewCardTitle('');
+    setNewCardTitle("");
     setCardTitleError(undefined);
     setTargetColumnId(null);
 
@@ -94,14 +98,14 @@ export function SpaceDetailPage() {
 
   const handleCloseCreateModal = () => {
     setIsCreateCardOpen(false);
-    setNewCardTitle('');
+    setNewCardTitle("");
     setCardTitleError(undefined);
     setTargetColumnId(null);
   };
 
   return (
     <div className={styles.container}>
-      {/* Back button */}
+      {/* Top action bar: Back button & Theme toggle */}
       <div className={styles.topBar}>
         <button
           type="button"
@@ -140,9 +144,13 @@ export function SpaceDetailPage() {
             setCards((prev) =>
               prev.map((c) =>
                 c.id === card.id
-                  ? { ...c, columnId: toColumnId, updatedAt: new Date().toISOString() }
-                  : c
-              )
+                  ? {
+                      ...c,
+                      columnId: toColumnId,
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : c,
+              ),
             );
           }}
           onCreateCard={(title, columnId) => {
@@ -153,7 +161,7 @@ export function SpaceDetailPage() {
               projectId: space.project.id,
               columnId,
               publisherId: mockCurrentUser.id,
-              priority: 'medium',
+              priority: "medium",
               order: cards.filter((c) => c.columnId === columnId).length,
               commentCount: 0,
               createdAt: new Date().toISOString(),
@@ -177,7 +185,7 @@ export function SpaceDetailPage() {
         }
         presentation="dialog"
         footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             <Button
               label="Cancel"
               variant="secondary"
@@ -199,7 +207,7 @@ export function SpaceDetailPage() {
             e.preventDefault();
             handleConfirmCreateCard();
           }}
-          style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+          style={{ display: "flex", flexDirection: "column", gap: 12 }}
         >
           <Input
             label="Card name"
@@ -228,7 +236,9 @@ export function SpaceDetailPage() {
         onClose={() => setSelectedCard(null)}
         onAddStatus={(newCol) => setColumns((prev) => [...prev, newCol])}
         onSave={(updated) => {
-          setCards((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+          setCards((prev) =>
+            prev.map((c) => (c.id === updated.id ? updated : c)),
+          );
           setSelectedCard(updated);
         }}
         onDelete={(cardId) => {

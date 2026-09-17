@@ -1,14 +1,12 @@
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Navbar, type NavbarPage } from '../components/shared/navbar';
-import { useAppDispatch, useAppSelector, selectThemeMode, toggleTheme } from '../store';
+import { useTheme } from '../hooks';
 import { ROUTES } from '../routes/paths';
 import { mockCurrentUser } from '@jira-clone/shared';
 import styles from './RootLayout.module.css';
 
 export function RootLayout() {
-  const mode = useAppSelector(selectThemeMode);
-  const isDark = mode === 'dark';
-  const dispatch = useAppDispatch();
+  const { isDark, toggleTheme } = useTheme();
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -31,7 +29,7 @@ export function RootLayout() {
         brand="Jira Clone"
         logoLabel="J"
         isDark={isDark}
-        onToggleTheme={() => dispatch(toggleTheme())}
+        onToggleTheme={toggleTheme}
         onNavigate={(href) => navigate(href)}
         onLogIn={() => navigate(ROUTES.AUTH.SIGN_IN)}
         onSignUp={() => navigate(ROUTES.AUTH.SIGN_UP)}

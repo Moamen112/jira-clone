@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Sidenav, type SidenavPage } from '../components/shared/sidenav';
-import { useAppDispatch, useAppSelector, selectThemeMode, toggleTheme } from '../store';
+import { useTheme } from '../hooks';
 import { ROUTES } from '../routes/paths';
 import { mockProjects, mockCurrentUser } from '@jira-clone/shared';
 import styles from './ProtectedLayout.module.css';
@@ -10,9 +10,7 @@ export function ProtectedLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string>(mockProjects[0].id);
 
-  const mode = useAppSelector(selectThemeMode);
-  const isDark = mode === 'dark';
-  const dispatch = useAppDispatch();
+  const { isDark, toggleTheme } = useTheme();
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -80,7 +78,7 @@ export function ProtectedLayout() {
           collapsed={collapsed}
           onToggleCollapse={(col) => setCollapsed(col)}
           isDark={isDark}
-          onToggleTheme={() => dispatch(toggleTheme())}
+          onToggleTheme={toggleTheme}
           onLogout={() => navigate(ROUTES.AUTH.SIGN_IN)}
           style={{ height: '100%' }}
         />

@@ -6,13 +6,35 @@
   background-color: var(--color-background);
   color: var(--color-ink);
   box-sizing: border-box;
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
 .topBar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.themeToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-card, 6px);
+  border: 1px solid var(--color-line);
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.themeToggleBtn:hover {
+  background-color: var(--color-paper);
+  border-color: var(--color-ink-muted);
 }
 
 .backButton {

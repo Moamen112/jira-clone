@@ -6,6 +6,7 @@
   background-color: var(--color-background);
   color: var(--color-ink);
   box-sizing: border-box;
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
 .header {
@@ -48,6 +49,7 @@
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card, 8px);
   margin-bottom: 24px;
+  transition: background-color 200ms ease, border-color 200ms ease;
 }
 
 .filtersLeft {

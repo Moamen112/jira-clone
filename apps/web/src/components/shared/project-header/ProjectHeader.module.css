@@ -19,8 +19,8 @@
   width: 42px;
   height: 42px;
   border-radius: var(--radius-card, 8px);
-  background: linear-gradient(135deg, var(--color-accent-soft) 0%, rgba(30, 111, 92, 0.16) 100%);
-  border: 1px solid rgba(30, 111, 92, 0.25);
+  background-color: var(--color-accent-soft);
+  border: 1px solid var(--color-line);
   color: var(--color-accent);
   display: flex;
   align-items: center;
