@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { FC } from 'react';
 import { useNavigate } from 'react-router';
 import { Button, Input, Dropdown } from '../../components/base';
@@ -27,7 +27,7 @@ const SearchIcon: FC<{ size?: number }> = ({ size = 15 }) => (
   </svg>
 );
 
-const PlusIcon: FC<{ size?: number }> = ({ size = 15 }) => (
+const PlusIcon: FC<{ size?: number }> = ({ size = 16 }) => (
   <svg
     width={size}
     height={size}
@@ -50,6 +50,7 @@ import {
   // mockSpaceOwnerOptions,
   mockSpaceSortOptions,
   mockCurrentUser,
+  useDebounce,
 } from '@jira-clone/shared';
 import type { SpaceItem } from '@jira-clone/shared';
 import { CreateSpaceModal } from './components/create-space-modal';
@@ -60,6 +61,7 @@ export function SpacesPage() {
   const [spaces, setSpaces] = useState<SpaceItem[]>(mockSpaces);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   // Filter dropdown states hidden until backend filter specifications are finalized
   // const [selectedType, setSelectedType] = useState('all');
   // const [selectedOwner, setSelectedOwner] = useState('all');
@@ -67,9 +69,13 @@ export function SpacesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 36;
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery]);
+
   const filteredSpaces = spaces.filter((item) => {
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (debouncedSearchQuery.trim()) {
+      const q = debouncedSearchQuery.toLowerCase();
       const matchName = item.project.name.toLowerCase().includes(q);
       const matchKey = item.project.key.toLowerCase().includes(q);
       if (!matchName && !matchKey) return false;

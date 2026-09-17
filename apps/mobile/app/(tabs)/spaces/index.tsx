@@ -8,6 +8,7 @@ import {
   mockColumns,
   mockUsers,
   Project,
+  useDebounce,
 } from '@jira-clone/shared';
 import { Text, Badge, Input } from '../../../src/components/base';
 import { ProjectCard, ProjectIssueCounts } from '../../../src/components/shared/project-card';
@@ -87,6 +88,7 @@ export default function SpacesIndexScreen() {
     'proj-2',
   ]);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   // Open project board and bump to front of recently viewed
   const handleOpenSpace = (projectId: string) => {
@@ -109,7 +111,7 @@ export default function SpacesIndexScreen() {
 
   // Filtered list for "All Spaces" container
   const filteredProjects = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = debouncedSearchQuery.trim().toLowerCase();
     if (!q) return mockProjects;
     return mockProjects.filter(
       (p) =>
@@ -117,7 +119,7 @@ export default function SpacesIndexScreen() {
         p.key.toLowerCase().includes(q) ||
         (p.description && p.description.toLowerCase().includes(q))
     );
-  }, [searchQuery]);
+  }, [debouncedSearchQuery]);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.paper }]}>
@@ -256,7 +258,7 @@ export default function SpacesIndexScreen() {
           ) : (
             <EmptyState
               title="No spaces found"
-              description={`No spaces match "${searchQuery}".`}
+              description={`No spaces match "${debouncedSearchQuery}".`}
               actionLabel="Clear Filter"
               onAction={() => setSearchQuery('')}
             />
