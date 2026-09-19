@@ -23,3 +23,7 @@ export interface SpaceFilterOption {
   label: string;
   value: string;
 }
+
+export type SpaceSortKey = 'updated' | 'name-asc' | 'name-desc' | 'issues';
+export type ProjectSortKey = 'updated' | 'name-asc' | 'name-desc';
+

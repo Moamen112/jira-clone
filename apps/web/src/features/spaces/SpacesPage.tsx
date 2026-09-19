@@ -51,6 +51,8 @@ import {
   mockSpaceSortOptions,
   mockCurrentUser,
   useDebounce,
+  filterSpaces,
+  sortSpaces,
 } from '@jira-clone/shared';
 import type { SpaceItem } from '@jira-clone/shared';
 import { CreateSpaceModal } from './components/create-space-modal';
@@ -71,29 +73,16 @@ export function SpacesPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchQuery]);
+  }, [debouncedSearchQuery, selectedSort]);
 
-  const filteredSpaces = spaces.filter((item) => {
-    if (debouncedSearchQuery.trim()) {
-      const q = debouncedSearchQuery.toLowerCase();
-      const matchName = item.project.name.toLowerCase().includes(q);
-      const matchKey = item.project.key.toLowerCase().includes(q);
-      if (!matchName && !matchKey) return false;
-    }
-    // Filter dropdown checks hidden until backend filter specifications are finalized
-    // if (selectedType !== 'all' && item.category !== selectedType) {
-    //   return false;
-    // }
-    // if (selectedOwner !== 'all' && item.project.ownerId !== selectedOwner) {
-    //   return false;
-    // }
-    return true;
-  });
+  const filteredSpaces = filterSpaces(spaces, debouncedSearchQuery);
+  const sortedSpaces = sortSpaces(filteredSpaces, selectedSort);
 
-  const totalItems = filteredSpaces.length;
+  const totalItems = sortedSpaces.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
-  const visibleSpaces = filteredSpaces.slice(startIndex, startIndex + pageSize);
+  const visibleSpaces = sortedSpaces.slice(startIndex, startIndex + pageSize);
+
 
   const handleCreateSpace = (input: CreateSpaceInput) => {
     const newSpace: SpaceItem = {

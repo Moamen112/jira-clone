@@ -9,7 +9,11 @@ import {
   mockUsers,
   Project,
   useDebounce,
+  filterProjects,
+  sortProjects,
 } from '@jira-clone/shared';
+
+
 import { Text, Badge, Input } from '../../../src/components/base';
 import { ProjectCard, ProjectIssueCounts } from '../../../src/components/shared/project-card';
 import { EmptyState } from '../../../src/components/shared/empty-state';
@@ -109,17 +113,13 @@ export default function SpacesIndexScreen() {
       .filter((p): p is Project => Boolean(p));
   }, [recentlyViewedIds]);
 
-  // Filtered list for "All Spaces" container
+  // Filtered list for "All Spaces" container (default sorted by updated / latest)
   const filteredProjects = useMemo(() => {
-    const q = debouncedSearchQuery.trim().toLowerCase();
-    if (!q) return mockProjects;
-    return mockProjects.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.key.toLowerCase().includes(q) ||
-        (p.description && p.description.toLowerCase().includes(q))
-    );
+    const filtered = filterProjects(mockProjects, debouncedSearchQuery);
+    return sortProjects(filtered, 'updated');
   }, [debouncedSearchQuery]);
+
+
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.paper }]}>
