@@ -27,3 +27,11 @@ export interface SpaceFilterOption {
 export type SpaceSortKey = 'updated' | 'name-asc' | 'name-desc' | 'issues';
 export type ProjectSortKey = 'updated' | 'name-asc' | 'name-desc';
 
+export interface CreateSpaceInput {
+  name: string;
+  key: string;
+  description?: string;
+  members?: SpaceMember[];
+}
+
+

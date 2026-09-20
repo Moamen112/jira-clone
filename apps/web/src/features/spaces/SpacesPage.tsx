@@ -53,6 +53,7 @@ import {
   useDebounce,
   filterSpaces,
   sortSpaces,
+  createSpace,
 } from '@jira-clone/shared';
 import type { SpaceItem } from '@jira-clone/shared';
 import { CreateSpaceModal } from './components/create-space-modal';
@@ -83,34 +84,12 @@ export function SpacesPage() {
   const startIndex = (currentPage - 1) * pageSize;
   const visibleSpaces = sortedSpaces.slice(startIndex, startIndex + pageSize);
 
-
   const handleCreateSpace = (input: CreateSpaceInput) => {
-    const newSpace: SpaceItem = {
-      project: {
-        id: `proj-${Date.now()}`,
-        name: input.name,
-        key: input.key,
-        description: input.description,
-        ownerId: mockCurrentUser.id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      members:
-        input.members.length > 0
-          ? input.members
-          : [
-              {
-                id: mockCurrentUser.id,
-                name: mockCurrentUser.name,
-                avatarUrl: mockCurrentUser.avatarUrl,
-              },
-            ],
-      issueCounts: { todo: 0, inProgress: 0, done: 0 },
-      category: 'software',
-    };
+    const newSpace = createSpace(input);
     setSpaces((prev) => [newSpace, ...prev]);
     setCurrentPage(1);
   };
+
 
   return (
     <div className={styles.container}>

@@ -11,7 +11,10 @@ import {
   useDebounce,
   filterProjects,
   sortProjects,
+  createSpace,
 } from '@jira-clone/shared';
+import type { CreateSpaceInput } from '@jira-clone/shared';
+
 
 
 import { Text, Badge, Input } from '../../../src/components/base';
@@ -86,6 +89,8 @@ export default function SpacesIndexScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
   const router = useRouter();
 
+  const [projects, setProjects] = useState<Project[]>(mockProjects);
+
   // Recently viewed space IDs (seeded with popular active spaces)
   const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([
     'proj-1',
@@ -93,6 +98,11 @@ export default function SpacesIndexScreen() {
   ]);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  const handleCreateSpace = (input: CreateSpaceInput) => {
+    const newSpace = createSpace(input);
+    setProjects((prev) => [newSpace.project, ...prev]);
+  };
 
   // Open project board and bump to front of recently viewed
   const handleOpenSpace = (projectId: string) => {
@@ -109,15 +119,16 @@ export default function SpacesIndexScreen() {
   // Resolve recently viewed projects in order
   const recentlyViewedProjects = useMemo(() => {
     return recentlyViewedIds
-      .map((id) => mockProjects.find((p) => p.id === id))
+      .map((id) => projects.find((p) => p.id === id))
       .filter((p): p is Project => Boolean(p));
-  }, [recentlyViewedIds]);
+  }, [recentlyViewedIds, projects]);
 
   // Filtered list for "All Spaces" container (default sorted by updated / latest)
   const filteredProjects = useMemo(() => {
-    const filtered = filterProjects(mockProjects, debouncedSearchQuery);
+    const filtered = filterProjects(projects, debouncedSearchQuery);
     return sortProjects(filtered, 'updated');
-  }, [debouncedSearchQuery]);
+  }, [projects, debouncedSearchQuery]);
+
 
 
 

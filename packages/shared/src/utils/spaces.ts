@@ -1,5 +1,37 @@
 import type { Project } from '../types/project';
-import type { SpaceItem } from '../types/space';
+import type { SpaceItem, CreateSpaceInput } from '../types/space';
+import { mockCurrentUser } from '../data/mockData';
+
+/**
+ * Creates a new SpaceItem based on input, matching the web implementation.
+ */
+export function createSpace(input: CreateSpaceInput): SpaceItem {
+  const now = new Date().toISOString();
+  return {
+    project: {
+      id: `proj-${Date.now()}`,
+      name: input.name,
+      key: input.key,
+      description: input.description,
+      ownerId: mockCurrentUser.id,
+      createdAt: now,
+      updatedAt: now,
+    },
+    members:
+      input.members && input.members.length > 0
+        ? input.members
+        : [
+            {
+              id: mockCurrentUser.id,
+              name: mockCurrentUser.name,
+              avatarUrl: mockCurrentUser.avatarUrl,
+            },
+          ],
+    issueCounts: { todo: 0, inProgress: 0, done: 0 },
+    category: 'software',
+  };
+}
+
 
 /**
  * Checks if a project matches a search query by name, key, or description.
