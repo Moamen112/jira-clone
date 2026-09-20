@@ -33,3 +33,21 @@ export interface CreateCardInput {
   cardIndex?: number;
   order?: number;
 }
+
+export interface CardTypeOption {
+  id: string;
+  label: string;
+  color: string;
+}
+
+export interface CreateStatusInput {
+  title: string;
+  projectId: string;
+  color?: string;
+  order?: number;
+}
+
+export interface CreateCardTypeInput {
+  label: string;
+  color?: string;
+}

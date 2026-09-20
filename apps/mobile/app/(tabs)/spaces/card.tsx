@@ -9,6 +9,7 @@ import {
   mockCurrentUser,
   mockComments,
   mockActivityLogs,
+  BoardColumn,
   Card as CardType,
   Comment,
   updateCardInList,
@@ -30,6 +31,7 @@ export default function SpacesCardScreen() {
   const { cardId, from } = useLocalSearchParams<{ cardId?: string; from?: string }>();
 
   const [cards, setCards] = useState<CardType[]>(mockCards);
+  const [columns, setColumns] = useState<BoardColumn[]>(mockColumns);
   const [comments, setComments] = useState<Comment[]>(mockComments);
 
   // Find active card from route parameter
@@ -148,7 +150,7 @@ export default function SpacesCardScreen() {
   return (
     <CardDetail
       card={card}
-      columns={mockColumns}
+      columns={columns}
       users={mockUsers}
       currentUserId={mockCurrentUser.id}
       comments={cardComments}
@@ -158,6 +160,7 @@ export default function SpacesCardScreen() {
       onClose={handleBack}
       onSave={handleSaveCard}
       onDelete={handleDeleteCard}
+      onAddStatus={(newCol) => setColumns((prev) => [...prev, newCol])}
       fullScreen={true}
     />
   );

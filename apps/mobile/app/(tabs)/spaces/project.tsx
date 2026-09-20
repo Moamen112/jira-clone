@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronBackIcon, SunnyIcon, MoonIcon } from '../../../assets/icon';
+import { ChevronBackIcon, SunnyIcon, MoonIcon, AddIcon } from '../../../assets/icon';
 import {
   mockProjects,
   mockColumns,
@@ -12,7 +12,7 @@ import {
   createCard,
   moveCardToColumn,
 } from '@jira-clone/shared';
-import { Text } from '../../../src/components/base';
+import { Text, Modal, Button, Input, Dropdown } from '../../../src/components/base';
 import { Board } from '../../../src/components/shared/board';
 import { ProjectHeader } from '../../../src/components/shared/project-header';
 import { CardMoveMenu, CardPosition } from '../../../src/components/shared/card-move-menu';
@@ -122,6 +122,36 @@ export default function SpacesProjectScreen() {
     setCards((prev) => [...prev, newCard]);
   };
 
+  // Quick Create Card Modal state & handlers
+  const [isCreateCardOpen, setIsCreateCardOpen] = useState(false);
+  const [targetColumnId, setTargetColumnId] = useState<string>('');
+  const [newCardTitle, setNewCardTitle] = useState('');
+  const [cardTitleError, setCardTitleError] = useState<string | undefined>();
+
+  const handleOpenCreateCard = (columnId?: string) => {
+    setTargetColumnId(columnId || projectColumns[0]?.id || '');
+    setNewCardTitle('');
+    setCardTitleError(undefined);
+    setIsCreateCardOpen(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    setIsCreateCardOpen(false);
+    setNewCardTitle('');
+    setCardTitleError(undefined);
+  };
+
+  const handleConfirmCreateCard = () => {
+    const trimmed = newCardTitle.trim();
+    if (!trimmed) {
+      setCardTitleError('Card title cannot be empty.');
+      return;
+    }
+    const chosenColumnId = targetColumnId || projectColumns[0]?.id || '';
+    handleCreateCard(trimmed, chosenColumnId);
+    handleCloseCreateModal();
+  };
+
   if (!project) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.paper }]}>
@@ -187,24 +217,33 @@ export default function SpacesProjectScreen() {
           </Text>
         </Pressable>
 
-        <Pressable
-          onPress={toggleTheme}
-          accessibilityRole="button"
-          accessibilityLabel={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-          style={({ pressed }) => [
-            styles.themeToggleBtn,
-            {
-              backgroundColor: pressed ? colors.paper : colors.surface,
-              borderColor: colors.line,
-            },
-          ]}
-        >
-          {isDark ? (
-            <SunnyIcon size={18} color={colors.accent} />
-          ) : (
-            <MoonIcon size={18} color={colors.ink} />
-          )}
-        </Pressable>
+        <View style={styles.topBarRight}>
+          <Button
+            label="+ Card"
+            variant="primary"
+            size="sm"
+            onPress={() => handleOpenCreateCard()}
+          />
+
+          <Pressable
+            onPress={toggleTheme}
+            accessibilityRole="button"
+            accessibilityLabel={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+            style={({ pressed }) => [
+              styles.themeToggleBtn,
+              {
+                backgroundColor: pressed ? colors.paper : colors.surface,
+                borderColor: colors.line,
+              },
+            ]}
+          >
+            {isDark ? (
+              <SunnyIcon size={18} color={colors.accent} />
+            ) : (
+              <MoonIcon size={18} color={colors.ink} />
+            )}
+          </Pressable>
+        </View>
       </View>
 
       {/* Kanban Board with Project Header */}
@@ -215,14 +254,93 @@ export default function SpacesProjectScreen() {
         currentUserId={mockCurrentUser.id}
         onCardPress={handleCardPress}
         onCardMove={handleCardMove}
+        onAddCardPress={(colId) => handleOpenCreateCard(colId)}
         onCreateCard={handleCreateCard}
         renderHeader={() => (
           <View style={styles.headerWrapper}>
-            <ProjectHeader project={project} members={members} />
+            <ProjectHeader
+              project={project}
+              members={members}
+              onCreateCard={() => handleOpenCreateCard()}
+            />
           </View>
         )}
         style={styles.board}
       />
+
+      {/* Floating Action Button for Card Creation */}
+      <Pressable
+        onPress={() => handleOpenCreateCard()}
+        accessibilityRole="button"
+        accessibilityLabel="Create card"
+        style={({ pressed }) => [
+          styles.fab,
+          {
+            backgroundColor: colors.accent,
+            opacity: pressed ? 0.88 : 1,
+            shadowColor: '#000',
+          },
+        ]}
+      >
+        <AddIcon size={24} color="#FFFFFF" />
+      </Pressable>
+
+      {/* Quick Create Card Dialog Modal */}
+      <Modal
+        visible={isCreateCardOpen}
+        onClose={handleCloseCreateModal}
+        title="Create Card"
+        subtitle={
+          targetColumnId
+            ? `${project.key} · ${projectColumns.find((c) => c.id === targetColumnId)?.title || targetColumnId}`
+            : project.key
+        }
+        presentation="dialog"
+        footer={
+          <View style={styles.modalFooter}>
+            <Button
+              label="Cancel"
+              variant="ghost"
+              size="sm"
+              onPress={handleCloseCreateModal}
+            />
+            <Button
+              label="Create Card"
+              variant="primary"
+              size="sm"
+              disabled={!newCardTitle.trim()}
+              onPress={handleConfirmCreateCard}
+            />
+          </View>
+        }
+      >
+        <View style={{ gap: spacing[3] }}>
+          <Input
+            label="Card name"
+            placeholder="e.g. Implement user authentication"
+            value={newCardTitle}
+            onChangeText={(text) => {
+              setNewCardTitle(text);
+              if (cardTitleError) setCardTitleError(undefined);
+            }}
+            error={cardTitleError}
+            autoFocus
+          />
+
+          {projectColumns.length > 1 && (
+            <Dropdown
+              label="Status"
+              value={targetColumnId}
+              options={projectColumns.map((c) => ({
+                label: c.title,
+                value: c.id,
+              }))}
+              onSelect={(val) => setTargetColumnId(val)}
+              placeholder="Select column..."
+            />
+          )}
+        </View>
+      </Modal>
 
       {/* Card Quick Move Menu */}
       <CardMoveMenu
@@ -252,6 +370,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
     borderBottomWidth: 1,
   },
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+  },
   themeToggleBtn: {
     width: 36,
     height: 36,
@@ -275,5 +398,25 @@ const styles = StyleSheet.create({
   },
   board: {
     flex: 1,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing[2],
+  },
+  fab: {
+    position: 'absolute',
+    bottom: spacing[6],
+    right: spacing[4],
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    zIndex: 99,
   },
 });

@@ -8,8 +8,13 @@ import {
   type User,
   type Comment,
   type ActivityLog as ActivityLogType,
+  type CardTypeOption,
   getCardRole,
   cardPermissions,
+  createStatusColumn,
+  createCardType,
+  DEFAULT_CARD_TYPES,
+  PRESET_STATUS_COLORS,
 } from "@jira-clone/shared";
 import { Modal } from "../modal/Modal";
 import { Text, Input, Textarea, Button, Badge, Dropdown } from "../../base";
@@ -58,29 +63,9 @@ export interface CardDetailProps {
   style?: CSSProperties;
 }
 
-export interface CardTypeOption {
-  id: string;
-  label: string;
-  color: string;
-}
+export type { CardTypeOption };
 
-const DEFAULT_CARD_TYPES: CardTypeOption[] = [
-  { id: "task", label: "Task", color: "#3B82F6" },
-  { id: "bug", label: "Bug", color: "#EF4444" },
-  { id: "story", label: "Story", color: "#10B981" },
-  { id: "epic", label: "Epic", color: "#8B5CF6" },
-];
-
-const PRESET_COLORS = [
-  "#3B82F6",
-  "#10B981",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-  "#EC4899",
-  "#06B6D4",
-  "#64748B",
-];
+const PRESET_COLORS = PRESET_STATUS_COLORS;
 
 const PRIORITIES: CardPriority[] = [
   "lowest",
@@ -353,23 +338,20 @@ export const CardDetail: FC<CardDetailProps> = ({
   };
 
   const handleAddStatus = () => {
-    const trimmed = newStatusTitle.trim();
-    if (!trimmed) {
-      setStatusError("Status name cannot be empty.");
+    const { column: newCol, error } = createStatusColumn({
+      title: newStatusTitle,
+      projectId: card.projectId,
+      color: newStatusColor,
+      order: allColumns.length,
+    });
+
+    if (error || !newCol) {
+      setStatusError(error || "Status name cannot be empty.");
       return;
     }
 
-    const newColId = `col-${Date.now()}`;
-    const newCol: BoardColumn = {
-      id: newColId,
-      projectId: card.projectId,
-      title: trimmed,
-      color: newStatusColor,
-      order: allColumns.length,
-    };
-
     setCustomColumns((prev) => [...prev, newCol]);
-    setDraftColumnId(newColId);
+    setDraftColumnId(newCol.id);
     onAddStatus?.(newCol);
     setIsAddStatusOpen(false);
     setNewStatusTitle("");
@@ -377,21 +359,18 @@ export const CardDetail: FC<CardDetailProps> = ({
   };
 
   const handleAddType = () => {
-    const trimmed = newTypeTitle.trim();
-    if (!trimmed) {
-      setTypeError("Type name cannot be empty.");
+    const { cardType: newType, error } = createCardType({
+      label: newTypeTitle,
+      color: newTypeColor,
+    });
+
+    if (error || !newType) {
+      setTypeError(error || "Type name cannot be empty.");
       return;
     }
 
-    const newTypeId = trimmed.toLowerCase().replace(/\s+/g, "-");
-    const newType: CardTypeOption = {
-      id: newTypeId,
-      label: trimmed,
-      color: newTypeColor,
-    };
-
     setCardTypes((prev) => [...prev, newType]);
-    setDraftType(newTypeId);
+    setDraftType(newType.id);
     setIsAddTypeOpen(false);
     setNewTypeTitle("");
     setTypeError(undefined);
@@ -840,7 +819,7 @@ export const CardDetail: FC<CardDetailProps> = ({
 
               {/* Publisher Info */}
               <div style={{ paddingTop: 8, borderTop: '1px solid var(--color-line)' }}>
-                <PublisherInfo publisher={publisher} createdAt={card.createdAt} />
+                <PublisherInfo publisher={publisher} createdAt={card.createdAt} variant="card" />
               </div>
             </div>
           </div>

@@ -20,6 +20,11 @@ import {
   Comment,
   getCardRole,
   cardPermissions,
+  CardTypeOption,
+  createStatusColumn,
+  createCardType,
+  DEFAULT_CARD_TYPES,
+  PRESET_STATUS_COLORS,
 } from '@jira-clone/shared';
 import { Modal } from '../../base/modal/Modal';
 import { Text } from '../../base/typography/Text';
@@ -27,6 +32,7 @@ import { Input } from '../../base/input/Input';
 import { Textarea } from '../../base/textarea/Textarea';
 import { Button } from '../../base/button/Button';
 import { Badge } from '../../base/badge/Badge';
+import { Dropdown, type DropdownOption } from '../../base/dropdown/Dropdown';
 import { Avatar } from '../../base/avatar/Avatar';
 import { Divider } from '../../base/divider/Divider';
 import { ActivityLog } from '../activity-log/ActivityLog';
@@ -65,6 +71,8 @@ export interface CardDetailProps {
   onSave?: (updatedCard: CardType) => void;
   /** Callback fired when user deletes the card */
   onDelete?: (cardId: string) => void;
+  /** Callback fired when a new status column is added */
+  onAddStatus?: (column: BoardColumn) => void;
   /** Loading state for save action */
   loading?: boolean;
   /** Whether to render as full screen (default: true) instead of modal */
@@ -95,6 +103,7 @@ export const CardDetail: React.FC<CardDetailProps> = ({
   onClose,
   onSave,
   onDelete,
+  onAddStatus,
   loading = false,
   fullScreen = true,
   style,
@@ -109,6 +118,26 @@ export const CardDetail: React.FC<CardDetailProps> = ({
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [priority, setPriority] = useState<CardPriority>('medium');
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Status & Custom Columns state
+  const [customColumns, setCustomColumns] = useState<BoardColumn[]>([]);
+  const allColumns = useMemo(() => {
+    const ids = new Set(columns.map((c) => c.id));
+    return [...columns, ...customColumns.filter((c) => !ids.has(c.id))];
+  }, [columns, customColumns]);
+
+  const [isAddStatusOpen, setIsAddStatusOpen] = useState(false);
+  const [newStatusTitle, setNewStatusTitle] = useState('');
+  const [newStatusColor, setNewStatusColor] = useState(PRESET_STATUS_COLORS[0]);
+  const [statusError, setStatusError] = useState<string | undefined>();
+
+  // Card Type state
+  const [cardTypes, setCardTypes] = useState<CardTypeOption[]>(DEFAULT_CARD_TYPES);
+  const [type, setType] = useState<string>(card?.type || 'task');
+  const [isAddTypeOpen, setIsAddTypeOpen] = useState(false);
+  const [newTypeTitle, setNewTypeTitle] = useState('');
+  const [newTypeColor, setNewTypeColor] = useState(PRESET_STATUS_COLORS[4]);
+  const [typeError, setTypeError] = useState<string | undefined>();
 
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
 
@@ -127,10 +156,92 @@ export const CardDetail: React.FC<CardDetailProps> = ({
           : []
       );
       setPriority(card.priority);
+      setType(card.type || 'task');
       setHasChanges(false);
       setDeleteConfirmVisible(false);
     }
   }, [card, visible]);
+
+  const statusOptions: DropdownOption[] = useMemo(() => [
+    ...allColumns.map((col) => ({
+      label: col.title,
+      value: col.id,
+    })),
+    {
+      label: '+ Add new status...',
+      value: '__add_status__',
+    },
+  ], [allColumns]);
+
+  const typeOptions: DropdownOption[] = useMemo(() => [
+    ...cardTypes.map((t) => ({
+      label: t.label,
+      value: t.id,
+    })),
+    {
+      label: '+ Add new type...',
+      value: '__add_type__',
+    },
+  ], [cardTypes]);
+
+  const handleStatusSelect = (val: string) => {
+    if (val === '__add_status__') {
+      setIsAddStatusOpen(true);
+      return;
+    }
+    handleColumnSelect(val);
+  };
+
+  const handleTypeSelect = (val: string) => {
+    if (val === '__add_type__') {
+      setIsAddTypeOpen(true);
+      return;
+    }
+    setType(val);
+    setHasChanges(true);
+  };
+
+  const handleConfirmAddStatus = () => {
+    if (!card) return;
+    const { column: newCol, error } = createStatusColumn({
+      title: newStatusTitle,
+      projectId: card.projectId,
+      color: newStatusColor,
+      order: allColumns.length,
+    });
+
+    if (error || !newCol) {
+      setStatusError(error || 'Status name cannot be empty.');
+      return;
+    }
+
+    setCustomColumns((prev) => [...prev, newCol]);
+    setColumnId(newCol.id);
+    setHasChanges(true);
+    onAddStatus?.(newCol);
+    setIsAddStatusOpen(false);
+    setNewStatusTitle('');
+    setStatusError(undefined);
+  };
+
+  const handleConfirmAddType = () => {
+    const { cardType: newType, error } = createCardType({
+      label: newTypeTitle,
+      color: newTypeColor,
+    });
+
+    if (error || !newType) {
+      setTypeError(error || 'Type name cannot be empty.');
+      return;
+    }
+
+    setCardTypes((prev) => [...prev, newType]);
+    setType(newType.id);
+    setHasChanges(true);
+    setIsAddTypeOpen(false);
+    setNewTypeTitle('');
+    setTypeError(undefined);
+  };
 
   if (!card) return null;
 
@@ -201,6 +312,7 @@ export const CardDetail: React.FC<CardDetailProps> = ({
       assigneeId,
       assigneeIds,
       priority,
+      type,
       updatedAt: new Date().toISOString(),
     };
     onSave?.(updated);
@@ -256,47 +368,35 @@ export const CardDetail: React.FC<CardDetailProps> = ({
 
       <Divider style={{ marginVertical: spacing[3] }} />
 
-      {/* Status / Column Selector */}
-      {columns.length > 0 && (
-        <View style={styles.fieldSection}>
-          <Text variant="label" style={[styles.fieldLabel, { color: colors.ink }]}>
-            Status
-          </Text>
-          <View style={styles.pillRow}>
-            {columns.map((col) => {
-              const isSelected = col.id === columnId;
-              return (
-                <Pressable
-                  key={col.id}
-                  disabled={!canMoveStatus}
-                  onPress={() => handleColumnSelect(col.id)}
-                  style={[
-                    styles.statusPill,
-                    { backgroundColor: colors.surface, borderColor: colors.line },
-                    isSelected && { backgroundColor: colors.accent, borderColor: colors.accent },
-                    !canMoveStatus && styles.disabledField,
-                  ]}
-                >
-                  <Text
-                    variant="caption"
-                    bold={isSelected}
-                    style={{
-                      color: isSelected ? colors.paper : colors.ink,
-                    }}
-                  >
-                    {col.title}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+      {/* Status & Issue Type Dropdowns */}
+      <View style={styles.dropdownsRow}>
+        <View style={styles.dropdownColumn}>
+          <Dropdown
+            label="Status"
+            value={columnId}
+            options={statusOptions}
+            onSelect={handleStatusSelect}
+            placeholder="Select status..."
+            disabled={!canMoveStatus}
+          />
           {!canMoveStatus && (
             <Text variant="caption" muted style={styles.helperText}>
               Only the publisher or assignee can move card status.
             </Text>
           )}
         </View>
-      )}
+
+        <View style={styles.dropdownColumn}>
+          <Dropdown
+            label="Issue Type"
+            value={type}
+            options={typeOptions}
+            onSelect={handleTypeSelect}
+            placeholder="Select type..."
+            disabled={!canEditTitle}
+          />
+        </View>
+      </View>
 
       {/* Accordion: Title & Description */}
       <Accordion
@@ -509,6 +609,162 @@ export const CardDetail: React.FC<CardDetailProps> = ({
     />
   );
 
+  const addStatusModal = (
+    <Modal
+      visible={isAddStatusOpen}
+      onClose={() => {
+        setIsAddStatusOpen(false);
+        setNewStatusTitle('');
+        setStatusError(undefined);
+      }}
+      title="Add a new status"
+      subtitle="Create a custom board column"
+      presentation="dialog"
+      footer={
+        <View style={styles.modalFooter}>
+          <Button
+            label="Cancel"
+            variant="ghost"
+            size="sm"
+            onPress={() => {
+              setIsAddStatusOpen(false);
+              setNewStatusTitle('');
+              setStatusError(undefined);
+            }}
+          />
+          <Button
+            label="Add Status"
+            variant="primary"
+            size="sm"
+            disabled={!newStatusTitle.trim()}
+            onPress={handleConfirmAddStatus}
+          />
+        </View>
+      }
+    >
+      <View style={{ gap: spacing[3] }}>
+        <Input
+          label="Status name"
+          placeholder="e.g. In QA, Blocked, Ready"
+          value={newStatusTitle}
+          onChangeText={(text) => {
+            setNewStatusTitle(text);
+            if (statusError) setStatusError(undefined);
+          }}
+          error={statusError}
+          autoFocus
+        />
+
+        <View>
+          <Text variant="label" style={[styles.fieldLabel, { color: colors.ink }]}>
+            Status Color
+          </Text>
+          <View style={styles.colorPalette}>
+            {PRESET_STATUS_COLORS.map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => setNewStatusColor(c)}
+                accessibilityRole="button"
+                accessibilityLabel={`Color ${c}`}
+                style={[
+                  styles.colorSwatch,
+                  {
+                    backgroundColor: c,
+                    borderColor: newStatusColor === c ? colors.ink : 'transparent',
+                  },
+                ]}
+              >
+                {newStatusColor === c && (
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>
+                    ✓
+                  </Text>
+                )}
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const addTypeModal = (
+    <Modal
+      visible={isAddTypeOpen}
+      onClose={() => {
+        setIsAddTypeOpen(false);
+        setNewTypeTitle('');
+        setTypeError(undefined);
+      }}
+      title="Add a new type"
+      subtitle="Create a custom issue type"
+      presentation="dialog"
+      footer={
+        <View style={styles.modalFooter}>
+          <Button
+            label="Cancel"
+            variant="ghost"
+            size="sm"
+            onPress={() => {
+              setIsAddTypeOpen(false);
+              setNewTypeTitle('');
+              setTypeError(undefined);
+            }}
+          />
+          <Button
+            label="Add Type"
+            variant="primary"
+            size="sm"
+            disabled={!newTypeTitle.trim()}
+            onPress={handleConfirmAddType}
+          />
+        </View>
+      }
+    >
+      <View style={{ gap: spacing[3] }}>
+        <Input
+          label="Type name"
+          placeholder="e.g. Feature, Spike, Defect"
+          value={newTypeTitle}
+          onChangeText={(text) => {
+            setNewTypeTitle(text);
+            if (typeError) setTypeError(undefined);
+          }}
+          error={typeError}
+          autoFocus
+        />
+
+        <View>
+          <Text variant="label" style={[styles.fieldLabel, { color: colors.ink }]}>
+            Badge Color
+          </Text>
+          <View style={styles.colorPalette}>
+            {PRESET_STATUS_COLORS.map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => setNewTypeColor(c)}
+                accessibilityRole="button"
+                accessibilityLabel={`Color ${c}`}
+                style={[
+                  styles.colorSwatch,
+                  {
+                    backgroundColor: c,
+                    borderColor: newTypeColor === c ? colors.ink : 'transparent',
+                  },
+                ]}
+              >
+                {newTypeColor === c && (
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>
+                    ✓
+                  </Text>
+                )}
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   // 1. Full Screen Layout (Default)
   if (fullScreen) {
     return (
@@ -602,6 +858,8 @@ export const CardDetail: React.FC<CardDetailProps> = ({
         )}
 
         {confirmDialog}
+        {addStatusModal}
+        {addTypeModal}
       </View>
     );
   }
@@ -654,6 +912,8 @@ export const CardDetail: React.FC<CardDetailProps> = ({
       </Modal>
 
       {confirmDialog}
+      {addStatusModal}
+      {addTypeModal}
     </>
   );
 };
@@ -792,6 +1052,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: spacing[2],
+  },
+  dropdownsRow: {
+    flexDirection: 'row',
+    gap: spacing[3],
+    marginBottom: spacing[3],
+  },
+  dropdownColumn: {
+    flex: 1,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing[2],
+  },
+  colorPalette: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+  },
+  colorSwatch: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

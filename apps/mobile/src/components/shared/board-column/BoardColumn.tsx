@@ -19,6 +19,7 @@ import { Button } from '../../base/button/Button';
 import { IconButton } from '../../base/icon-button/IconButton';
 import { Input } from '../../base/input/Input';
 import { Card } from '../card/Card';
+import { CreateCardInline } from '../create-card-inline';
 import { radius } from '../../../tokens/radius';
 import { spacing } from '../../../tokens/spacing';
 import { useTheme } from '../../../tokens';
@@ -43,6 +44,8 @@ export interface BoardColumnProps {
   onCardAssigneeChange?: (userId: string | null, card: CardType) => void;
   /** Card multi-assignees change callback */
   onCardAssigneesChange?: (userIds: string[], card: CardType) => void;
+  /** Callback fired when the '+' add card button is clicked */
+  onAddCardPress?: (columnId: string) => void;
   /** Quick inline card creation callback */
   onCreateCard?: (title: string, columnId: string) => void | Promise<void>;
   /** Whether card creation is allowed (default: true) */
@@ -64,6 +67,7 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
   onCardMove,
   onCardAssigneeChange,
   onCardAssigneesChange,
+  onAddCardPress,
   onCreateCard,
   canCreateCard = true,
   columnWidth = DEFAULT_COLUMN_WIDTH,
@@ -72,8 +76,6 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
 }) => {
   const { colors } = useTheme();
   const [isCreating, setIsCreating] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [submitting, setSubmitting] = useState(false);
 
   // Column accent colors matching Fieldnotes status semantics
   const columnColor =
@@ -85,25 +87,6 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
       : column.id.includes('progress')
       ? '#3B82F6'
       : colors.inkMuted);
-
-  const handleCreateSubmit = async () => {
-    const trimmed = newTitle.trim();
-    if (!trimmed || submitting || !onCreateCard) return;
-
-    try {
-      setSubmitting(true);
-      await onCreateCard(trimmed, column.id);
-      setNewTitle('');
-      setIsCreating(false);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleCancelCreate = () => {
-    setNewTitle('');
-    setIsCreating(false);
-  };
 
   // Helper to resolve card assignees for each card
   const getCardAssignees = (card: CardType): User[] => {
@@ -152,13 +135,19 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
           />
         </View>
 
-        {canCreateCard && onCreateCard && !isCreating && (
+        {canCreateCard && (onAddCardPress || onCreateCard) && (
           <IconButton
             variant="ghost"
             size="sm"
             icon={<AddIcon size={18} color={colors.ink} />}
             accessibilityLabel={`Add card to ${column.title}`}
-            onPress={() => setIsCreating(true)}
+            onPress={() => {
+              if (onAddCardPress) {
+                onAddCardPress(column.id);
+              } else {
+                setIsCreating(true);
+              }
+            }}
           />
         )}
       </View>
@@ -205,77 +194,25 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
             <Text variant="caption" muted style={{ textAlign: 'center' }}>
               No cards in {column.title}
             </Text>
-            {canCreateCard && onCreateCard && (
-              <Button
-                variant="ghost"
-                size="sm"
-                label="+ Add a card"
-                onPress={() => setIsCreating(true)}
-                style={{ marginTop: spacing[1] }}
-              />
-            )}
           </View>
         )}
 
-        {/* Inline Card Creation Form */}
-        {isCreating && (
-          <View
-            style={[
-              styles.createCardBox,
-              { backgroundColor: colors.paper, borderColor: colors.line },
-            ]}
-          >
-            <Input
-              value={newTitle}
-              onChangeText={setNewTitle}
-              placeholder="What needs to be done?"
-              autoFocus
-              editable={!submitting}
-              containerStyle={styles.createInput}
-              onSubmitEditing={handleCreateSubmit}
-              returnKeyType="done"
-            />
-            <View style={styles.createActions}>
-              <Button
-                label="Cancel"
-                variant="ghost"
-                size="sm"
-                disabled={submitting}
-                onPress={handleCancelCreate}
-              />
-              <Button
-                label="Add Card"
-                variant="primary"
-                size="sm"
-                disabled={!newTitle.trim()}
-                loading={submitting}
-                onPress={handleCreateSubmit}
-              />
-            </View>
-          </View>
+        {/* Inline Card Creation */}
+        {canCreateCard && (onAddCardPress || onCreateCard) && (
+          <CreateCardInline
+            columnId={column.id}
+            placeholder="What needs to be done?"
+            autoExpand={isCreating}
+            onTriggerPress={onAddCardPress ? () => onAddCardPress(column.id) : undefined}
+            onCreate={async ({ title }) => {
+              if (onCreateCard) {
+                await onCreateCard(title, column.id);
+              }
+              setIsCreating(false);
+            }}
+          />
         )}
       </View>
-
-      {/* Quick Add Footer Trigger (when not creating and column has cards) */}
-      {canCreateCard && onCreateCard && !isCreating && cards.length > 0 && (
-        <Pressable
-          onPress={() => setIsCreating(true)}
-          style={({ pressed }) => [
-            styles.addCardButton,
-            pressed && {
-              backgroundColor: colors.paper,
-              borderColor: colors.line,
-            },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={`Add card to ${column.title}`}
-        >
-          <AddIcon size={16} color={colors.inkMuted} />
-          <Text variant="caption" bold muted style={{ marginLeft: spacing[1] }}>
-            Add card
-          </Text>
-        </Pressable>
-      )}
     </View>
   );
 };
@@ -322,32 +259,6 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderRadius: radius.card,
   },
-  createCardBox: {
-    borderRadius: radius.card,
-    borderWidth: 1,
-    padding: spacing[2],
-    marginBottom: spacing[2],
-  },
-  createInput: {
-    marginBottom: spacing[2],
-  },
-  createActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: spacing[2],
-  },
-  addCardButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing[2],
-    borderRadius: radius.input,
-    marginTop: spacing[2],
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  addCardButtonPressed: {},
 });
 
 export default BoardColumn;

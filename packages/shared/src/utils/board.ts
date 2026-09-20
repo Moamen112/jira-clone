@@ -1,5 +1,11 @@
-import type { Card, CreateCardInput } from '../types/card';
-import type { CardFilterCriteria } from '../types/board';
+import type {
+  Card,
+  CreateCardInput,
+  CardTypeOption,
+  CreateStatusInput,
+  CreateCardTypeInput,
+} from '../types/card';
+import type { CardFilterCriteria, BoardColumn } from '../types/board';
 import { mockCurrentUser } from '../data/mockData';
 
 /**
@@ -173,4 +179,61 @@ export function handleCardTitleChange(
     return { title: text, error: 'Card title must not exceed 255 characters.' };
   }
   return { title: text, error: undefined };
+}
+
+export const DEFAULT_CARD_TYPES: CardTypeOption[] = [
+  { id: 'task', label: 'Task', color: '#3B82F6' },
+  { id: 'bug', label: 'Bug', color: '#EF4444' },
+  { id: 'story', label: 'Story', color: '#10B981' },
+  { id: 'epic', label: 'Epic', color: '#8B5CF6' },
+];
+
+export const PRESET_STATUS_COLORS: string[] = [
+  '#3B82F6',
+  '#10B981',
+  '#F59E0B',
+  '#EF4444',
+  '#8B5CF6',
+  '#EC4899',
+  '#06B6D4',
+  '#64748B',
+];
+
+/**
+ * Creates a new BoardColumn (status) entity with validation.
+ */
+export function createStatusColumn(
+  input: CreateStatusInput
+): { column?: BoardColumn; error?: string } {
+  const trimmed = input.title.trim();
+  if (!trimmed) {
+    return { error: 'Status name cannot be empty.' };
+  }
+  const column: BoardColumn = {
+    id: `col-${Date.now()}`,
+    projectId: input.projectId,
+    title: trimmed,
+    color: input.color,
+    order: input.order ?? 0,
+  };
+  return { column };
+}
+
+/**
+ * Creates a new CardTypeOption entity with validation.
+ */
+export function createCardType(
+  input: CreateCardTypeInput
+): { cardType?: CardTypeOption; error?: string } {
+  const trimmed = input.label.trim();
+  if (!trimmed) {
+    return { error: 'Type name cannot be empty.' };
+  }
+  const id = trimmed.toLowerCase().replace(/\s+/g, '-');
+  const cardType: CardTypeOption = {
+    id,
+    label: trimmed,
+    color: input.color || '#3B82F6',
+  };
+  return { cardType };
 }

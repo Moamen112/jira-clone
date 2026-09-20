@@ -22,6 +22,10 @@ export interface ProjectHeaderProps {
   onAction?: () => void;
   /** Visual variant for the action button */
   actionVariant?: ButtonVariant;
+  /** Fired when the Create card button is pressed */
+  onCreateCard?: () => void;
+  /** Custom label for the create card button (defaults to 'Create card') */
+  createCardLabel?: string;
   /** Container style override */
   style?: ViewStyle;
 }
@@ -31,10 +35,13 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
   members,
   actionLabel,
   onAction,
-  actionVariant = 'primary',
+  actionVariant = 'secondary',
+  onCreateCard,
+  createCardLabel = 'Create card',
   style,
 }) => {
   const hasAction = Boolean(actionLabel && onAction);
+  const showActionsSection = hasAction || Boolean(onCreateCard);
 
   return (
     <View style={[styles.container, style]}>
@@ -57,14 +64,24 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
         </Text>
       )}
 
-      {hasAction && (
+      {showActionsSection && (
         <View style={styles.actionsRow}>
-          <Button
-            label={actionLabel}
-            variant={actionVariant}
-            size="sm"
-            onPress={onAction}
-          />
+          {onCreateCard && (
+            <Button
+              label={createCardLabel}
+              variant="primary"
+              size="sm"
+              onPress={onCreateCard}
+            />
+          )}
+          {hasAction && (
+            <Button
+              label={actionLabel}
+              variant={actionVariant}
+              size="sm"
+              onPress={onAction}
+            />
+          )}
         </View>
       )}
     </View>

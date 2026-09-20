@@ -54,6 +54,8 @@ export interface BoardProps {
   onCardAssigneeChange?: (userId: string | null, card: CardType) => void;
   /** Card multi-assignees change */
   onCardAssigneesChange?: (userIds: string[], card: CardType) => void;
+  /** Callback fired when the '+' add card button is clicked in a column */
+  onAddCardPress?: (columnId: string) => void;
   /** Quick inline card creation callback */
   onCreateCard?: (title: string, columnId: string) => void | Promise<void>;
   /** Whether card creation is permitted (default: true) */
@@ -91,6 +93,7 @@ export const Board: React.FC<BoardProps> = ({
   onCardMove,
   onCardAssigneeChange,
   onCardAssigneesChange,
+  onAddCardPress,
   onCreateCard,
   canCreateCard = true,
   refreshing = false,
@@ -349,6 +352,7 @@ export const Board: React.FC<BoardProps> = ({
                 onCardMove={onCardMove}
                 onCardAssigneeChange={onCardAssigneeChange}
                 onCardAssigneesChange={onCardAssigneesChange}
+                onAddCardPress={onAddCardPress}
                 onCreateCard={onCreateCard}
                 canCreateCard={canCreateCard}
                 columnWidth={columnWidth}

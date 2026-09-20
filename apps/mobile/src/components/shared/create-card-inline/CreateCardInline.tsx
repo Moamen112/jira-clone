@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { Text, Button, Input } from '../../base';
 import { useTheme } from '../../../tokens';
@@ -14,6 +14,8 @@ export interface CreateCardInlineProps {
   autoExpand?: boolean;
   /** Invoked when the user confirms a new card. Supports sync or async handlers. */
   onCreate: (input: { title: string; columnId?: string }) => void | Promise<void>;
+  /** Optional custom trigger handler when the collapsed row is clicked */
+  onTriggerPress?: () => void;
   /** Show a spinner in the Add button while the parent persists the card */
   loading?: boolean;
   /** Disable the entire composer (collapsed row and inputs) */
@@ -33,6 +35,7 @@ export const CreateCardInline: React.FC<CreateCardInlineProps> = ({
   placeholder = DEFAULT_PLACEHOLDER,
   autoExpand = false,
   onCreate,
+  onTriggerPress,
   loading = false,
   disabled = false,
   style,
@@ -42,6 +45,10 @@ export const CreateCardInline: React.FC<CreateCardInlineProps> = ({
   const [title, setTitle] = useState('');
   const [error, setError] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (autoExpand) setExpanded(true);
+  }, [autoExpand]);
 
   const busy = submitting || loading;
 
@@ -96,7 +103,13 @@ export const CreateCardInline: React.FC<CreateCardInlineProps> = ({
   if (!expanded) {
     return (
       <Pressable
-        onPress={() => setExpanded(true)}
+        onPress={() => {
+          if (onTriggerPress) {
+            onTriggerPress();
+          } else {
+            setExpanded(true);
+          }
+        }}
         disabled={disabled}
         style={({ pressed }) => [
           styles.addRow,

@@ -49,7 +49,6 @@ import {
   // mockSpaceTypeOptions,
   // mockSpaceOwnerOptions,
   mockSpaceSortOptions,
-  mockCurrentUser,
   useDebounce,
   filterSpaces,
   sortSpaces,
