@@ -11,6 +11,8 @@ import {
   mockActivityLogs,
   Card as CardType,
   Comment,
+  updateCardInList,
+  deleteCardFromList,
 } from '@jira-clone/shared';
 import { CardDetail } from '../../../src/components/shared/card-detail';
 import { EmptyState } from '../../../src/components/shared/empty-state';
@@ -63,15 +65,13 @@ export default function SpacesCardScreen() {
 
   // Save changes callback
   const handleSaveCard = (updatedCard: CardType) => {
-    setCards((prev) =>
-      prev.map((c) => (c.id === updatedCard.id ? updatedCard : c))
-    );
+    setCards((prev) => updateCardInList(prev, updatedCard));
     handleBack();
   };
 
   // Delete card callback
   const handleDeleteCard = (deletedCardId: string) => {
-    setCards((prev) => prev.filter((c) => c.id !== deletedCardId));
+    setCards((prev) => deleteCardFromList(prev, deletedCardId));
     handleBack();
   };
 

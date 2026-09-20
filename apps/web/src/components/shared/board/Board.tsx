@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import type { CSSProperties, FC, ReactNode } from 'react';
-import type {
-  BoardColumn as BoardColumnType,
-  Card as CardType,
-  User,
+import {
+  filterCards,
+  type BoardColumn as BoardColumnType,
+  type Card as CardType,
+  type User,
 } from '@jira-clone/shared';
 import { Text, Badge } from '../../base';
 import { BoardColumn, DEFAULT_COLUMN_WIDTH } from '../board-column/BoardColumn';
-import { BoardFilterBar, filterCards } from '../board-filter-bar';
+import { BoardFilterBar } from '../board-filter-bar';
 import { CardMoveMenu, type CardPosition } from '../card-move-menu';
 
 export interface BoardProps {

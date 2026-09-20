@@ -9,6 +9,8 @@ import {
   mockUsers,
   mockCurrentUser,
   Card as CardType,
+  createCard,
+  moveCardToColumn,
 } from '@jira-clone/shared';
 import { Text } from '../../../src/components/base';
 import { Board } from '../../../src/components/shared/board';
@@ -103,31 +105,20 @@ export default function SpacesProjectScreen() {
     targetCard: CardType,
     _position?: CardPosition
   ) => {
-    setCards((prev) =>
-      prev.map((c) =>
-        c.id === targetCard.id
-          ? { ...c, columnId, updatedAt: new Date().toISOString() }
-          : c
-      )
-    );
+    setCards((prev) => moveCardToColumn(prev, targetCard.id, columnId));
   };
 
   // Inline card creation callback
   const handleCreateCard = (title: string, columnId: string) => {
     if (!project) return;
-    const newCard: CardType = {
-      id: `card-${Date.now()}`,
-      key: `${project.key}-${cards.length + 1}`,
-      title: title.trim(),
+    const newCard = createCard({
+      title,
       projectId: project.id,
+      projectKey: project.key,
       columnId,
-      publisherId: mockCurrentUser.id,
-      priority: 'medium',
+      cardIndex: cards.length + 1,
       order: cards.filter((c) => c.columnId === columnId).length,
-      commentCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    });
     setCards((prev) => [...prev, newCard]);
   };
 

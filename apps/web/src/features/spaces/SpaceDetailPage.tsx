@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { FC } from "react";
+import type { FC, FormEvent } from "react";
 import { useParams, useNavigate } from "react-router";
 import { Button, Input } from "../../components/base";
 import { Modal } from "../../components/shared/modal";
@@ -16,6 +16,11 @@ import {
   mockCurrentUser,
   type Card,
   type BoardColumn,
+  createCard,
+  updateCardInList,
+  moveCardToColumn,
+  deleteCardFromList,
+  handleCardTitleChange as processCardTitleChange,
 } from "@jira-clone/shared";
 import { ROUTES } from "../../routes/paths";
 import styles from "./SpaceDetailPage.module.css";
@@ -57,6 +62,10 @@ export function SpaceDetailPage() {
         s.project.key.toLowerCase() === id?.toLowerCase(),
     ) ?? mockSpaces[0];
 
+  const handleBackToSpaces = () => {
+    navigate(ROUTES.PROTECTED.SPACES);
+  };
+
   const handleOpenCreateCard = (columnId?: string) => {
     setTargetColumnId(columnId || null);
     setNewCardTitle("");
@@ -64,27 +73,26 @@ export function SpaceDetailPage() {
     setIsCreateCardOpen(true);
   };
 
+  const handleHeaderCreateCard = () => {
+    handleOpenCreateCard();
+  };
+
   const handleConfirmCreateCard = () => {
-    const trimmed = newCardTitle.trim();
-    if (!trimmed) {
-      setCardTitleError("Card name cannot be empty.");
+    const validation = processCardTitleChange(newCardTitle);
+    if (validation.error) {
+      setCardTitleError(validation.error);
       return;
     }
 
     const chosenColumnId = targetColumnId || columns[0]?.id || "col-todo";
-    const newCard: Card = {
-      id: `card-${Date.now()}`,
-      key: `${space.project.key}-${cards.length + 1}`,
-      title: trimmed,
+    const newCard = createCard({
+      title: validation.title,
       projectId: space.project.id,
+      projectKey: space.project.key,
       columnId: chosenColumnId,
-      publisherId: mockCurrentUser.id,
-      priority: "medium",
+      cardIndex: cards.length + 1,
       order: cards.filter((c) => c.columnId === chosenColumnId).length,
-      commentCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    });
 
     setCards((prev) => [...prev, newCard]);
     setIsCreateCardOpen(false);
@@ -103,6 +111,61 @@ export function SpaceDetailPage() {
     setTargetColumnId(null);
   };
 
+  const handleCardPress = (card: Card) => {
+    setSelectedCard(card);
+  };
+
+  const handleAddCardPress = (columnId?: string) => {
+    handleOpenCreateCard(columnId);
+  };
+
+  const handleCardMove = (card: Card, toColumnId?: string) => {
+    if (!toColumnId) return;
+    setCards((prev) => moveCardToColumn(prev, card.id, toColumnId));
+  };
+
+  const handleInlineCreateCard = (title: string, columnId: string) => {
+    const newCard = createCard({
+      title,
+      projectId: space.project.id,
+      projectKey: space.project.key,
+      columnId,
+      cardIndex: cards.length + 1,
+      order: cards.filter((c) => c.columnId === columnId).length,
+    });
+    setCards((prev) => [...prev, newCard]);
+    setSelectedCard(newCard);
+  };
+
+  const handleFormSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    handleConfirmCreateCard();
+  };
+
+  const handleCardTitleChange = (text: string) => {
+    const { title, error } = processCardTitleChange(text);
+    setNewCardTitle(title);
+    if (cardTitleError && !error) setCardTitleError(undefined);
+  };
+
+  const handleCloseCardDetail = () => {
+    setSelectedCard(null);
+  };
+
+  const handleAddStatus = (newCol: BoardColumn) => {
+    setColumns((prev) => [...prev, newCol]);
+  };
+
+  const handleSaveCardDetail = (updated: Card) => {
+    setCards((prev) => updateCardInList(prev, updated));
+    setSelectedCard(updated);
+  };
+
+  const handleDeleteCard = (cardId: string) => {
+    setCards((prev) => deleteCardFromList(prev, cardId));
+    setSelectedCard(null);
+  };
+
   return (
     <div className={styles.container}>
       {/* Top action bar: Back button & Theme toggle */}
@@ -110,7 +173,7 @@ export function SpaceDetailPage() {
         <button
           type="button"
           className={styles.backButton}
-          onClick={() => navigate(ROUTES.PROTECTED.SPACES)}
+          onClick={handleBackToSpaces}
           aria-label="Back to spaces"
         >
           <ArrowLeftIcon size={14} />
@@ -124,7 +187,7 @@ export function SpaceDetailPage() {
           project={space.project}
           members={space.members}
           category={space.category}
-          onCreateCard={() => handleOpenCreateCard()}
+          onCreateCard={handleHeaderCreateCard}
         />
       </section>
 
@@ -137,39 +200,10 @@ export function SpaceDetailPage() {
           currentUserId={mockCurrentUser.id}
           boardTitle={`${space.project.name} Sprint Board`}
           projectKey={space.project.key}
-          onCardPress={(card) => setSelectedCard(card)}
-          onAddCardPress={(columnId) => handleOpenCreateCard(columnId)}
-          onCardMove={(card, toColumnId) => {
-            if (!toColumnId) return;
-            setCards((prev) =>
-              prev.map((c) =>
-                c.id === card.id
-                  ? {
-                      ...c,
-                      columnId: toColumnId,
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : c,
-              ),
-            );
-          }}
-          onCreateCard={(title, columnId) => {
-            const newCard: Card = {
-              id: `card-${Date.now()}`,
-              key: `${space.project.key}-${cards.length + 1}`,
-              title: title.trim(),
-              projectId: space.project.id,
-              columnId,
-              publisherId: mockCurrentUser.id,
-              priority: "medium",
-              order: cards.filter((c) => c.columnId === columnId).length,
-              commentCount: 0,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-            setCards((prev) => [...prev, newCard]);
-            setSelectedCard(newCard);
-          }}
+          onCardPress={handleCardPress}
+          onAddCardPress={handleAddCardPress}
+          onCardMove={handleCardMove}
+          onCreateCard={handleInlineCreateCard}
         />
       </section>
 
@@ -203,20 +237,14 @@ export function SpaceDetailPage() {
         }
       >
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleConfirmCreateCard();
-          }}
+          onSubmit={handleFormSubmit}
           style={{ display: "flex", flexDirection: "column", gap: 12 }}
         >
           <Input
             label="Card name"
             placeholder="e.g. Implement user authentication"
             value={newCardTitle}
-            onChangeText={(text) => {
-              setNewCardTitle(text);
-              if (cardTitleError) setCardTitleError(undefined);
-            }}
+            onChangeText={handleCardTitleChange}
             error={cardTitleError}
             autoFocus
             containerStyle={{ marginBottom: 0 }}
@@ -233,18 +261,10 @@ export function SpaceDetailPage() {
         comments={mockComments}
         activityLogs={mockActivityLogs}
         currentUserId={mockCurrentUser.id}
-        onClose={() => setSelectedCard(null)}
-        onAddStatus={(newCol) => setColumns((prev) => [...prev, newCol])}
-        onSave={(updated) => {
-          setCards((prev) =>
-            prev.map((c) => (c.id === updated.id ? updated : c)),
-          );
-          setSelectedCard(updated);
-        }}
-        onDelete={(cardId) => {
-          setCards((prev) => prev.filter((c) => c.id !== cardId));
-          setSelectedCard(null);
-        }}
+        onClose={handleCloseCardDetail}
+        onAddStatus={handleAddStatus}
+        onSave={handleSaveCardDetail}
+        onDelete={handleDeleteCard}
       />
     </div>
   );

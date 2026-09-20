@@ -14,7 +14,7 @@ import {
   ChatBubbleIcon,
   CloseCircleOutlineIcon,
 } from '../../../../assets/icon';
-import { Card as CardType, User } from '@jira-clone/shared';
+import { User } from '@jira-clone/shared';
 import { Input } from '../../base/input/Input';
 import { Text } from '../../base/typography/Text';
 import { Avatar } from '../../base/avatar/Avatar';
@@ -22,66 +22,6 @@ import { Badge } from '../../base/badge/Badge';
 import { useTheme } from '../../../tokens';
 import { radius } from '../../../tokens/radius';
 import { spacing } from '../../../tokens/spacing';
-
-export interface CardFilterCriteria {
-  searchQuery?: string;
-  assignedToMe?: boolean;
-  createdByMe?: boolean;
-  hasComments?: boolean;
-  selectedUserIds?: string[];
-  currentUserId?: string;
-}
-
-/**
- * Pure helper function to filter cards based on criteria
- */
-export function filterCards(
-  cards: CardType[],
-  criteria: CardFilterCriteria
-): CardType[] {
-  return cards.filter((card) => {
-    // 1. Search Query (matches key, title, or description)
-    if (criteria.searchQuery && criteria.searchQuery.trim().length > 0) {
-      const q = criteria.searchQuery.toLowerCase().trim();
-      const matchKey = card.key.toLowerCase().includes(q);
-      const matchTitle = card.title.toLowerCase().includes(q);
-      const matchDesc = card.description
-        ? card.description.toLowerCase().includes(q)
-        : false;
-      if (!matchKey && !matchTitle && !matchDesc) return false;
-    }
-
-    // 2. Assigned to Current User
-    if (criteria.assignedToMe && criteria.currentUserId) {
-      const isAssigned =
-        card.assigneeId === criteria.currentUserId ||
-        (card.assigneeIds && card.assigneeIds.includes(criteria.currentUserId));
-      if (!isAssigned) return false;
-    }
-
-    // 3. Created / Reported by Current User
-    if (criteria.createdByMe && criteria.currentUserId) {
-      if (card.publisherId !== criteria.currentUserId) return false;
-    }
-
-    // 4. Has Comments
-    if (criteria.hasComments) {
-      if (!card.commentCount || card.commentCount <= 0) return false;
-    }
-
-    // 5. Filter by Selected Workspace Member User IDs
-    if (criteria.selectedUserIds && criteria.selectedUserIds.length > 0) {
-      const matchesAnyUser = criteria.selectedUserIds.some(
-        (uid) =>
-          card.assigneeId === uid ||
-          (card.assigneeIds && card.assigneeIds.includes(uid))
-      );
-      if (!matchesAnyUser) return false;
-    }
-
-    return true;
-  });
-}
 
 export interface BoardFilterBarProps {
   /** Search query text */

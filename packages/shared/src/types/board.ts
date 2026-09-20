@@ -1,4 +1,4 @@
-﻿export type DefaultColumnType = 'todo' | 'in_progress' | 'in_review' | 'done';
+export type DefaultColumnType = 'todo' | 'in_progress' | 'in_review' | 'done';
 
 export interface BoardColumn {
   id: string;
@@ -13,4 +13,13 @@ export interface Board {
   projectId: string;
   name: string;
   columns: BoardColumn[];
+}
+
+export interface CardFilterCriteria {
+  searchQuery?: string;
+  assignedToMe?: boolean;
+  createdByMe?: boolean;
+  hasComments?: boolean;
+  selectedUserIds?: string[];
+  currentUserId?: string;
 }

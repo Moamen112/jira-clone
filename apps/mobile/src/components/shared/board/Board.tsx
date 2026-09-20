@@ -15,16 +15,14 @@ import {
   BoardColumn as BoardColumnType,
   Card as CardType,
   User,
+  filterCards,
+  CardFilterCriteria,
 } from '@jira-clone/shared';
 import { Text } from '../../base/typography/Text';
 import { Badge } from '../../base/badge/Badge';
 import { Button } from '../../base/button/Button';
 import { BoardColumn, DEFAULT_COLUMN_WIDTH } from '../board-column/BoardColumn';
-import {
-  BoardFilterBar,
-  filterCards,
-  CardFilterCriteria,
-} from '../board-filter-bar';
+import { BoardFilterBar } from '../board-filter-bar';
 import { radius } from '../../../tokens/radius';
 import { spacing } from '../../../tokens/spacing';
 import { useTheme } from '../../../tokens';

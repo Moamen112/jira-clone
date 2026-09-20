@@ -21,3 +21,15 @@ export interface Card {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface CreateCardInput {
+  title: string;
+  projectId: string;
+  projectKey: string;
+  columnId: string;
+  publisherId?: string;
+  priority?: CardPriority;
+  description?: string;
+  cardIndex?: number;
+  order?: number;
+}
