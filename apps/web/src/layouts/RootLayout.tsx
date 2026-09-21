@@ -25,14 +25,13 @@ export function RootLayout() {
       <Navbar
         user={isProtectedPath ? mockCurrentUser : null}
         page={pageMode}
-        links={isProtectedPath ? [] : undefined}
+        links={[]}
         brand="Jira Clone"
         logoLabel="J"
         isDark={isDark}
         onToggleTheme={toggleTheme}
         onNavigate={(href) => navigate(href)}
         onLogIn={() => navigate(ROUTES.AUTH.SIGN_IN)}
-        onSignUp={() => navigate(ROUTES.AUTH.SIGN_UP)}
         onLogout={() => navigate(ROUTES.AUTH.SIGN_IN)}
         onOpenProfile={() => navigate(ROUTES.PROTECTED.PROFILE)}
         onOpenNotifications={() => navigate(ROUTES.PROTECTED.NOTIFICATIONS)}

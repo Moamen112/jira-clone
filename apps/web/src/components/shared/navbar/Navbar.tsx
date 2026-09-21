@@ -97,11 +97,7 @@ export interface NavbarProps {
    Default link sets per context
    -------------------------------------------------------------------------- */
 
-const LANDING_LINKS: NavbarLink[] = [
-  { label: "Features", href: "#features" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "Docs", href: "#docs" },
-];
+const LANDING_LINKS: NavbarLink[] = [];
 
 
 const MODE_LABELS: Record<NavbarMode, string> = {
@@ -811,7 +807,7 @@ export const Navbar: FC<NavbarProps> = ({
             {onLogIn && (
               <Button
                 label="Log in"
-                variant="ghost"
+                variant={onSignUp ? "ghost" : "primary"}
                 size="sm"
                 onPress={onLogIn}
               />

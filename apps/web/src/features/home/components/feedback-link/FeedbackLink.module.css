@@ -1,0 +1,95 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  gap: 12px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.iconCircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.titleInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.subtitle {
+  font-size: 11px;
+  color: var(--color-ink-muted);
+}
+
+.tipsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: var(--color-paper);
+  border-radius: var(--radius-input);
+  padding: 10px 12px;
+  border: 1px solid var(--color-line);
+}
+
+.tipItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.keyBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+  color: var(--color-ink);
+  box-shadow: 0 1px 0 var(--color-line);
+  flex-shrink: 0;
+}
+
+.tipDesc {
+  color: var(--color-ink-muted);
+  line-height: 14px;
+}
+
+.actionRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.thankYouMsg {
+  font-size: 12px;
+  color: var(--color-accent);
+  font-weight: 600;
+}

@@ -135,11 +135,8 @@ export const LandingFooter: FC<LandingFooterProps> = ({
             </Link>
           ) : (
             <div className={styles.bottomLinks}>
-              <Link to={ROUTES.AUTH.SIGN_IN} className={styles.link}>
+              <Link to={ROUTES.AUTH.SIGN_IN} className={styles.accentLink}>
                 Log in
-              </Link>
-              <Link to={ROUTES.AUTH.SIGN_UP} className={styles.accentLink}>
-                Sign up
               </Link>
             </div>
           )}

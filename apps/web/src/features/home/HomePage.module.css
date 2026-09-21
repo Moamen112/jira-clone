@@ -8,159 +8,94 @@
   font-family: var(--font-sans);
 }
 
-.navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 28px;
-  background-color: var(--color-surface);
-  border-bottom: 1px solid var(--color-line);
-}
-
-.navLeft {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 700;
-  font-size: 16px;
-  color: var(--color-ink);
-  text-decoration: none;
-}
-
-.brandLogo {
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  background: var(--color-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.navLinks {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.navLink {
-  padding: 6px 12px;
-  border-radius: var(--radius-input);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-ink-muted);
-  text-decoration: none;
-  transition: all 150ms ease;
-}
-
-.navLink:hover {
-  background-color: var(--color-line);
-  color: var(--color-ink);
-}
-
-.navLinkActive {
-  background-color: var(--color-accent-soft);
-  color: var(--color-accent);
-  font-weight: 600;
-}
-
-.navRight {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.avatarLink {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
-  color: var(--color-ink);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.avatarCircle {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: var(--color-accent-soft);
-  color: var(--color-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 12px;
-  border: 1px solid var(--color-accent);
-}
-
-.signOutLink {
-  padding: 6px 10px;
-  font-size: 12px;
-  color: var(--color-ink-muted);
-  text-decoration: none;
-  border-radius: var(--radius-input);
-  border: 1px solid var(--color-line);
-  transition: background-color 150ms ease;
-}
-
-.signOutLink:hover {
-  background-color: var(--color-surface);
-  color: var(--color-warn);
-}
-
 .content {
   flex: 1;
-  max-width: 1000px;
+  max-width: 1240px;
   width: 100%;
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: 28px 24px 48px;
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
-.pageHeader {
+/* ==========================================================================
+   Header Row
+   ========================================================================== */
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.headerText {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
+.greetingRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .title {
   font-size: 26px;
   font-weight: 800;
+  color: var(--color-ink);
   margin: 0;
+  letter-spacing: -0.5px;
 }
 
 .subtitle {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-ink-muted);
   margin: 0;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ==========================================================================
+   KPI Summary Grid
+   ========================================================================== */
 .kpiGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
+  gap: 14px;
 }
 
 .kpiCard {
   background-color: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
-  padding: 20px;
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  transition: all 150ms ease;
+  cursor: pointer;
+  user-select: none;
+  text-align: left;
+}
+
+.kpiCard:hover {
+  background-color: var(--color-paper);
+  border-color: var(--color-accent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
+}
+
+.kpiTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .kpiLabel {
@@ -172,68 +107,91 @@
   margin: 0;
 }
 
-.kpiValue {
-  font-size: 32px;
-  font-weight: 800;
-  color: var(--color-ink);
-  margin: 0;
-}
-
-.kpiDesc {
-  font-size: 12px;
+.kpiIcon {
   color: var(--color-ink-muted);
-  margin: 0;
-}
-
-.section {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
-  padding: 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.sectionTitle {
-  font-size: 16px;
-  font-weight: 700;
-  margin: 0;
-}
-
-.taskItem {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border-radius: var(--radius-input);
-  background-color: var(--color-paper);
-  border: 1px solid var(--color-line);
+  justify-content: center;
 }
 
-.taskInfo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.badge {
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  font-size: 11px;
-  font-weight: 600;
-  background-color: var(--color-accent-soft);
+.kpiCard:hover .kpiIcon {
   color: var(--color-accent);
 }
 
-.taskText {
-  font-size: 13px;
-  font-weight: 600;
+.kpiValue {
+  font-size: 28px;
+  font-weight: 800;
   color: var(--color-ink);
+  margin: 0;
+  line-height: 1.1;
+  font-family: var(--font-mono);
+}
+
+.kpiDesc {
+  font-size: 11px;
+  color: var(--color-ink-muted);
   margin: 0;
 }
 
-.taskStatus {
-  font-size: 12px;
-  color: var(--color-ink-muted);
+/* ==========================================================================
+   2-Column Main Layout
+   ========================================================================== */
+.mainGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.leftColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+
+
+/* ==========================================================================
+   Responsive Breakpoints
+   ========================================================================== */
+@media (max-width: 960px) {
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rightColumn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .content {
+    padding: 16px 12px 32px;
+    gap: 16px;
+  }
+
+  .headerRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .headerActions {
+    width: 100%;
+  }
+
+  .headerActions button {
+    flex: 1;
+  }
+
+  .title {
+    font-size: 22px;
+  }
 }

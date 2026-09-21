@@ -1,0 +1,147 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  padding: 12px 14px;
+  gap: 10px;
+  transition: all 150ms ease;
+  user-select: none;
+}
+
+.cardClickable {
+  cursor: pointer;
+}
+
+.cardClickable:hover {
+  background-color: var(--color-paper);
+  border-color: var(--color-accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.cardClickable:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.iconBadge {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-input);
+  background-color: var(--color-accent);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+}
+
+.nameCol {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.projectName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardClickable:hover .projectName {
+  color: var(--color-accent);
+}
+
+.categoryLabel {
+  font-size: 11px;
+  color: var(--color-ink-muted);
+  text-transform: capitalize;
+}
+
+.progressArea {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.progressBar {
+  height: 5px;
+  width: 100%;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-paper);
+  overflow: hidden;
+  display: flex;
+  border: 1px solid var(--color-line);
+}
+
+.progressDone {
+  background-color: #10b981;
+  height: 100%;
+  transition: width 200ms ease;
+}
+
+.progressActive {
+  background-color: var(--color-accent);
+  height: 100%;
+  transition: width 200ms ease;
+}
+
+.progressTodo {
+  background-color: var(--color-line);
+  height: 100%;
+  transition: width 200ms ease;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--color-ink-muted);
+}
+
+.countsText {
+  font-weight: 500;
+}
+
+.percentText {
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.emptyMeta {
+  font-size: 11px;
+  color: var(--color-ink-muted);
+  font-style: italic;
+}

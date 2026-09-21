@@ -2,7 +2,7 @@ import type { CSSProperties, FC, ReactNode } from 'react';
 import styles from './FeaturesOverview.module.css';
 
 // ============================================================================
-// ICONS — inline, theme-aware (inherit currentColor from the badge)
+// ICONS
 // ============================================================================
 
 interface IconProps {
@@ -146,123 +146,118 @@ const GridIcon: FC<IconProps> = ({ size = 20 }) => (
     <rect x="13" y="13" width="8" height="8" rx="1" />
   </svg>
 );
+
 // ============================================================================
-// Types & Default Content
+// Types & Content
 // ============================================================================
 
 export interface FeatureItem {
-  /** Feature title */
   title: string;
-  /** Feature description */
+  category: string;
   description: string;
-  /** Optional custom icon element (rendered inside the accent badge) */
   icon?: ReactNode;
 }
 
 export interface FeaturesOverviewProps {
-  /** Whether the current visitor is authenticated (logged in). */
   isAuthenticated?: boolean;
-  /** Custom feature list — overrides the built-in guest / signed-in sets. */
   features?: FeatureItem[];
-  /** Custom section title (overrides the auth-state default). */
   title?: string;
-  /** Custom section subtitle (overrides the auth-state default). */
   subtitle?: string;
-  /** Container style override. */
   style?: CSSProperties;
-  /** Additional CSS class. */
   className?: string;
-  /** Test identifier. */
   testID?: string;
 }
 
 const GUEST_FEATURES: FeatureItem[] = [
   {
+    category: 'WORKFLOW',
     icon: <KanbanIcon />,
     title: 'Agile Kanban Boards',
     description:
-      'Drag, prioritize, and manage sprint backlogs with real-time status transitions.',
+      'Drag, prioritize, and manage sprint backlogs with customizable columns and real-time status transitions.',
   },
   {
+    category: 'COLLABORATION',
     icon: <TeamIcon />,
     title: 'Team Spaces & Projects',
     description:
-      'Organize roadmaps, team permissions, and cross-functional project spaces.',
+      'Organize roadmaps, team member permissions, and project workspaces with visual completion metrics.',
   },
   {
+    category: 'REAL-TIME AUDIT',
     icon: <PulseIcon />,
-    title: 'Activity & Notifications',
+    title: 'Audit Logs & Timeline',
     description:
-      'Stay synchronized with instant mentions, audit logs, and priority alert feeds.',
+      'Stay in sync with instant changelogs, status movement tracking, and complete activity history on every card.',
   },
   {
+    category: 'GOVERNANCE',
     icon: <ShieldIcon />,
-    title: 'Card-level Permissions',
+    title: 'Role-Based Permissions',
     description:
-      'Enforce publisher vs. assignee rules for title edits, reassignments, and deletions.',
+      'Enforce granular publisher vs. assignee permissions for issue edits, reassignments, and column transitions.',
   },
   {
+    category: 'EFFICIENCY',
     icon: <BoltIcon />,
-    title: 'Fast & Keyboard-first',
+    title: 'Keyboard-First Speed',
     description:
-      'Move between boards, cards, and filters with your keyboard — no context switching.',
+      'Move swiftly between boards, issues, and filters with fluid interactions and sub-50ms render latency.',
   },
   {
+    category: 'ZERO CONFIG',
     icon: <CheckIcon />,
-    title: 'Free to Start',
+    title: 'Native Light & Dark Mode',
     description:
-      'Get your whole team going free for 30 days. No credit card required, cancel anytime.',
+      'Beautiful tokenized design built to adapt seamlessly to your operating system theme preference.',
   },
 ];
 
 const AUTH_FEATURES: FeatureItem[] = [
   {
+    category: 'BOARDS',
     icon: <KanbanIcon />,
-    title: 'Your Boards',
+    title: 'Sprint Boards',
     description:
-      'Reopen any sprint board and move cards between columns in a single click.',
+      'Reopen any active project board and transition cards between columns with zero friction.',
   },
   {
+    category: 'TEAMS',
     icon: <TeamIcon />,
-    title: 'Your Team',
+    title: 'Workspace Members',
     description:
-      'Member avatars, roles, and assignments for everyone working in the space.',
+      'Member avatars, roles, and assignments for everyone collaborating across your projects.',
   },
   {
+    category: 'DISCUSSIONS',
     icon: <CommentIcon />,
-    title: 'Card Details & Comments',
+    title: 'Card Details & Notes',
     description:
-      'Discuss issues inline with comments, changelog, and a complete audit trail.',
+      'Inspect cards, log time, comment on issues, and review full timestamped audit trails.',
   },
   {
+    category: 'SECURITY',
     icon: <ShieldIcon />,
-    title: 'Controlled Permissions',
+    title: 'Controlled Access',
     description:
-      'Publisher, assignee, and viewer roles keep every edit accountable.',
+      'Publisher, assignee, and viewer roles keep every card modification accountable and transparent.',
   },
   {
+    category: 'HISTORY',
     icon: <PulseIcon />,
-    title: 'Activity Logs',
+    title: 'Activity Feed',
     description:
-      'Watch status changes, reassignments, and work logs as they happen.',
+      'Watch status transitions, reassignments, and work logs stream in as they happen.',
   },
   {
+    category: 'SPACES',
     icon: <GridIcon />,
-    title: 'Spaces You Use',
+    title: 'Multi-Space Directory',
     description:
-      'Search, filter, and page through every project workspace you belong to.',
+      'Search, filter, and access all team workspaces and project backlogs from one central place.',
   },
 ];
-/**
- * FeaturesOverview — the landing page feature-highlight grid.
- *
- * Renders a different feature set based on the visitor's auth state:
- * - Guest:      marketing highlights (boards, spaces, permissions, speed...)
- * - Signed in:  workspace-oriented highlights (your boards, team, activity...)
- *
- * Styled entirely with Fieldnotes design tokens so it adapts to
- * `[data-theme='dark']` automatically.
- */
+
 export const FeaturesOverview: FC<FeaturesOverviewProps> = ({
   isAuthenticated = false,
   features,
@@ -278,15 +273,15 @@ export const FeaturesOverview: FC<FeaturesOverviewProps> = ({
     title ??
     (isAuthenticated
       ? 'Everything you need to keep shipping'
-      : 'Everything your team needs to ship');
+      : 'Engineered for modern agile engineering teams');
 
   const resolvedSubtitle =
     subtitle ??
     (isAuthenticated
-      ? 'Quick access to the boards, people, and activity in your workspace — right where you left off.'
-      : 'Purpose-built blocks for planning, tracking, and shipping work — from a single sprint to a full program.');
+      ? 'Quick access to the boards, teammates, and activity in your workspace — right where you left off.'
+      : 'Purpose-built blocks for planning, tracking, and shipping work — from a single sprint to enterprise program roadmaps.');
 
-  const eyebrow = isAuthenticated ? 'Your workspace' : 'Why teams choose Jira Clone';
+  const eyebrow = isAuthenticated ? 'Your Workspace Capabilities' : 'Why Teams Choose Jira Clone';
 
   return (
     <section
@@ -304,11 +299,14 @@ export const FeaturesOverview: FC<FeaturesOverviewProps> = ({
       <ul className={styles.grid}>
         {resolvedFeatures.map((feature) => (
           <li key={feature.title} className={styles.card}>
-            {feature.icon && (
-              <div className={styles.iconBadge} aria-hidden="true">
-                {feature.icon}
-              </div>
-            )}
+            <div className={styles.cardTop}>
+              {feature.icon && (
+                <div className={styles.iconBadge} aria-hidden="true">
+                  {feature.icon}
+                </div>
+              )}
+              <span className={styles.categoryBadge}>{feature.category}</span>
+            </div>
             <h3 className={styles.cardTitle}>{feature.title}</h3>
             <p className={styles.cardDesc}>{feature.description}</p>
           </li>

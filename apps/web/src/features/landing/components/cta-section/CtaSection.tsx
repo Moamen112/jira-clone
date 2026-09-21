@@ -6,22 +6,45 @@ import styles from './CtaSection.module.css';
 export interface CtaSectionProps {
   /** Whether the current visitor is authenticated (logged in). */
   isAuthenticated?: boolean;
-  /** Display name of the authenticated user — personalizes the heading (e.g. "Welcome back, Alex!"). */
+  /** Display name of the authenticated user — personalizes the heading. */
   userName?: string;
   /** Container style override. */
   style?: CSSProperties;
 }
 
-/**
- * CtaSection — the landing page call-to-action band.
- *
- * Renders different copy and actions based on the visitor's auth state:
- * - Guest:      "Start Free Trial" (→ sign-up) + "Log in" (→ sign-in)
- * - Signed in:  "Open Home Dashboard" (→ /home) + "Browse Spaces" (→ /spaces)
- *
- * Styled entirely with Fieldnotes design tokens so it adapts to
- * `[data-theme='dark']` automatically.
- */
+const ArrowRightIcon: FC<{ size?: number }> = ({ size = 16 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <line x1="5" y1="12" x2="19" y2="12" />
+    <polyline points="12 5 19 12 12 19" />
+  </svg>
+);
+
+const CheckIcon: FC<{ size?: number }> = ({ size = 14 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
 export const CtaSection: FC<CtaSectionProps> = ({
   isAuthenticated = false,
   userName,
@@ -32,53 +55,63 @@ export const CtaSection: FC<CtaSectionProps> = ({
   const heading = isAuthenticated
     ? displayName
       ? `Welcome back, ${displayName}!`
-      : 'Welcome back!'
-    : 'Ready to streamline your workflow?';
+      : 'Ready to continue shipping?'
+    : 'Ready to modernize your team workflow?';
 
   const subtitle = isAuthenticated
-    ? 'Your boards, issues, and team activity are waiting for you. Jump right in and pick up where you left off.'
-    : 'Join modern product teams tracking sprints, issues, and releases — together, in one place.';
-
-  const finePrint = isAuthenticated
-    ? 'Your workspace is synced and ready.'
-    : 'Free 30-day trial · No credit card required · Cancel anytime';
+    ? 'Your sprint boards, assigned cards, and team updates are waiting. Jump in and keep the momentum going.'
+    : 'Join agile engineering squads shipping faster with high-performance Kanban boards, card inspection, and live audit trails.';
 
   return (
-    <section
-      className={styles.section}
-      style={style}
-      aria-label="Call to action"
-    >
-      <span className={styles.eyebrow}>
-        {isAuthenticated ? 'Good to see you again' : 'Start shipping today'}
-      </span>
+    <section className={styles.section} style={style} aria-label="Call to action">
+      <div className={styles.card}>
+        <span className={styles.eyebrow}>
+          {isAuthenticated ? 'Workspace Connected' : 'Get Started in Seconds'}
+        </span>
 
-      <h2 className={styles.title}>{heading}</h2>
-      <p className={styles.subtitle}>{subtitle}</p>
+        <h2 className={styles.title}>{heading}</h2>
+        <p className={styles.subtitle}>{subtitle}</p>
 
-      <div className={styles.actions}>
-        {isAuthenticated ? (
-          <>
-            <Link to={ROUTES.PROTECTED.HOME} className={styles.primaryBtn}>
-              Open Home Dashboard
+        <div className={styles.actions}>
+          {isAuthenticated ? (
+            <>
+              <Link to={ROUTES.PROTECTED.HOME} className={styles.primaryBtn}>
+                <span>Open Home Dashboard</span>
+                <ArrowRightIcon size={16} />
+              </Link>
+              <Link to={ROUTES.PROTECTED.SPACES} className={styles.secondaryBtn}>
+                Browse Spaces
+              </Link>
+            </>
+          ) : (
+            <Link to={ROUTES.AUTH.SIGN_IN} className={styles.primaryBtn}>
+              <span>Log In to Get Started</span>
+              <ArrowRightIcon size={16} />
             </Link>
-            <Link to={ROUTES.PROTECTED.SPACES} className={styles.secondaryBtn}>
-              Browse Spaces
-            </Link>
-          </>
-        ) : (
-          <>
-            <Link to={ROUTES.AUTH.SIGN_UP} className={styles.primaryBtn}>
-              Start Free Trial
-            </Link>
-            <Link to={ROUTES.AUTH.SIGN_IN} className={styles.secondaryBtn}>
-              Log in
-            </Link>
-          </>
-        )}
+          )}
+        </div>
+
+        <div className={styles.trustBadges}>
+          <div className={styles.trustItem}>
+            <span className={styles.checkIcon}>
+              <CheckIcon size={12} />
+            </span>
+            <span>Free 30-day trial</span>
+          </div>
+          <div className={styles.trustItem}>
+            <span className={styles.checkIcon}>
+              <CheckIcon size={12} />
+            </span>
+            <span>No credit card required</span>
+          </div>
+          <div className={styles.trustItem}>
+            <span className={styles.checkIcon}>
+              <CheckIcon size={12} />
+            </span>
+            <span>Cancel anytime</span>
+          </div>
+        </div>
       </div>
-
-      <p className={styles.finePrint}>{finePrint}</p>
     </section>
   );
 };
