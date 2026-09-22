@@ -1,0 +1,39 @@
+[project]
+name = "tasklane-backend"
+version = "1.0.0"
+description = "Tasklane -- a Jira-like project and task tracker with a role-scoped status workflow."
+requires-python = ">=3.11"
+dependencies = [
+    "django>=5.1,<6.0",
+    "djangorestframework>=3.15",
+    "djangorestframework-simplejwt>=5.3",
+    "django-filter>=24.3",
+    "django-cors-headers>=4.4",
+    "django-environ>=0.11",
+    "psycopg[binary]>=3.2",
+    "drf-nested-routers>=0.94",
+    "pyotp>=2.10.0",
+    "pillow>=12.3.0",
+]
+
+[dependency-groups]
+dev = [
+    "django-debug-toolbar>=4.4",
+    "ruff>=0.6",
+]
+
+[tool.uv]
+# An application, not a distributable library: nothing to build or install.
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [".venv", "*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "DJ", "RUF"]
+ignore = ["RUF012"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["common", "config", "projects", "tasks", "users"]

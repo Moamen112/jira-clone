@@ -1,0 +1,56 @@
+# Compose project name: prefixes the default network and the volumes.
+name: jira-clone
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: jira_clone_db
+    restart: unless-stopped
+    # Defaults match backend/.env.example. Override by running compose with
+    # `--env-file backend/.env` once those values diverge from the defaults.
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-tasklane}
+      POSTGRES_USER: ${POSTGRES_USER:-tasklane}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tasklane}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-tasklane} -d ${POSTGRES_DB:-tasklane}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    image: jira-clone-backend
+    container_name: jira_clone_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # Migrations run on every start (see backend/Dockerfile CMD), so a fresh
+    # database is ready as soon as the API answers on port 5000.
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-only-insecure-key-never-use-this-in-production}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      POSTGRES_DB: ${POSTGRES_DB:-tasklane}
+      POSTGRES_USER: ${POSTGRES_USER:-tasklane}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tasklane}
+      # In-network address of the db service, not the port published to the host.
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+    ports:
+      - "5000:5000"
+    volumes:
+      - media:/app/media
+
+volumes:
+  pgdata:
+  media:
