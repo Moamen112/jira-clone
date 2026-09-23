@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# uv-managed virtualenv (uv.lock is committed)
+.venv/
+
+# Environment
+.env
+*.env
+!.env.example
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+
+# Tooling
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
