@@ -1,11 +1,9 @@
 import { useState } from "react";
-import type { FC, FormEvent } from "react";
+import type { FC } from "react";
 import { useParams, useNavigate } from "react-router";
-import { Button, Input } from "../../components/base";
-import { Modal } from "../../components/shared/modal";
 import { ProjectHeader } from "../../components/shared/project-header";
 import { Board } from "../../components/shared/board";
-import { CardDetail } from "../../components/shared/card-detail";
+import { CardDetail, type CreateCardData } from "../../components/shared/card-detail";
 import {
   mockSpaces,
   mockColumns,
@@ -16,11 +14,12 @@ import {
   mockCurrentUser,
   type Card,
   type BoardColumn,
+  type CardTypeOption,
+  DEFAULT_CARD_TYPES,
   createCard,
   updateCardInList,
   moveCardToColumn,
   deleteCardFromList,
-  handleCardTitleChange as processCardTitleChange,
 } from "@jira-clone/shared";
 import { ROUTES } from "../../routes/paths";
 import styles from "./SpaceDetailPage.module.css";
@@ -50,10 +49,7 @@ export function SpaceDetailPage() {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [isCreateCardOpen, setIsCreateCardOpen] = useState(false);
   const [targetColumnId, setTargetColumnId] = useState<string | null>(null);
-  const [newCardTitle, setNewCardTitle] = useState("");
-  const [cardTitleError, setCardTitleError] = useState<string | undefined>(
-    undefined,
-  );
+  const [cardTypes, setCardTypes] = useState<CardTypeOption[]>(DEFAULT_CARD_TYPES.slice(0, 3));
 
   const space =
     mockSpaces.find(
@@ -68,8 +64,7 @@ export function SpaceDetailPage() {
 
   const handleOpenCreateCard = (columnId?: string) => {
     setTargetColumnId(columnId || null);
-    setNewCardTitle("");
-    setCardTitleError(undefined);
+    setSelectedCard(null);
     setIsCreateCardOpen(true);
   };
 
@@ -77,16 +72,16 @@ export function SpaceDetailPage() {
     handleOpenCreateCard();
   };
 
-  const handleConfirmCreateCard = () => {
-    const validation = processCardTitleChange(newCardTitle);
-    if (validation.error) {
-      setCardTitleError(validation.error);
-      return;
-    }
-
-    const chosenColumnId = targetColumnId || columns[0]?.id || "col-todo";
+  const handleCreateCardSubmit = (formData: CreateCardData) => {
+    const chosenColumnId = formData.columnId || targetColumnId || columns[0]?.id || "col-todo";
     const newCard = createCard({
-      title: validation.title,
+      title: formData.title,
+      type: formData.type,
+      priority: formData.priority || "medium",
+      assigneeId: formData.assigneeId,
+      assigneeIds: formData.assigneeIds,
+      description: formData.description,
+      dueDate: formData.dueDate,
       projectId: space.project.id,
       projectKey: space.project.key,
       columnId: chosenColumnId,
@@ -96,22 +91,12 @@ export function SpaceDetailPage() {
 
     setCards((prev) => [...prev, newCard]);
     setIsCreateCardOpen(false);
-    setNewCardTitle("");
-    setCardTitleError(undefined);
     setTargetColumnId(null);
-
-    // Opening it will open the card normally
     setSelectedCard(newCard);
   };
 
-  const handleCloseCreateModal = () => {
-    setIsCreateCardOpen(false);
-    setNewCardTitle("");
-    setCardTitleError(undefined);
-    setTargetColumnId(null);
-  };
-
   const handleCardPress = (card: Card) => {
+    setIsCreateCardOpen(false);
     setSelectedCard(card);
   };
 
@@ -124,32 +109,10 @@ export function SpaceDetailPage() {
     setCards((prev) => moveCardToColumn(prev, card.id, toColumnId));
   };
 
-  const handleInlineCreateCard = (title: string, columnId: string) => {
-    const newCard = createCard({
-      title,
-      projectId: space.project.id,
-      projectKey: space.project.key,
-      columnId,
-      cardIndex: cards.length + 1,
-      order: cards.filter((c) => c.columnId === columnId).length,
-    });
-    setCards((prev) => [...prev, newCard]);
-    setSelectedCard(newCard);
-  };
-
-  const handleFormSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    handleConfirmCreateCard();
-  };
-
-  const handleCardTitleChange = (text: string) => {
-    const { title, error } = processCardTitleChange(text);
-    setNewCardTitle(title);
-    if (cardTitleError && !error) setCardTitleError(undefined);
-  };
-
   const handleCloseCardDetail = () => {
     setSelectedCard(null);
+    setIsCreateCardOpen(false);
+    setTargetColumnId(null);
   };
 
   const handleAddStatus = (newCol: BoardColumn) => {
@@ -198,70 +161,33 @@ export function SpaceDetailPage() {
           cards={cards}
           users={mockUsers}
           currentUserId={mockCurrentUser.id}
+          cardTypes={cardTypes}
           boardTitle={`${space.project.name} Sprint Board`}
           projectKey={space.project.key}
           onCardPress={handleCardPress}
           onAddCardPress={handleAddCardPress}
           onCardMove={handleCardMove}
-          onCreateCard={handleInlineCreateCard}
+          onCreateCard={(_title, columnId) => handleOpenCreateCard(columnId)}
         />
       </section>
 
-      {/* Quick Create Card Dialog */}
-      <Modal
-        visible={isCreateCardOpen}
-        onClose={handleCloseCreateModal}
-        title="Create Card"
-        subtitle={
-          targetColumnId
-            ? `${space.project.key} · ${columns.find((c) => c.id === targetColumnId)?.title || targetColumnId}`
-            : space.project.key
-        }
-        presentation="dialog"
-        footer={
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-            <Button
-              label="Cancel"
-              variant="secondary"
-              size="sm"
-              onPress={handleCloseCreateModal}
-            />
-            <Button
-              label="Create Card"
-              variant="primary"
-              size="sm"
-              disabled={!newCardTitle.trim()}
-              onPress={handleConfirmCreateCard}
-            />
-          </div>
-        }
-      >
-        <form
-          onSubmit={handleFormSubmit}
-          style={{ display: "flex", flexDirection: "column", gap: 12 }}
-        >
-          <Input
-            label="Card name"
-            placeholder="e.g. Implement user authentication"
-            value={newCardTitle}
-            onChangeText={handleCardTitleChange}
-            error={cardTitleError}
-            autoFocus
-            containerStyle={{ marginBottom: 0 }}
-          />
-        </form>
-      </Modal>
-
-      {/* Card Detail Modal */}
+      {/* Unified Card Detail Modal (Used for Viewing, Editing, and Creating) */}
       <CardDetail
-        visible={Boolean(selectedCard)}
+        visible={Boolean(selectedCard) || isCreateCardOpen}
         card={selectedCard}
+        isCreating={isCreateCardOpen}
+        targetColumnId={targetColumnId}
+        projectKey={space.project.key}
+        projectId={space.project.id}
         columns={columns}
         users={mockUsers}
         comments={mockComments}
         activityLogs={mockActivityLogs}
         currentUserId={mockCurrentUser.id}
+        cardTypes={cardTypes}
+        onAddType={(newType) => setCardTypes((prev) => [...prev, newType])}
         onClose={handleCloseCardDetail}
+        onCreateCard={handleCreateCardSubmit}
         onAddStatus={handleAddStatus}
         onSave={handleSaveCardDetail}
         onDelete={handleDeleteCard}

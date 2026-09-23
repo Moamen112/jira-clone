@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { ActivityLog as ActivityLogType, User } from '@jira-clone/shared';
 
-export type ActivityLogFilter = 'all' | 'history' | 'working';
+export type ActivityLogFilter = 'history' | 'all' | 'working';
 
 export interface ActivityLogFilterOption {
   label: string;
@@ -9,9 +9,7 @@ export interface ActivityLogFilterOption {
 }
 
 export const ACTIVITY_LOG_FILTERS: ActivityLogFilterOption[] = [
-  { label: 'All', value: 'all' },
   { label: 'History', value: 'history' },
-  { label: 'Working', value: 'working' },
 ];
 
 export interface ActivityLogProps {

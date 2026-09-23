@@ -40,10 +40,14 @@ export interface CreateSpaceModalProps {
 const DEFAULT_TITLE = 'Create Space';
 const DEFAULT_SUBTITLE = 'SPACE';
 const NAME_MAX_LENGTH = 120;
+const KEY_MAX_LENGTH = 10;
 const DESCRIPTION_MAX_LENGTH = 500;
+const KEY_PATTERN = /^[A-Z0-9]{2,10}$/;
 
 const ERROR_NAME_REQUIRED = 'Space name cannot be empty.';
 const ERROR_NAME_TOO_LONG = `Space name must not exceed ${NAME_MAX_LENGTH} characters.`;
+const ERROR_KEY_REQUIRED = 'Space key is required.';
+const ERROR_KEY_INVALID = 'Space key must be 2-10 uppercase alphanumeric characters (e.g. ENG).';
 const GENERIC_SUBMIT_ERROR = 'Something went wrong. Please try again.';
 
 /** Derives an uppercase space key automatically from name (e.g. "Mobile Dev" -> "MD", "Core" -> "CORE"). */
@@ -55,10 +59,10 @@ const deriveKey = (name: string): string => {
       .filter(Boolean)
       .join('')
       .toUpperCase();
-    if (initials.length >= 2) return initials.slice(0, 6);
+    if (initials.length >= 2) return initials.slice(0, KEY_MAX_LENGTH);
   }
   const clean = name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-  return clean.slice(0, 5) || 'SPACE';
+  return clean.slice(0, Math.min(clean.length, 6));
 };
 
 export const CreateSpaceModal: FC<CreateSpaceModalProps> = ({
@@ -78,19 +82,24 @@ export const CreateSpaceModal: FC<CreateSpaceModalProps> = ({
   };
 
   const [name, setName] = useState('');
+  const [key, setKey] = useState('');
   const [description, setDescription] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>(getDefaultMemberIds);
+  const [keyManuallyEdited, setKeyManuallyEdited] = useState(false);
   const [nameError, setNameError] = useState<string | undefined>(undefined);
+  const [keyError, setKeyError] = useState<string | undefined>(undefined);
   const [formError, setFormError] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
 
   const busy = submitting || loading;
-  const derivedKey = deriveKey(name);
 
   const resetForm = () => {
     setName('');
+    setKey('');
     setDescription('');
+    setKeyManuallyEdited(false);
     setNameError(undefined);
+    setKeyError(undefined);
     setFormError(undefined);
     setSubmitting(false);
     setSelectedUserIds(getDefaultMemberIds());
@@ -99,19 +108,39 @@ export const CreateSpaceModal: FC<CreateSpaceModalProps> = ({
   const handleNameChange = (text: string) => {
     setName(text);
     setNameError(undefined);
+    if (!keyManuallyEdited) {
+      setKey(deriveKey(text));
+      setKeyError(undefined);
+    }
+  };
+
+  const handleKeyChange = (text: string) => {
+    setKeyManuallyEdited(true);
+    setKey(text.toUpperCase());
+    setKeyError(undefined);
   };
 
   const validate = (): boolean => {
+    let isValid = true;
     const trimmedName = name.trim();
     if (!trimmedName) {
       setNameError(ERROR_NAME_REQUIRED);
-      return false;
-    }
-    if (trimmedName.length > NAME_MAX_LENGTH) {
+      isValid = false;
+    } else if (trimmedName.length > NAME_MAX_LENGTH) {
       setNameError(ERROR_NAME_TOO_LONG);
-      return false;
+      isValid = false;
     }
-    return true;
+
+    const trimmedKey = key.trim();
+    if (!trimmedKey) {
+      setKeyError(ERROR_KEY_REQUIRED);
+      isValid = false;
+    } else if (!KEY_PATTERN.test(trimmedKey)) {
+      setKeyError(ERROR_KEY_INVALID);
+      isValid = false;
+    }
+
+    return isValid;
   };
 
   const handleSubmit = () => {
@@ -131,7 +160,7 @@ export const CreateSpaceModal: FC<CreateSpaceModalProps> = ({
 
     const result = onCreate({
       name: name.trim(),
-      key: derivedKey,
+      key: key.trim().toUpperCase(),
       description: description.trim() || undefined,
       members: spaceMembers,
     });
@@ -183,14 +212,14 @@ export const CreateSpaceModal: FC<CreateSpaceModalProps> = ({
             variant="primary"
             size="sm"
             loading={busy}
-            disabled={busy || !name.trim()}
+            disabled={busy || !name.trim() || !key.trim()}
             onPress={handleSubmit}
           />
         </div>
       }
     >
       <div className={styles.form}>
-        {/* 2 Form Inputs: Space Name & Description */}
+        {/* Form Inputs: Space Name, Space Key & Description */}
         <div className={styles.inputsGroup}>
           <Input
             label="Space name"
@@ -199,12 +228,18 @@ export const CreateSpaceModal: FC<CreateSpaceModalProps> = ({
             placeholder="e.g. Mobile Engineering"
             error={nameError}
             maxLength={NAME_MAX_LENGTH}
-            hint={
-              name.trim()
-                ? `Key: ${derivedKey} (auto-generated)`
-                : 'Space key will be generated automatically from the name.'
-            }
             autoFocus
+            containerStyle={{ marginBottom: 0 }}
+          />
+
+          <Input
+            label="Space key"
+            value={key}
+            onChangeText={handleKeyChange}
+            placeholder="e.g. ENG"
+            error={keyError}
+            hint="2-10 uppercase letters and numbers, e.g. ENG."
+            maxLength={KEY_MAX_LENGTH}
             containerStyle={{ marginBottom: 0 }}
           />
 

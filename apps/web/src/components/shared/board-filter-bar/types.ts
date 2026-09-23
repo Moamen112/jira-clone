@@ -1,22 +1,32 @@
 import type { CSSProperties } from 'react';
-import type { User } from '@jira-clone/shared';
+import type { User, CardTypeOption } from '@jira-clone/shared';
 
 export interface BoardFilterBarProps {
   /** Search query text */
   searchQuery?: string;
   /** Search query change handler */
   onSearchChange?: (query: string) => void;
-  /** Whether "Only My Issues" filter is active */
+  /** Whether "Assigned to me" filter is active */
   assignedToMe?: boolean;
-  /** Toggle "Only My Issues" */
+  /** Toggle "Assigned to me" */
   onToggleAssignedToMe?: () => void;
-  /** Whether "Created by Me" filter is active */
+  /** Whether "Shared with me" filter is active */
+  sharedWithMe?: boolean;
+  /** Toggle "Shared with me" */
+  onToggleSharedWithMe?: () => void;
+  /** Currently selected card type (e.g. 'all', 'task', 'bug', 'story', 'epic') */
+  selectedType?: string;
+  /** Callback fired when card type filter changes */
+  onSelectType?: (type: string) => void;
+  /** Available card type options (defaults to DEFAULT_CARD_TYPES) */
+  cardTypes?: CardTypeOption[];
+  /** Whether "Created by Me" filter is active (optional backwards compatibility) */
   createdByMe?: boolean;
-  /** Toggle "Created by Me" */
+  /** Toggle "Created by Me" (optional backwards compatibility) */
   onToggleCreatedByMe?: () => void;
-  /** Whether "Has Comments" filter is active */
+  /** Whether "Has Comments" filter is active (optional backwards compatibility) */
   hasComments?: boolean;
-  /** Toggle "Has Comments" */
+  /** Toggle "Has Comments" (optional backwards compatibility) */
   onToggleHasComments?: () => void;
   /** Array of selected user IDs for assignee filtering */
   selectedUserIds?: string[];

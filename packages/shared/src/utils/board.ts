@@ -21,7 +21,11 @@ export function createCard(input: CreateCardInput): Card {
     projectId: input.projectId,
     columnId: input.columnId,
     publisherId: input.publisherId || mockCurrentUser.id,
+    assigneeId: input.assigneeId ?? null,
+    assigneeIds: input.assigneeIds ?? (input.assigneeId ? [input.assigneeId] : []),
     priority: input.priority ?? 'medium',
+    type: input.type ?? 'task',
+    dueDate: input.dueDate,
     order: input.order ?? 0,
     commentCount: 0,
     createdAt: now,
@@ -88,6 +92,22 @@ export function filterCardsByCreator(cards: Card[], userId?: string): Card[] {
 }
 
 /**
+ * Checks if a card is shared with a specific user (i.e. created by another team member).
+ */
+export function isCardSharedWithUser(card: Card, userId?: string): boolean {
+  if (!userId) return false;
+  return card.publisherId !== userId;
+}
+
+/**
+ * Filters an array of Cards to those shared with a specific user.
+ */
+export function filterCardsByShared(cards: Card[], userId?: string): Card[] {
+  if (!userId) return cards;
+  return cards.filter((card) => isCardSharedWithUser(card, userId));
+}
+
+/**
  * Checks if a card has comments.
  */
 export function hasCardComments(card: Card): boolean {
@@ -119,22 +139,41 @@ export function filterCards(
       if (!isCardAssignedToUser(card, criteria.currentUserId)) return false;
     }
 
-    // 3. Created / Reported by Current User
+    // 3. Shared with Me
+    if (criteria.sharedWithMe && criteria.currentUserId) {
+      if (!isCardSharedWithUser(card, criteria.currentUserId)) return false;
+    }
+
+    // 4. Created / Reported by Current User (backwards compatibility)
     if (criteria.createdByMe && criteria.currentUserId) {
       if (!isCardCreatedByUser(card, criteria.currentUserId)) return false;
     }
 
-    // 4. Has Comments
+    // 5. Has Comments (backwards compatibility)
     if (criteria.hasComments) {
       if (!hasCardComments(card)) return false;
     }
 
-    // 5. Filter by Selected Workspace Member User IDs
+    // 6. Filter by Selected Workspace Member User IDs (and 'unassigned')
     if (criteria.selectedUserIds && criteria.selectedUserIds.length > 0) {
-      const matchesAnyUser = criteria.selectedUserIds.some((uid) =>
-        isCardAssignedToUser(card, uid)
-      );
-      if (!matchesAnyUser) return false;
+      const includesUnassigned = criteria.selectedUserIds.includes('unassigned');
+      const regularUserIds = criteria.selectedUserIds.filter((id) => id !== 'unassigned');
+
+      const matchesRegularUser =
+        regularUserIds.length > 0 &&
+        regularUserIds.some((uid) => isCardAssignedToUser(card, uid));
+      const matchesUnassigned =
+        includesUnassigned &&
+        !card.assigneeId &&
+        (!card.assigneeIds || card.assigneeIds.length === 0);
+
+      if (!matchesRegularUser && !matchesUnassigned) return false;
+    }
+
+    // 7. Filter by Card Type (e.g. 'task', 'bug', 'story', 'epic')
+    if (criteria.type && criteria.type !== 'all') {
+      const cardType = (card.type || 'task').toLowerCase();
+      if (cardType !== criteria.type.toLowerCase()) return false;
     }
 
     return true;

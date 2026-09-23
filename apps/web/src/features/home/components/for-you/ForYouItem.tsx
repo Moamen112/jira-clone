@@ -1,7 +1,6 @@
 import type { CSSProperties, FC } from 'react';
 import type { Card, BoardColumn, Project, User } from '@jira-clone/shared';
 import { Badge } from '../../../../components/base';
-import { PriorityBadge } from '../../../../components/shared/priority-badge';
 import { StatusBar } from '../../../../components/shared/status-bar';
 import { Avatar } from '../../../../components/shared/avatar';
 import styles from './ForYouItem.module.css';
@@ -11,8 +10,6 @@ export interface ForYouItemProps {
   project?: Project;
   statusColumn?: BoardColumn;
   assignee?: User | null;
-  starred?: boolean;
-  onToggleStar?: () => void;
   onPress?: () => void;
   style?: CSSProperties;
   className?: string;
@@ -23,8 +20,6 @@ export const ForYouItem: FC<ForYouItemProps> = ({
   project,
   statusColumn,
   assignee,
-  starred = false,
-  onToggleStar,
   onPress,
   style,
   className = '',
@@ -78,32 +73,8 @@ export const ForYouItem: FC<ForYouItemProps> = ({
         }
       }}
     >
-      {/* Left side: Star, Key, Type, Title, Project */}
+      {/* Left side: Key, Type, Title, Project */}
       <div className={styles.leftGroup}>
-        <button
-          type="button"
-          className={`${styles.starBtn} ${starred ? styles.starActive : ''}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleStar?.();
-          }}
-          title={starred ? 'Unstar issue' : 'Star issue'}
-          aria-label={starred ? 'Unstar issue' : 'Star issue'}
-        >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill={starred ? 'currentColor' : 'none'}
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
-        </button>
-
         <div className={styles.keyArea}>
           <Badge label={card.key} variant="mono" size="sm" />
         </div>
@@ -124,10 +95,6 @@ export const ForYouItem: FC<ForYouItemProps> = ({
       <div className={styles.rightGroup}>
         <div className={styles.statusWrap}>
           <StatusBar status={defaultStatus} size="sm" />
-        </div>
-
-        <div className={styles.priorityWrap}>
-          <PriorityBadge priority={card.priority} size="sm" showLabel={false} />
         </div>
 
         {card.dueDate && (

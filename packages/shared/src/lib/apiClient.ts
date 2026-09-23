@@ -1,99 +1,71 @@
-import axios, { type AxiosInstance } from 'axios';
-import { setupRequestInterceptor, setupResponseInterceptor } from './interceptors';
-import { TokenManager } from './tokenManager';
-import type { ApiClientConfig, AuthTokens, RefreshTokens } from './types';
+import axios, {
+  type AxiosError,
+  type AxiosInstance,
+  type InternalAxiosRequestConfig,
+} from 'axios';
+import { clearAuthTokens, getAuthTokens, setAuthTokens } from './authTokens';
+import { API_ENDPOINTS } from './endpoints';
 
-/** Only explicit refresh rejection is terminal; network/5xx failures can retry. */
-function defaultShouldInvalidateSession(error: unknown): boolean {
-  if (!axios.isAxiosError(error)) return true;
-
-  const status = error.response?.status;
-  return status === 400 || status === 401 || status === 403;
+interface RefreshResponse {
+  accessToken: string;
+  refreshToken?: string;
 }
 
-/** Validates the default refresh response without tying it to an `any` shape. */
-function parseRefreshTokens(responseData: unknown): AuthTokens {
-  if (
-    typeof responseData !== 'object' ||
-    responseData === null ||
-    !('accessToken' in responseData) ||
-    typeof responseData.accessToken !== 'string'
-  ) {
-    throw new Error('The refresh response did not include an access token.');
-  }
-
-  const refreshToken =
-    'refreshToken' in responseData &&
-    (typeof responseData.refreshToken === 'string' || responseData.refreshToken === null)
-      ? responseData.refreshToken
-      : undefined;
-
-  return { accessToken: responseData.accessToken, refreshToken };
+interface RetryRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
 }
 
 /**
- * Creates one configured Axios instance. Pass the same TokenManager to login
- * code so successful auth can call `await tokenManager.setTokens(tokens)`.
+ * Creates the Axios instance used by an application.
+ * Create it once and reuse it for every API request.
  */
-export function createApiClient(
-  config: ApiClientConfig = {},
-  providedTokenManager?: TokenManager
-): AxiosInstance {
-  const {
-    baseURL = '',
-    timeout = 15_000,
-    withCredentials = true,
-    refreshEndpoint = '/auth/refresh',
-    storageAdapter,
-    refreshTokens: customRefreshTokens,
-    shouldInvalidateSession = defaultShouldInvalidateSession,
-    onAuthFailure,
-  } = config;
+export function createApiClient(baseURL: string): AxiosInstance {
+  const apiClient = axios.create({ baseURL });
+  const refreshClient = axios.create({ baseURL });
 
-  const tokenManager = providedTokenManager ?? new TokenManager(storageAdapter);
-  if (providedTokenManager && storageAdapter) {
-    tokenManager.setStorageAdapter(storageAdapter);
-  }
+  apiClient.interceptors.request.use((config) => {
+    const accessToken = getAuthTokens()?.accessToken;
 
-  const instance = axios.create({
-    baseURL,
-    timeout,
-    withCredentials,
-    headers: { Accept: 'application/json' },
+    if (accessToken) {
+      config.headers.set('Authorization', `Bearer ${accessToken}`);
+    }
+
+    return config;
   });
 
-  setupRequestInterceptor(instance, tokenManager);
+  apiClient.interceptors.response.use(
+    (response) => response,
+    async (error: AxiosError) => {
+      const request = error.config as RetryRequestConfig | undefined;
+      const currentTokens = getAuthTokens();
 
-  let refreshTokens: RefreshTokens | undefined = customRefreshTokens;
+      if (error.response?.status !== 401 || !request || request._retry || !currentTokens) {
+        return Promise.reject(error);
+      }
 
-  if (!refreshTokens && refreshEndpoint !== false) {
-    // A separate bare instance ensures the refresh call cannot recursively
-    // trigger the response interceptor that it is trying to satisfy.
-    const refreshClient = axios.create({
-      baseURL,
-      timeout,
-      withCredentials,
-      headers: { Accept: 'application/json' },
-    });
+      request._retry = true;
 
-    refreshTokens = async (storedRefreshToken) => {
-      const body = storedRefreshToken
-        ? { refreshToken: storedRefreshToken }
-        : undefined;
-      const response = await refreshClient.post<unknown>(refreshEndpoint, body);
+      try {
+        const response = await refreshClient.post<RefreshResponse>(
+          API_ENDPOINTS.AUTH.REFRESH,
+          { refreshToken: currentTokens.refreshToken }
+        );
 
-      return parseRefreshTokens(response.data);
-    };
-  }
+        const nextTokens = {
+          accessToken: response.data.accessToken,
+          refreshToken: response.data.refreshToken ?? currentTokens.refreshToken,
+        };
 
-  if (refreshTokens) {
-    setupResponseInterceptor(instance, {
-      tokenManager,
-      refreshTokens,
-      shouldInvalidateSession,
-      onAuthFailure,
-    });
-  }
+        setAuthTokens(nextTokens);
+        request.headers.set('Authorization', `Bearer ${nextTokens.accessToken}`);
 
-  return instance;
+        return apiClient(request);
+      } catch (refreshError) {
+        clearAuthTokens();
+        return Promise.reject(refreshError);
+      }
+    }
+  );
+
+  return apiClient;
 }

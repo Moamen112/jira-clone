@@ -34,8 +34,6 @@ export function RootLayout() {
         onLogIn={() => navigate(ROUTES.AUTH.SIGN_IN)}
         onLogout={() => navigate(ROUTES.AUTH.SIGN_IN)}
         onOpenProfile={() => navigate(ROUTES.PROTECTED.PROFILE)}
-        onOpenNotifications={() => navigate(ROUTES.PROTECTED.NOTIFICATIONS)}
-        onCreate={() => navigate(ROUTES.PROTECTED.HOME)}
       />
 
       <main className={styles.mainContent}>

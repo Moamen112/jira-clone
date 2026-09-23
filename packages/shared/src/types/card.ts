@@ -28,7 +28,11 @@ export interface CreateCardInput {
   projectKey: string;
   columnId: string;
   publisherId?: string;
+  assigneeId?: string | null;
+  assigneeIds?: string[];
   priority?: CardPriority;
+  type?: string;
+  dueDate?: string;
   description?: string;
   cardIndex?: number;
   order?: number;

@@ -35,6 +35,8 @@ export interface InputProps {
   onFocus?: () => void;
   /** Blur callback */
   onBlur?: () => void;
+  /** Keydown handler */
+  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
   /** Outer container style overrides */
   containerStyle?: CSSProperties;
   /** Input wrapper style (borders, background) */
@@ -60,6 +62,7 @@ export const Input: FC<InputProps> = ({
   onChangeText,
   onFocus,
   onBlur,
+  onKeyDown,
   containerStyle,
   inputWrapperStyle,
   style,
@@ -124,6 +127,7 @@ export const Input: FC<InputProps> = ({
           maxLength={maxLength}
           autoFocus={autoFocus}
           onChange={(event) => onChangeText?.(event.target.value)}
+          onKeyDown={onKeyDown}
           onFocus={() => {
             setIsFocused(true);
             onFocus?.();

@@ -439,6 +439,7 @@ export const mockCards: Card[] = [
     assigneeId: 'user-2',  // Sarah (Assignee)
     assigneeIds: ['user-1', 'user-2'],
     priority: 'high',
+    type: 'story',
     order: 0,
     commentCount: 2,
     startDate: '2026-09-02',
@@ -456,6 +457,7 @@ export const mockCards: Card[] = [
     publisherId: 'user-1', // Alex (Publisher)
     assigneeId: 'user-1',  // Alex (Assignee)
     priority: 'highest',
+    type: 'task',
     order: 0,
     commentCount: 1,
     startDate: '2026-09-03',
@@ -473,12 +475,30 @@ export const mockCards: Card[] = [
     publisherId: 'user-2', // Sarah (Publisher)
     assigneeId: 'user-3',  // David (Assignee)
     priority: 'medium',
+    type: 'bug',
     order: 0,
     commentCount: 0,
     startDate: '2026-09-05',
     dueDate: '2026-09-20',
     createdAt: '2026-09-05T15:00:00.000Z',
     updatedAt: '2026-09-05T15:00:00.000Z',
+  },
+  {
+    id: 'card-4',
+    key: 'FIELD-4',
+    title: 'Audit accessibility across high-contrast themes',
+    description: 'Verify WCAG AAA color contrast ratios and screen reader announcements on the board.',
+    projectId: 'proj-1',
+    columnId: 'col-todo',
+    publisherId: 'user-2', // Sarah (Publisher)
+    priority: 'low',
+    type: 'epic',
+    order: 1,
+    commentCount: 0,
+    startDate: '2026-09-06',
+    dueDate: '2026-09-22',
+    createdAt: '2026-09-06T10:00:00.000Z',
+    updatedAt: '2026-09-06T10:00:00.000Z',
   },
 ];
 

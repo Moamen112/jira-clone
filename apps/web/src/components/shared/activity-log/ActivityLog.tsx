@@ -1,9 +1,16 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import type { FC } from 'react';
 import { Text } from '../../base';
 import { ActivityLogItem } from './ActivityLogItem';
-import { ACTIVITY_LOG_FILTERS } from './types';
-import type { ActivityLogProps, ActivityLogFilter } from './types';
+import type { ActivityLogProps } from './types';
+
+const HISTORY_ACTIONS = [
+  'CARD_CREATED',
+  'STATUS_CHANGED',
+  'ASSIGNEE_CHANGED',
+  'TITLE_UPDATED',
+  'DESCRIPTION_UPDATED',
+];
 
 export const ActivityLog: FC<ActivityLogProps> = ({
   logs,
@@ -13,97 +20,35 @@ export const ActivityLog: FC<ActivityLogProps> = ({
   maxItems,
   style,
   className,
-  filter,
-  defaultFilter = 'all',
-  onFilterChange,
-  showFilters = true,
+  filter: _filter,
+  defaultFilter: _defaultFilter = 'history',
+  onFilterChange: _onFilterChange,
+  showFilters: _showFilters,
   bordered = true,
   testID,
 }) => {
-  const [internalFilter, setInternalFilter] = useState<ActivityLogFilter>(defaultFilter);
-  const activeFilter = filter !== undefined ? filter : internalFilter;
-
-  const handleFilterSelect = (newFilter: ActivityLogFilter) => {
-    if (filter === undefined) {
-      setInternalFilter(newFilter);
-    }
-    onFilterChange?.(newFilter);
-  };
-
   // 1. Filter by cardId if specified
   const cardLogs = useMemo(() => {
     return cardId ? logs.filter((log) => log.cardId === cardId) : logs;
   }, [logs, cardId]);
 
-  // 2. Count for each filter option
-  const counts = useMemo(() => {
-    const historyCount = cardLogs.filter((log) =>
-      ['CARD_CREATED', 'STATUS_CHANGED', 'ASSIGNEE_CHANGED', 'TITLE_UPDATED', 'DESCRIPTION_UPDATED'].includes(
-        log.action
-      )
-    ).length;
-
-    const workingCount = cardLogs.filter(
-      (log) =>
-        ['STATUS_CHANGED', 'WORK_LOGGED', 'COMMENT_ADDED'].includes(log.action) ||
-        Boolean(
-          log.details &&
-            (log.details.message?.toLowerCase().includes('work') ||
-              log.details.to?.toLowerCase().includes('progress'))
-        )
-    ).length;
-
-    return {
-      all: cardLogs.length,
-      history: historyCount,
-      working: workingCount,
-    };
+  // 2. Filter to history changes only
+  const historyLogs = useMemo(() => {
+    return cardLogs.filter((log) => HISTORY_ACTIONS.includes(log.action));
   }, [cardLogs]);
 
-  // 3. Filter by active category
-  const filteredLogs = useMemo(() => {
-    if (activeFilter === 'history') {
-      return cardLogs.filter((log) =>
-        ['CARD_CREATED', 'STATUS_CHANGED', 'ASSIGNEE_CHANGED', 'TITLE_UPDATED', 'DESCRIPTION_UPDATED'].includes(
-          log.action
-        )
-      );
-    }
-    if (activeFilter === 'working') {
-      return cardLogs.filter(
-        (log) =>
-          ['STATUS_CHANGED', 'WORK_LOGGED', 'COMMENT_ADDED'].includes(log.action) ||
-          Boolean(
-            log.details &&
-              (log.details.message?.toLowerCase().includes('work') ||
-                log.details.to?.toLowerCase().includes('progress'))
-          )
-      );
-    }
-    return cardLogs;
-  }, [cardLogs, activeFilter]);
-
-  // 4. Sort descending (newest first)
+  // 3. Sort descending (newest first)
   const sortedLogs = useMemo(() => {
-    return [...filteredLogs].sort(
+    return [...historyLogs].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-  }, [filteredLogs]);
+  }, [historyLogs]);
 
   const displayedLogs = maxItems ? sortedLogs.slice(0, maxItems) : sortedLogs;
 
   const getUser = (userId: string) => users.find((u) => u.id === userId) || null;
 
-  const emptyMessage = useMemo(() => {
-    switch (activeFilter) {
-      case 'history':
-        return 'No history changes recorded yet.';
-      case 'working':
-        return 'No work logs or status transitions recorded yet.';
-      default:
-        return 'No activity recorded yet.';
-    }
-  }, [activeFilter]);
+  const emptyMessage = 'No history changes recorded yet.';
 
   return (
     <div
@@ -138,68 +83,6 @@ export const ActivityLog: FC<ActivityLogProps> = ({
           </Text>
         </div>
       ) : null}
-
-      {/* Filter Tabs / Pills */}
-      {showFilters && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 8,
-            marginBottom: 16,
-            marginTop: 4,
-          }}
-        >
-          {ACTIVITY_LOG_FILTERS.map((f) => {
-            const isSelected = f.value === activeFilter;
-            const count = counts[f.value];
-            return (
-              <button
-                key={f.value}
-                type="button"
-                onClick={() => handleFilterSelect(f.value)}
-                aria-pressed={isSelected}
-                aria-label={`Filter activity logs by ${f.label}`}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '5px 12px',
-                  borderRadius: 'var(--radius-pill)',
-                  border: `1px solid ${isSelected ? 'var(--color-accent)' : 'var(--color-line)'}`,
-                  backgroundColor: isSelected ? 'var(--color-accent)' : 'var(--color-surface)',
-                  color: isSelected ? '#ffffff' : 'var(--color-ink)',
-                  fontSize: 12,
-                  fontWeight: isSelected ? 600 : 500,
-                  cursor: 'pointer',
-                  transition: 'background-color 150ms ease, border-color 150ms ease, color 150ms ease',
-                }}
-              >
-                <span>{f.label}</span>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '1px 6px',
-                    borderRadius: 'var(--radius-pill)',
-                    minWidth: 18,
-                    fontSize: 10,
-                    fontWeight: 600,
-                    backgroundColor: isSelected
-                      ? 'rgba(255, 255, 255, 0.25)'
-                      : 'var(--color-line)',
-                    color: isSelected ? '#ffffff' : 'var(--color-ink-muted)',
-                  }}
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       {/* List or Empty State */}
       {displayedLogs.length === 0 ? (

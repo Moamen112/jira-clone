@@ -15,24 +15,44 @@ import {
   createCardType,
   DEFAULT_CARD_TYPES,
   PRESET_STATUS_COLORS,
+  handleCardTitleChange,
 } from "@jira-clone/shared";
 import { Modal } from "../modal/Modal";
 import { Text, Input, Textarea, Button, Badge, Dropdown } from "../../base";
 import type { DropdownOption } from "../../base";
-import { PriorityBadge } from "../priority-badge";
 import { AssigneeSelect } from "../assignee-select";
 import { PublisherInfo } from "../publisher-info";
-import { StatusBar } from "../status-bar";
 import { CommentSection } from "../comment-section";
 import { ConfirmDialog } from "../confirm-dialog";
 import { Accordion } from "../accordion";
 import { ActivityLog } from "../activity-log";
 
+export interface CreateCardData {
+  title: string;
+  type: string;
+  columnId: string;
+  priority?: CardPriority;
+  assigneeId?: string | null;
+  assigneeIds?: string[];
+  description?: string;
+  dueDate?: string;
+}
+
 export interface CardDetailProps {
   /** Visibility toggle */
   visible?: boolean;
-  /** The card entity to view or edit */
-  card: CardType | null;
+  /** The card entity to view or edit (null when creating a new card) */
+  card?: CardType | null;
+  /** Whether the modal is in creation mode */
+  isCreating?: boolean;
+  /** Target column ID when creating a new card */
+  targetColumnId?: string | null;
+  /** Project key code (e.g. "ENG") */
+  projectKey?: string;
+  /** Space / Project ID */
+  projectId?: string;
+  /** Callback fired when creating a new card */
+  onCreateCard?: (data: CreateCardData) => void | Promise<void>;
   /** Available board columns */
   columns?: BoardColumn[];
   /** Available workspace members */
@@ -51,6 +71,10 @@ export interface CardDetailProps {
   currentUserRole?: CardRole;
   /** Callback fired when a new status column is added */
   onAddStatus?: (column: BoardColumn) => void;
+  /** Available card types */
+  cardTypes?: CardTypeOption[];
+  /** Callback fired when a new card type is added */
+  onAddType?: (type: CardTypeOption) => void;
   /** Close or back callback */
   onClose?: () => void;
   /** Callback fired when user saves changes */
@@ -65,14 +89,15 @@ export interface CardDetailProps {
 
 export type { CardTypeOption };
 
-const PRESET_COLORS = PRESET_STATUS_COLORS;
-
-const PRIORITIES: CardPriority[] = [
-  "lowest",
-  "low",
-  "medium",
-  "high",
-  "highest",
+const PRESET_TYPE_COLORS: string[] = [
+  '#3B82F6',
+  '#10B981',
+  '#F59E0B',
+  '#EF4444',
+  '#8B5CF6',
+  '#EC4899',
+  '#06B6D4',
+  '#64748B',
 ];
 
 const toDateInputValue = (dateStr?: string | null): string => {
@@ -127,6 +152,11 @@ const ChatBubblesIcon: FC<{ size?: number }> = ({ size = 18 }) => (
 export const CardDetail: FC<CardDetailProps> = ({
   visible = true,
   card,
+  isCreating = false,
+  targetColumnId,
+  projectKey,
+  projectId,
+  onCreateCard,
   columns = [],
   users = [],
   comments = [],
@@ -136,109 +166,158 @@ export const CardDetail: FC<CardDetailProps> = ({
   currentUserId,
   currentUserRole,
   onAddStatus,
+  cardTypes: passedCardTypes,
+  onAddType,
   onClose,
   onSave,
   onDelete,
   loading = false,
   style,
 }) => {
-  // Controlled form draft state initialized directly from card
-  const [draftTitle, setDraftTitle] = useState(card?.title ?? "");
+  // Custom columns added locally
+  const [customColumns, setCustomColumns] = useState<BoardColumn[]>([]);
+  const allColumns = [...(columns || []), ...customColumns];
+
+  // Controlled form draft state
+  const [draftTitle, setDraftTitle] = useState(isCreating ? "" : card?.title ?? "");
   const [draftDescription, setDraftDescription] = useState(
-    card?.description ?? "",
+    isCreating ? "" : card?.description ?? ""
   );
-  const [draftColumnId, setDraftColumnId] = useState(card?.columnId ?? "");
   const [draftAssigneeId, setDraftAssigneeId] = useState<string | null>(
-    card?.assigneeId ?? null,
+    isCreating ? null : card?.assigneeId ?? null
   );
   const [draftAssigneeIds, setDraftAssigneeIds] = useState<string[]>(
-    card?.assigneeIds && card.assigneeIds.length > 0
-      ? card.assigneeIds
-      : card?.assigneeId
-        ? [card.assigneeId]
-        : [],
+    isCreating
+      ? []
+      : card?.assigneeIds && card.assigneeIds.length > 0
+        ? card.assigneeIds
+        : card?.assigneeId
+          ? [card.assigneeId]
+          : []
   );
-  const [draftPriority, setDraftPriority] = useState<CardPriority>(
-    card?.priority ?? "medium",
+  const [draftColumnId, setDraftColumnId] = useState<string>(
+    isCreating
+      ? targetColumnId || (columns && columns.length > 0 ? columns[0].id : "")
+      : card?.columnId ?? ""
   );
-  const [cardTypes, setCardTypes] = useState<CardTypeOption[]>(DEFAULT_CARD_TYPES);
-  const [draftType, setDraftType] = useState<string>(card?.type || "task");
-  const [draftStartDate, setDraftStartDate] = useState(
-    toDateInputValue(card?.startDate),
+  // Custom card types added locally
+  const [customCardTypes, setCustomCardTypes] = useState<CardTypeOption[]>([]);
+  const baseCardTypes =
+    passedCardTypes && passedCardTypes.length > 0
+      ? passedCardTypes
+      : DEFAULT_CARD_TYPES.slice(0, 3);
+  const cardTypes = [
+    ...baseCardTypes,
+    ...customCardTypes.filter((c) => !baseCardTypes.some((b) => b.id === c.id)),
+  ];
+  const [draftType, setDraftType] = useState<string>(
+    isCreating ? "" : card?.type || "task"
   );
   const [draftDueDate, setDraftDueDate] = useState(
-    toDateInputValue(card?.dueDate),
+    isCreating ? "" : toDateInputValue(card?.dueDate)
   );
-  const [cardIdTracking, setCardIdTracking] = useState(card?.id);
+  const [cardIdTracking, setCardIdTracking] = useState<string | null>(
+    isCreating ? "__new__" : card?.id ?? null
+  );
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Dynamic custom columns & modals
-  const [customColumns, setCustomColumns] = useState<BoardColumn[]>([]);
+  // Validation error states
+  const [titleError, setTitleError] = useState<string | undefined>(undefined);
+  const [typeError, setTypeError] = useState<string | undefined>(undefined);
+  const [statusFieldError, setStatusFieldError] = useState<string | undefined>(undefined);
 
   // Add status modal state
   const [isAddStatusOpen, setIsAddStatusOpen] = useState(false);
   const [newStatusTitle, setNewStatusTitle] = useState("");
-  const [newStatusColor, setNewStatusColor] = useState("#3B82F6");
+  const [newStatusColor, setNewStatusColor] = useState(PRESET_STATUS_COLORS[0]);
   const [statusError, setStatusError] = useState<string | undefined>(undefined);
 
   // Add type modal state
   const [isAddTypeOpen, setIsAddTypeOpen] = useState(false);
   const [newTypeTitle, setNewTypeTitle] = useState("");
   const [newTypeColor, setNewTypeColor] = useState("#6366F1");
-  const [typeError, setTypeError] = useState<string | undefined>(undefined);
+  const [newTypeError, setNewTypeError] = useState<string | undefined>(undefined);
 
-  // Sync state when a different card is opened without cascading effects
-  if (card && card.id !== cardIdTracking) {
-    setCardIdTracking(card.id);
-    setDraftTitle(card.title);
-    setDraftDescription(card.description ?? "");
-    setDraftColumnId(card.columnId);
-    setDraftAssigneeId(card.assigneeId ?? null);
-    setDraftAssigneeIds(
-      card.assigneeIds && card.assigneeIds.length > 0
-        ? card.assigneeIds
-        : card.assigneeId
-          ? [card.assigneeId]
-          : [],
-    );
-    setDraftPriority(card.priority);
-    setDraftType(card.type || "task");
-    setDraftStartDate(toDateInputValue(card.startDate));
-    setDraftDueDate(toDateInputValue(card.dueDate));
+  // Sync state when card or creation mode changes
+  const targetTracking = isCreating ? "__new__" : card?.id ?? null;
+  if (targetTracking !== cardIdTracking) {
+    setCardIdTracking(targetTracking);
+    if (isCreating) {
+      setDraftTitle("");
+      setDraftDescription("");
+      setDraftAssigneeId(null);
+      setDraftAssigneeIds([]);
+      setDraftColumnId(targetColumnId || (columns && columns.length > 0 ? columns[0].id : ""));
+      setDraftType("");
+      setDraftDueDate("");
+      setTitleError(undefined);
+      setTypeError(undefined);
+      setStatusFieldError(undefined);
+    } else if (card) {
+      setDraftTitle(card.title);
+      setDraftDescription(card.description ?? "");
+      setDraftAssigneeId(card.assigneeId ?? null);
+      setDraftAssigneeIds(
+        card.assigneeIds && card.assigneeIds.length > 0
+          ? card.assigneeIds
+          : card.assigneeId
+            ? [card.assigneeId]
+            : []
+      );
+      setDraftColumnId(card.columnId);
+      setDraftType(card.type || "task");
+      setDraftDueDate(toDateInputValue(card.dueDate));
+      setTitleError(undefined);
+      setTypeError(undefined);
+      setStatusFieldError(undefined);
+    }
   }
 
-  if (!card || !visible) return null;
+  if (!visible) return null;
+  if (!isCreating && !card) return null;
 
   // Derive permissions
   const role: CardRole =
     currentUserRole ||
-    (currentUserId ? getCardRole(currentUserId, card) : "viewer");
+    (currentUserId && card ? getCardRole(currentUserId, card) : "publisher");
 
-  const canEditTitle = cardPermissions.canEditTitle(role);
-  const canEditDescription = cardPermissions.canEditDescription(role);
-  const canChangeAssignee = cardPermissions.canChangeAssignee(role);
-  const canMoveStatus = cardPermissions.canMoveStatus(role);
-  const canEditDates = cardPermissions.canEditDates(role);
-  const canDeleteCard = cardPermissions.canDeleteCard(role);
+  const canEditTitle = isCreating ? true : cardPermissions.canEditTitle(role);
+  const canEditDescription = isCreating ? true : cardPermissions.canEditDescription(role);
+  const canMoveStatus = isCreating ? true : cardPermissions.canMoveStatus(role);
+  const canChangeAssignee = isCreating ? true : cardPermissions.canChangeAssignee(role);
+  const canEditDates = isCreating ? true : cardPermissions.canEditDates(role);
+  const canDeleteCard = isCreating ? false : cardPermissions.canDeleteCard(role);
 
   const isOverdue = draftDueDate ? checkIsOverdue(draftDueDate) : false;
 
-  const publisher = users.find((u) => u.id === card.publisherId) || {
-    id: card.publisherId,
-    name: "Unknown User",
-    email: "",
-    initials: "?",
-  };
-
   const currentUser = users.find((u) => u.id === currentUserId) || null;
-  const currentColumn = columns.find((c) => c.id === draftColumnId);
-  const relevantLogs = activityLogs
-    ? activityLogs.filter((log) => log.cardId === card.id)
-    : [];
-  const relevantComments = comments
-    ? comments.filter((c) => c.cardId === card.id)
-    : [];
+  const publisher =
+    users.find((u) => u.id === (card?.publisherId || currentUserId)) ||
+    currentUser || {
+      id: card?.publisherId || currentUserId || "unknown",
+      name: "Current User",
+      email: "",
+      initials: "CU",
+    };
+
+  const relevantLogs =
+    !isCreating && card && activityLogs
+      ? activityLogs.filter((log) => log.cardId === card.id)
+      : [];
+  const historyLogs = relevantLogs.filter((log) =>
+    [
+      "CARD_CREATED",
+      "STATUS_CHANGED",
+      "ASSIGNEE_CHANGED",
+      "TITLE_UPDATED",
+      "DESCRIPTION_UPDATED",
+    ].includes(log.action)
+  );
+  const relevantComments =
+    !isCreating && card && comments
+      ? comments.filter((c) => c.cardId === card.id)
+      : [];
 
   const roleLabel =
     role === "publisher"
@@ -247,35 +326,34 @@ export const CardDetail: FC<CardDetailProps> = ({
         ? "Assignee"
         : "Viewer";
 
-  const allColumns = [
-    ...columns,
-    ...customColumns.filter((c) => !columns.some((col) => col.id === c.id)),
-  ];
+  const statusOptions: DropdownOption[] = allColumns.map((col) => {
+    const colColor =
+      col.color ||
+      (col.id.includes("done")
+        ? "#10B981"
+        : col.id.includes("review")
+          ? "var(--color-accent)"
+          : col.id.includes("progress")
+            ? "#3B82F6"
+            : "var(--color-ink-muted)");
 
-  const statusOptions: DropdownOption[] = allColumns.map((col) => ({
-    label: col.title,
-    value: col.id,
-    icon: (
-      <span
-        style={{
-          width: 8,
-          height: 8,
-          borderRadius: "var(--radius-pill)",
-          backgroundColor:
-            col.color ||
-            (col.id.includes("done")
-              ? "#10B981"
-              : col.id.includes("review")
-                ? "var(--color-accent)"
-                : col.id.includes("progress")
-                  ? "#3B82F6"
-                  : "var(--color-ink-muted)"),
-          display: "inline-block",
-          flexShrink: 0,
-        }}
-      />
-    ),
-  }));
+    return {
+      label: col.title,
+      value: col.id,
+      icon: (
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: "var(--radius-pill)",
+            backgroundColor: colColor,
+            display: "inline-block",
+            flexShrink: 0,
+          }}
+        />
+      ),
+    };
+  });
 
   const typeOptions: DropdownOption[] = cardTypes.map((t) => ({
     label: t.label,
@@ -294,28 +372,79 @@ export const CardDetail: FC<CardDetailProps> = ({
     ),
   }));
 
-  const priorityOptions: DropdownOption[] = PRIORITIES.map((p) => ({
-    label: p.charAt(0).toUpperCase() + p.slice(1),
-    value: p,
-    icon: <PriorityBadge priority={p} size="sm" />,
-  }));
+  const currentStatusColumn = allColumns.find((c) => c.id === draftColumnId);
+  const currentStatusColor =
+    currentStatusColumn?.color ||
+    (draftColumnId.includes("done")
+      ? "#10B981"
+      : draftColumnId.includes("review")
+        ? "var(--color-accent)"
+        : draftColumnId.includes("progress")
+          ? "#3B82F6"
+          : "var(--color-ink-muted)");
 
   const hasChanges =
-    draftTitle !== card.title ||
-    draftDescription !== (card.description ?? "") ||
-    draftColumnId !== card.columnId ||
-    draftAssigneeId !== (card.assigneeId ?? null) ||
-    draftPriority !== card.priority ||
-    draftType !== (card.type || "task") ||
-    draftStartDate !== toDateInputValue(card.startDate) ||
-    draftDueDate !== toDateInputValue(card.dueDate) ||
-    JSON.stringify(draftAssigneeIds) !==
-      JSON.stringify(
-        card.assigneeIds || (card.assigneeId ? [card.assigneeId] : []),
-      );
+    !isCreating &&
+    Boolean(card) &&
+    (draftTitle !== card!.title ||
+      draftDescription !== (card!.description ?? "") ||
+      draftAssigneeId !== (card!.assigneeId ?? null) ||
+      draftColumnId !== card!.columnId ||
+      draftType !== (card!.type || "task") ||
+      draftDueDate !== toDateInputValue(card!.dueDate) ||
+      JSON.stringify(draftAssigneeIds) !==
+        JSON.stringify(
+          card!.assigneeIds || (card!.assigneeId ? [card!.assigneeId] : [])
+        ));
+
+  const handleCreateSubmit = async () => {
+    if (!onCreateCard) return;
+
+    let isValid = true;
+    const titleVal = handleCardTitleChange(draftTitle);
+    if (titleVal.error) {
+      setTitleError(titleVal.error);
+      isValid = false;
+    } else {
+      setTitleError(undefined);
+    }
+
+    if (!draftType) {
+      setTypeError("Issue type is required.");
+      isValid = false;
+    } else {
+      setTypeError(undefined);
+    }
+
+    if (!draftColumnId) {
+      setStatusFieldError("Status is required.");
+      isValid = false;
+    } else {
+      setStatusFieldError(undefined);
+    }
+
+    if (!isValid) return;
+
+    try {
+      setIsSaving(true);
+      await onCreateCard({
+        title: draftTitle.trim(),
+        type: draftType,
+        columnId: draftColumnId,
+        priority: "medium",
+        assigneeId: draftAssigneeId,
+        assigneeIds: draftAssigneeIds,
+        description: draftDescription.trim() || undefined,
+        dueDate: draftDueDate || undefined,
+      });
+      onClose?.();
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleSave = async () => {
-    if (!onSave || !hasChanges) return;
+    if (!onSave || !hasChanges || !card) return;
 
     try {
       setIsSaving(true);
@@ -323,12 +452,10 @@ export const CardDetail: FC<CardDetailProps> = ({
         ...card,
         title: draftTitle.trim() || card.title,
         description: draftDescription.trim() || undefined,
-        columnId: draftColumnId,
         assigneeId: draftAssigneeId,
         assigneeIds: draftAssigneeIds,
-        priority: draftPriority,
-        type: draftType,
-        startDate: draftStartDate ? draftStartDate : undefined,
+        columnId: draftColumnId || card.columnId,
+        type: draftType || card.type || "task",
         dueDate: draftDueDate ? draftDueDate : undefined,
         updatedAt: new Date().toISOString(),
       });
@@ -340,7 +467,7 @@ export const CardDetail: FC<CardDetailProps> = ({
   const handleAddStatus = () => {
     const { column: newCol, error } = createStatusColumn({
       title: newStatusTitle,
-      projectId: card.projectId,
+      projectId: projectId || card?.projectId || "proj-default",
       color: newStatusColor,
       order: allColumns.length,
     });
@@ -356,6 +483,7 @@ export const CardDetail: FC<CardDetailProps> = ({
     setIsAddStatusOpen(false);
     setNewStatusTitle("");
     setStatusError(undefined);
+    setStatusFieldError(undefined);
   };
 
   const handleAddType = () => {
@@ -365,19 +493,21 @@ export const CardDetail: FC<CardDetailProps> = ({
     });
 
     if (error || !newType) {
-      setTypeError(error || "Type name cannot be empty.");
+      setNewTypeError(error || "Type name cannot be empty.");
       return;
     }
 
-    setCardTypes((prev) => [...prev, newType]);
+    setCustomCardTypes((prev) => [...prev, newType]);
+    onAddType?.(newType);
     setDraftType(newType.id);
     setIsAddTypeOpen(false);
     setNewTypeTitle("");
+    setNewTypeError(undefined);
     setTypeError(undefined);
   };
 
   const handleDelete = async () => {
-    if (!onDelete) return;
+    if (!onDelete || !card) return;
     await onDelete(card.id);
     setDeleteConfirmVisible(false);
     onClose?.();
@@ -393,6 +523,7 @@ export const CardDetail: FC<CardDetailProps> = ({
           maxWidth: 1040,
           width: "95%",
           maxHeight: "90vh",
+          minHeight: isCreating ? "min(680px, 88vh)" : undefined,
           ...style,
         }}
         footer={
@@ -405,7 +536,7 @@ export const CardDetail: FC<CardDetailProps> = ({
             }}
           >
             <div>
-              {canDeleteCard && onDelete && (
+              {!isCreating && canDeleteCard && onDelete && (
                 <Button
                   label="Delete Card"
                   variant="danger"
@@ -422,14 +553,25 @@ export const CardDetail: FC<CardDetailProps> = ({
                 size="sm"
                 onPress={onClose}
               />
-              <Button
-                label="Save Changes"
-                variant="primary"
-                size="sm"
-                disabled={!hasChanges}
-                loading={isSaving || loading}
-                onPress={handleSave}
-              />
+              {isCreating ? (
+                <Button
+                  label="Create Card"
+                  variant="primary"
+                  size="sm"
+                  disabled={!draftTitle.trim() || !draftType || !draftColumnId}
+                  loading={isSaving || loading}
+                  onPress={handleCreateSubmit}
+                />
+              ) : (
+                <Button
+                  label="Save Changes"
+                  variant="primary"
+                  size="sm"
+                  disabled={!hasChanges}
+                  loading={isSaving || loading}
+                  onPress={handleSave}
+                />
+              )}
             </div>
           </div>
         }
@@ -448,15 +590,43 @@ export const CardDetail: FC<CardDetailProps> = ({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Badge label={card.key} variant="mono" size="md" />
-              <PriorityBadge priority={draftPriority} size="md" />
-              {currentColumn && <StatusBar status={currentColumn} size="md" />}
+              <Badge
+                label={isCreating ? (projectKey ? `${projectKey}-NEW` : "NEW") : (card?.key || "")}
+                variant="mono"
+                size="md"
+              />
+              {currentStatusColumn && (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "3px 10px",
+                    borderRadius: "var(--radius-pill)",
+                    backgroundColor: currentStatusColor ? `${currentStatusColor}18` : "var(--color-surface)",
+                    color: currentStatusColor || "var(--color-ink)",
+                    border: `1px solid ${currentStatusColor ? `${currentStatusColor}35` : "var(--color-line)"}`,
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "var(--radius-pill)",
+                      backgroundColor: currentStatusColor,
+                    }}
+                  />
+                  {currentStatusColumn.title}
+                </span>
+              )}
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <Badge
-                label={roleLabel}
-                variant={role === "publisher" ? "accent" : "neutral"}
+                label={isCreating ? "Publisher" : roleLabel}
+                variant={role === "publisher" || isCreating ? "accent" : "neutral"}
                 size="sm"
               />
             </div>
@@ -469,9 +639,10 @@ export const CardDetail: FC<CardDetailProps> = ({
               gridTemplateColumns: "minmax(0, 1fr) minmax(260px, 320px)",
               gap: 28,
               alignItems: "flex-start",
+              minHeight: isCreating ? 500 : undefined,
             }}
           >
-            {/* Left Column: Title, Description, Comments */}
+            {/* Left Column: Title, Description, Comments & Activity */}
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               {/* Title Input or Text */}
               <div>
@@ -486,9 +657,14 @@ export const CardDetail: FC<CardDetailProps> = ({
                 {canEditTitle ? (
                   <Input
                     value={draftTitle}
-                    onChangeText={setDraftTitle}
+                    onChangeText={(text) => {
+                      setDraftTitle(text);
+                      if (titleError) setTitleError(undefined);
+                    }}
+                    error={titleError}
                     placeholder="Enter card title..."
                     containerStyle={{ marginBottom: 0 }}
+                    autoFocus={isCreating}
                   />
                 ) : (
                   <Text variant="heading" bold style={{ display: "block" }}>
@@ -512,7 +688,8 @@ export const CardDetail: FC<CardDetailProps> = ({
                     value={draftDescription}
                     onChangeText={setDraftDescription}
                     placeholder="Add a more detailed description of what needs to be done..."
-                    rows={3}
+                    rows={isCreating ? 7 : 4}
+                    style={{ minHeight: isCreating ? 160 : undefined }}
                     containerStyle={{ marginBottom: 0 }}
                   />
                 ) : (
@@ -525,8 +702,8 @@ export const CardDetail: FC<CardDetailProps> = ({
                 )}
               </div>
 
-              {/* Activity Audit Timeline */}
-              {activityLogs && (
+              {/* Activity Audit Timeline (Only shown when viewing existing card) */}
+              {!isCreating && activityLogs && (
                 <div
                   style={{
                     paddingTop: 8,
@@ -538,54 +715,55 @@ export const CardDetail: FC<CardDetailProps> = ({
                     subtitle="Audit log of status changes and edits"
                     icon={<PulseIcon size={18} />}
                     badge={
-                      relevantLogs.length > 0 ? relevantLogs.length : undefined
+                      historyLogs.length > 0 ? historyLogs.length : undefined
                     }
                     defaultExpanded={false}
                   >
                     <ActivityLog
-                      logs={relevantLogs}
+                      logs={historyLogs}
                       users={users}
-                      cardId={card.id}
+                      cardId={card?.id || ""}
                       title=""
                       bordered={false}
-                      style={{ padding: 0 }}
                     />
                   </Accordion>
                 </div>
               )}
 
-              {/* Discussion & Comments */}
-              <div
-                style={{
-                  paddingTop: 8,
-                  borderTop: "1px solid var(--color-line)",
-                }}
-              >
-                <Accordion
-                  title="Comments"
-                  subtitle="Card discussion and notes"
-                  icon={<ChatBubblesIcon size={18} />}
-                  badge={
-                    relevantComments.length > 0
-                      ? relevantComments.length
-                      : undefined
-                  }
-                  defaultExpanded={true}
+              {/* Comments (Only shown when viewing existing card) */}
+              {!isCreating && (
+                <div
+                  style={{
+                    paddingTop: 8,
+                    borderTop: "1px solid var(--color-line)",
+                  }}
                 >
-                  <div style={{ paddingTop: 4 }}>
-                    <CommentSection
-                      cardId={card.id}
-                      comments={relevantComments}
-                      users={users}
-                      currentUser={currentUser}
-                      title=""
-                      style={{ padding: 0 }}
-                      onAddComment={onAddComment}
-                      onDeleteComment={onDeleteComment}
-                    />
-                  </div>
-                </Accordion>
-              </div>
+                  <Accordion
+                    title="Comments"
+                    subtitle="Card discussion and notes"
+                    icon={<ChatBubblesIcon size={18} />}
+                    badge={
+                      relevantComments.length > 0
+                        ? relevantComments.length
+                        : undefined
+                    }
+                    defaultExpanded={true}
+                  >
+                    <div style={{ paddingTop: 4 }}>
+                      <CommentSection
+                        cardId={card?.id || ""}
+                        comments={relevantComments}
+                        users={users}
+                        currentUser={currentUser}
+                        title=""
+                        style={{ padding: 0 }}
+                        onAddComment={onAddComment}
+                        onDeleteComment={onDeleteComment}
+                      />
+                    </div>
+                  </Accordion>
+                </div>
+              )}
             </div>
 
             {/* Right Column: Properties & Metadata */}
@@ -622,204 +800,136 @@ export const CardDetail: FC<CardDetailProps> = ({
                     setDraftAssigneeId(ids[0] || null);
                   }}
                   helperText={
-                    canChangeAssignee
-                      ? undefined
-                      : "Only publishers can reassign this card."
+                    !isCreating && !canChangeAssignee
+                      ? "Only publishers can reassign this card."
+                      : undefined
                   }
+                  placeholder="Unassigned"
                 />
               </div>
 
-              {/* Status / Column Selector */}
+              {/* Status Selector (Mandatory) */}
               {allColumns.length > 0 && (
                 <Dropdown
                   label="Status"
                   value={draftColumnId}
                   options={statusOptions}
-                  onSelect={(val) => setDraftColumnId(val)}
+                  onSelect={(val) => {
+                    setDraftColumnId(val);
+                    if (statusFieldError) setStatusFieldError(undefined);
+                  }}
+                  error={statusFieldError}
                   disabled={!canMoveStatus}
                   placeholder="Select status..."
                   style={{ marginBottom: 0 }}
-                  action={{
-                    label: "Add a new status",
-                    onPress: () => {
-                      setNewStatusTitle("");
-                      setStatusError(undefined);
-                      setIsAddStatusOpen(true);
-                    },
-                  }}
                 />
               )}
 
-              {/* Type Selector */}
+              {/* Type Selector (Mandatory) */}
               <Dropdown
                 label="Type"
                 value={draftType}
                 options={typeOptions}
-                onSelect={(val) => setDraftType(val)}
+                onSelect={(val) => {
+                  setDraftType(val);
+                  if (typeError) setTypeError(undefined);
+                }}
+                error={typeError}
                 disabled={!canEditTitle}
                 placeholder="Select type..."
+                searchable
                 style={{ marginBottom: 0 }}
                 action={{
                   label: "Add a new type",
-                  onPress: () => {
-                    setNewTypeTitle("");
-                    setTypeError(undefined);
+                  onPress: (query) => {
+                    setNewTypeTitle(query || "");
+                    setNewTypeError(undefined);
                     setIsAddTypeOpen(true);
                   },
                 }}
               />
 
-              {/* Priority Selector */}
-              <Dropdown
-                label="Priority"
-                value={draftPriority}
-                options={priorityOptions}
-                onSelect={(val) => setDraftPriority(val as CardPriority)}
-                disabled={!canEditTitle}
-                placeholder="Select priority..."
-                style={{ marginBottom: 0 }}
-              />
-
-              {/* Dates: Start Date & Due Date */}
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 12 }}
-              >
-                {/* Start Date */}
-                <div>
+              {/* Due Date (Optional) */}
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 4,
+                  }}
+                >
                   <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      marginBottom: 4,
-                    }}
+                    style={{ display: "flex", alignItems: "center", gap: 6 }}
                   >
                     <Text variant="label" bold>
-                      Start Date
+                      Due Date
                     </Text>
-                    {canEditDates && draftStartDate && (
-                      <button
-                        type="button"
-                        onClick={() => setDraftStartDate("")}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          padding: 0,
-                          cursor: "pointer",
-                          fontSize: 11,
-                          color: "var(--color-ink-muted)",
-                          textDecoration: "underline",
-                        }}
-                      >
-                        Clear
-                      </button>
+                    {isOverdue && (
+                      <Badge label="Overdue" variant="warn" size="sm" />
                     )}
                   </div>
-                  {canEditDates ? (
-                    <Input
-                      type="date"
-                      value={draftStartDate}
-                      onChangeText={setDraftStartDate}
-                      containerStyle={{ marginBottom: 0 }}
-                      inputWrapperStyle={{ minHeight: 36, paddingInline: 8 }}
-                      style={{ fontSize: 13 }}
-                    />
-                  ) : (
-                    <Text
-                      variant="bodySmall"
-                      color={
-                        draftStartDate
-                          ? "var(--color-ink)"
-                          : "var(--color-ink-muted)"
-                      }
+                  {canEditDates && draftDueDate && (
+                    <button
+                      type="button"
+                      onClick={() => setDraftDueDate("")}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        cursor: "pointer",
+                        fontSize: 11,
+                        color: "var(--color-ink-muted)",
+                        textDecoration: "underline",
+                      }}
                     >
-                      {draftStartDate
-                        ? new Date(draftStartDate).toLocaleDateString(
-                            undefined,
-                            {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            },
-                          )
-                        : "None"}
-                    </Text>
+                      Clear
+                    </button>
                   )}
                 </div>
-
-                {/* Due Date */}
-                <div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      marginBottom: 4,
-                    }}
+                {canEditDates ? (
+                  <Input
+                    type="date"
+                    value={draftDueDate}
+                    onChangeText={setDraftDueDate}
+                    containerStyle={{ marginBottom: 0 }}
+                    inputWrapperStyle={{ minHeight: 36, paddingInline: 8 }}
+                    style={{ fontSize: 13 }}
+                  />
+                ) : (
+                  <Text
+                    variant="bodySmall"
+                    color={
+                      draftDueDate
+                        ? isOverdue
+                          ? "var(--color-warn)"
+                          : "var(--color-ink)"
+                        : "var(--color-ink-muted)"
+                    }
                   >
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 6 }}
-                    >
-                      <Text variant="label" bold>
-                        Due Date
-                      </Text>
-                      {isOverdue && (
-                        <Badge label="Overdue" variant="warn" size="sm" />
-                      )}
-                    </div>
-                    {canEditDates && draftDueDate && (
-                      <button
-                        type="button"
-                        onClick={() => setDraftDueDate("")}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          padding: 0,
-                          cursor: "pointer",
-                          fontSize: 11,
-                          color: "var(--color-ink-muted)",
-                          textDecoration: "underline",
-                        }}
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </div>
-                  {canEditDates ? (
-                    <Input
-                      type="date"
-                      value={draftDueDate}
-                      onChangeText={setDraftDueDate}
-                      containerStyle={{ marginBottom: 0 }}
-                      inputWrapperStyle={{ minHeight: 36, paddingInline: 8 }}
-                      style={{ fontSize: 13 }}
-                    />
-                  ) : (
-                    <Text
-                      variant="bodySmall"
-                      color={
-                        draftDueDate
-                          ? isOverdue
-                            ? "var(--color-warn)"
-                            : "var(--color-ink)"
-                          : "var(--color-ink-muted)"
-                      }
-                    >
-                      {draftDueDate
-                        ? new Date(draftDueDate).toLocaleDateString(undefined, {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })
-                        : "None"}
-                    </Text>
-                  )}
-                </div>
+                    {draftDueDate
+                      ? new Date(draftDueDate).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "None"}
+                  </Text>
+                )}
               </div>
 
               {/* Publisher Info */}
-              <div style={{ paddingTop: 8, borderTop: '1px solid var(--color-line)' }}>
-                <PublisherInfo publisher={publisher} createdAt={card.createdAt} variant="card" />
+              <div
+                style={{
+                  paddingTop: 8,
+                  borderTop: "1px solid var(--color-line)",
+                }}
+              >
+                <PublisherInfo
+                  publisher={publisher}
+                  createdAt={card?.createdAt || new Date().toISOString()}
+                  variant="card"
+                />
               </div>
             </div>
           </div>
@@ -827,16 +937,110 @@ export const CardDetail: FC<CardDetailProps> = ({
       </Modal>
 
       {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        visible={deleteConfirmVisible}
-        title="Delete Card"
-        message={`Are you sure you want to permanently delete [${card.key}] "${card.title}"? This cannot be undone.`}
-        itemKey={card.key}
-        variant="danger"
-        confirmLabel="Delete"
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteConfirmVisible(false)}
-      />
+      {!isCreating && card && (
+        <ConfirmDialog
+          visible={deleteConfirmVisible}
+          title="Delete Card"
+          message={`Are you sure you want to permanently delete [${card.key}] "${card.title}"? This cannot be undone.`}
+          itemKey={card.key}
+          variant="danger"
+          confirmLabel="Delete"
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteConfirmVisible(false)}
+        />
+      )}
+
+      {/* Add New Type Modal */}
+      <Modal
+        visible={isAddTypeOpen}
+        onClose={() => setIsAddTypeOpen(false)}
+        title="Add a new type"
+        subtitle="Create a custom card type"
+        presentation="dialog"
+        contentStyle={{ maxWidth: 440 }}
+        footer={
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <Button
+              label="Cancel"
+              variant="secondary"
+              size="sm"
+              onPress={() => setIsAddTypeOpen(false)}
+            />
+            <Button
+              label="Add Type"
+              variant="primary"
+              size="sm"
+              disabled={!newTypeTitle.trim()}
+              onPress={handleAddType}
+            />
+          </div>
+        }
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleAddType();
+          }}
+          style={{ display: "flex", flexDirection: "column", gap: 16 }}
+        >
+          <Input
+            label="Type name"
+            placeholder="e.g. Feature, Spike, Defect"
+            value={newTypeTitle}
+            onChangeText={(text) => {
+              setNewTypeTitle(text);
+              if (newTypeError) setNewTypeError(undefined);
+            }}
+            error={newTypeError}
+            autoFocus
+            containerStyle={{ marginBottom: 0 }}
+          />
+
+          <div>
+            <Text variant="label" style={{ display: "block", marginBottom: 8 }}>
+              Badge Color
+            </Text>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {PRESET_TYPE_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setNewTypeColor(c)}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "var(--radius-pill)",
+                    backgroundColor: c,
+                    border:
+                      newTypeColor === c
+                        ? "2px solid var(--color-ink)"
+                        : "2px solid transparent",
+                    cursor: "pointer",
+                    padding: 0,
+                    outline: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  aria-label={`Color ${c}`}
+                >
+                  {newTypeColor === c && (
+                    <span
+                      style={{
+                        color: "#fff",
+                        fontSize: 12,
+                        fontWeight: "bold",
+                      }}
+                    >
+                      ✓
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </form>
+      </Modal>
 
       {/* Add New Status Modal */}
       <Modal
@@ -889,7 +1093,7 @@ export const CardDetail: FC<CardDetailProps> = ({
               Status Color
             </Text>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {PRESET_COLORS.map((c) => (
+              {PRESET_STATUS_COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
@@ -913,98 +1117,6 @@ export const CardDetail: FC<CardDetailProps> = ({
                   aria-label={`Color ${c}`}
                 >
                   {newStatusColor === c && (
-                    <span
-                      style={{
-                        color: "#fff",
-                        fontSize: 12,
-                        fontWeight: "bold",
-                      }}
-                    >
-                      ✓
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Add New Type Modal */}
-      <Modal
-        visible={isAddTypeOpen}
-        onClose={() => setIsAddTypeOpen(false)}
-        title="Add a new type"
-        subtitle="Create a custom card type"
-        presentation="dialog"
-        contentStyle={{ maxWidth: 440 }}
-        footer={
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-            <Button
-              label="Cancel"
-              variant="secondary"
-              size="sm"
-              onPress={() => setIsAddTypeOpen(false)}
-            />
-            <Button
-              label="Add Type"
-              variant="primary"
-              size="sm"
-              disabled={!newTypeTitle.trim()}
-              onPress={handleAddType}
-            />
-          </div>
-        }
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleAddType();
-          }}
-          style={{ display: "flex", flexDirection: "column", gap: 16 }}
-        >
-          <Input
-            label="Type name"
-            placeholder="e.g. Feature, Spike, Defect"
-            value={newTypeTitle}
-            onChangeText={(text) => {
-              setNewTypeTitle(text);
-              if (typeError) setTypeError(undefined);
-            }}
-            error={typeError}
-            autoFocus
-            containerStyle={{ marginBottom: 0 }}
-          />
-
-          <div>
-            <Text variant="label" style={{ display: "block", marginBottom: 8 }}>
-              Badge Color
-            </Text>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {PRESET_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setNewTypeColor(c)}
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: "var(--radius-pill)",
-                    backgroundColor: c,
-                    border:
-                      newTypeColor === c
-                        ? "2px solid var(--color-ink)"
-                        : "2px solid transparent",
-                    cursor: "pointer",
-                    padding: 0,
-                    outline: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                  aria-label={`Color ${c}`}
-                >
-                  {newTypeColor === c && (
                     <span
                       style={{
                         color: "#fff",

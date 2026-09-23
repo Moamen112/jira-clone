@@ -14,6 +14,8 @@ export interface IconButtonProps {
   disabled?: boolean;
   /** Accessible label describing the action */
   label: string;
+  /** Optional tooltip title (defaults to label) */
+  title?: string;
   /** Container style overrides */
   style?: CSSProperties;
   /** Press handler */
@@ -33,6 +35,7 @@ export const IconButton: FC<IconButtonProps> = ({
   rounded = false,
   disabled = false,
   label,
+  title,
   style,
   onPress,
 }) => {
@@ -69,6 +72,7 @@ export const IconButton: FC<IconButtonProps> = ({
     <button
       type="button"
       aria-label={label}
+      title={title || label}
       disabled={disabled}
       onClick={() => onPress?.()}
       style={{

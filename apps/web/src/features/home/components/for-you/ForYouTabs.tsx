@@ -1,7 +1,7 @@
 import type { CSSProperties, FC } from 'react';
 import styles from './ForYouTabs.module.css';
 
-export type ForYouTabKey = 'latest' | 'worked_on' | 'assigned' | 'starred' | 'created';
+export type ForYouTabKey = 'latest' | 'worked_on' | 'assigned' | 'created';
 
 export interface ForYouTabItem {
   key: ForYouTabKey;

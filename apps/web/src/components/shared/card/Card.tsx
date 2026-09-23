@@ -1,7 +1,6 @@
 import type { CSSProperties, FC } from 'react';
 import type { Card as CardType, CardRole, User } from '@jira-clone/shared';
 import { Text, Badge, IconButton } from '../../base';
-import { PriorityBadge } from '../priority-badge';
 import { AssigneeSelect } from '../assignee-select';
 import { Avatar } from '../avatar';
 import { AvatarGroup } from '../avatar-group';
@@ -121,7 +120,6 @@ export const Card: FC<CardProps> = ({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <PriorityBadge priority={card.priority} size="sm" />
           {onMove && (
             <span onClick={(e) => e.stopPropagation()}>
               <IconButton

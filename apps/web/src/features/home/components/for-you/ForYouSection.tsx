@@ -13,8 +13,6 @@ export interface ForYouSectionProps {
   columns: BoardColumn[];
   users: User[];
   currentUserId: string;
-  starredCardIds: string[];
-  onToggleStar: (cardId: string) => void;
   onSelectCard: (card: Card) => void;
   onCreateCard?: () => void;
   style?: CSSProperties;
@@ -46,8 +44,6 @@ export const ForYouSection: FC<ForYouSectionProps> = ({
   columns,
   users,
   currentUserId,
-  starredCardIds,
-  onToggleStar,
   onSelectCard,
   onCreateCard,
   style,
@@ -75,14 +71,9 @@ export const ForYouSection: FC<ForYouSectionProps> = ({
     );
   }, [latestCards, currentUserId]);
 
-  const starredCards = useMemo(() => {
-    return latestCards.filter((c) => starredCardIds.includes(c.id));
-  }, [latestCards, starredCardIds]);
-
   const tabs: ForYouTabItem[] = [
     { key: 'latest', label: 'Latest cards', count: latestCards.length },
     { key: 'assigned', label: 'Assigned to me', count: assignedCards.length },
-    { key: 'starred', label: 'Starred', count: starredCards.length },
   ];
 
   // 2. Select current card pool based on active tab
@@ -90,13 +81,11 @@ export const ForYouSection: FC<ForYouSectionProps> = ({
     switch (activeTab) {
       case 'assigned':
         return assignedCards;
-      case 'starred':
-        return starredCards;
       case 'latest':
       default:
         return latestCards;
     }
-  }, [activeTab, latestCards, assignedCards, starredCards]);
+  }, [activeTab, latestCards, assignedCards]);
 
   // 3. Search filter
   const filteredCards = useMemo(() => {
@@ -181,8 +170,6 @@ export const ForYouSection: FC<ForYouSectionProps> = ({
               project={getProject(card.projectId)}
               statusColumn={getColumn(card.columnId)}
               assignee={getUser(card.assigneeId)}
-              starred={starredCardIds.includes(card.id)}
-              onToggleStar={() => onToggleStar(card.id)}
               onPress={() => onSelectCard(card)}
             />
           ))
@@ -191,16 +178,12 @@ export const ForYouSection: FC<ForYouSectionProps> = ({
             title={
               searchQuery
                 ? 'No matching cards found'
-                : activeTab === 'starred'
-                  ? 'No starred cards yet'
-                  : 'No cards in this view'
+                : 'No cards in this view'
             }
             description={
               searchQuery
                 ? `No cards match "${searchQuery}". Try another keyword.`
-                : activeTab === 'starred'
-                  ? 'Star any card to easily find and track it here.'
-                  : 'There are no active cards to display.'
+                : 'There are no active cards to display.'
             }
             actionLabel={onCreateCard ? 'Create card' : undefined}
             onAction={onCreateCard}

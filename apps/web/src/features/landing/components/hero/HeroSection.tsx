@@ -3,7 +3,6 @@ import type { CSSProperties, FC } from 'react';
 import { Link } from 'react-router';
 import { ROUTES } from '../../../../routes/paths';
 import { Badge } from '../../../../components/base';
-import { PriorityBadge } from '../../../../components/shared/priority-badge';
 import { StatusBar } from '../../../../components/shared/status-bar';
 import { Avatar } from '../../../../components/shared/avatar';
 import styles from './HeroSection.module.css';
@@ -161,7 +160,6 @@ export const HeroSection: FC<HeroSectionProps> = ({
                 <div className={styles.mockCard}>
                   <div className={styles.cardHeader}>
                     <Badge label="FIELD-3" variant="mono" size="sm" />
-                    <PriorityBadge priority="medium" size="sm" showLabel={false} />
                   </div>
                   <p className={styles.cardTitle}>Audit accessibility &amp; keyboard navigation</p>
                   <div className={styles.cardFooter}>
@@ -182,7 +180,6 @@ export const HeroSection: FC<HeroSectionProps> = ({
                 <div className={`${styles.mockCard} ${styles.mockCardHighlight}`}>
                   <div className={styles.cardHeader}>
                     <Badge label="FIELD-2" variant="mono" size="sm" />
-                    <PriorityBadge priority="highest" size="sm" showLabel={false} />
                   </div>
                   <p className={styles.cardTitle}>Design card-level permission system</p>
                   <div className={styles.cardFooter}>
@@ -203,7 +200,6 @@ export const HeroSection: FC<HeroSectionProps> = ({
                 <div className={styles.mockCard}>
                   <div className={styles.cardHeader}>
                     <Badge label="FIELD-1" variant="mono" size="sm" />
-                    <PriorityBadge priority="high" size="sm" showLabel={false} />
                   </div>
                   <p className={styles.cardTitle}>Implement design tokens &amp; typography scale</p>
                   <div className={styles.cardFooter}>

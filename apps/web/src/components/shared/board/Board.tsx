@@ -4,6 +4,7 @@ import {
   filterCards,
   type BoardColumn as BoardColumnType,
   type Card as CardType,
+  type CardTypeOption,
   type User,
 } from '@jira-clone/shared';
 import { Text, Badge } from '../../base';
@@ -20,6 +21,8 @@ export interface BoardProps {
   users?: User[];
   /** Current viewing user ID */
   currentUserId?: string;
+  /** Available card types for filtering */
+  cardTypes?: CardTypeOption[];
   /** Optional board title (e.g. "Sprint 14 Kanban") */
   boardTitle?: string;
   /** Optional project key or code (e.g. "FIELD") */
@@ -61,6 +64,7 @@ export const Board: FC<BoardProps> = ({
   cards = [],
   users = [],
   currentUserId,
+  cardTypes,
   boardTitle,
   projectKey,
   showFilterBar = true,
@@ -81,8 +85,8 @@ export const Board: FC<BoardProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [assignedToMe, setAssignedToMe] = useState(false);
-  const [createdByMe, setCreatedByMe] = useState(false);
-  const [hasComments, setHasComments] = useState(false);
+  const [sharedWithMe, setSharedWithMe] = useState(false);
+  const [selectedType, setSelectedType] = useState('all');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [movingCard, setMovingCard] = useState<CardType | null>(null);
 
@@ -92,9 +96,9 @@ export const Board: FC<BoardProps> = ({
   const filteredCards = filterCards(cards, {
     searchQuery,
     assignedToMe,
-    createdByMe,
-    hasComments,
+    sharedWithMe,
     selectedUserIds,
+    type: selectedType !== 'all' ? selectedType : undefined,
     currentUserId,
   });
 
@@ -141,10 +145,11 @@ export const Board: FC<BoardProps> = ({
           onSearchChange={setSearchQuery}
           assignedToMe={assignedToMe}
           onToggleAssignedToMe={() => setAssignedToMe((v) => !v)}
-          createdByMe={createdByMe}
-          onToggleCreatedByMe={() => setCreatedByMe((v) => !v)}
-          hasComments={hasComments}
-          onToggleHasComments={() => setHasComments((v) => !v)}
+          sharedWithMe={sharedWithMe}
+          onToggleSharedWithMe={() => setSharedWithMe((v) => !v)}
+          selectedType={selectedType}
+          onSelectType={setSelectedType}
+          cardTypes={cardTypes}
           selectedUserIds={selectedUserIds}
           onToggleUserId={(uid) =>
             setSelectedUserIds((prev) =>
@@ -158,8 +163,8 @@ export const Board: FC<BoardProps> = ({
           onClearFilters={() => {
             setSearchQuery('');
             setAssignedToMe(false);
-            setCreatedByMe(false);
-            setHasComments(false);
+            setSharedWithMe(false);
+            setSelectedType('all');
             setSelectedUserIds([]);
           }}
         />

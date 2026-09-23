@@ -31,29 +31,6 @@
   flex: 1;
 }
 
-.starBtn {
-  background: transparent;
-  border: none;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  border-radius: var(--radius-input);
-  color: var(--color-ink-muted);
-  transition: color 150ms ease, transform 100ms ease;
-  flex-shrink: 0;
-}
-
-.starBtn:hover {
-  color: #d97706;
-  transform: scale(1.1);
-}
-
-.starActive {
-  color: #f59e0b;
-}
-
 .keyArea {
   flex-shrink: 0;
 }

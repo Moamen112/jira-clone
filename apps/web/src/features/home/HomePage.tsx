@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { FC, FormEvent } from 'react';
+import type { FC } from 'react';
 import { useNavigate } from 'react-router';
 import {
   mockCards,
@@ -10,14 +10,10 @@ import {
   mockComments,
   mockActivityLogs,
   type Card,
-  createCard,
   updateCardInList,
   deleteCardFromList,
-  handleCardTitleChange as processCardTitleChange,
 } from '@jira-clone/shared';
-import { Button, Input, Dropdown } from '../../components/base';
-import type { DropdownOption } from '../../components/base';
-import { Modal } from '../../components/shared/modal';
+import { Button } from '../../components/base';
 import { CardDetail } from '../../components/shared/card-detail';
 import { ForYouSection } from './components/for-you';
 import { RecommendedSpaces } from './components/recommended-spaces';
@@ -28,23 +24,6 @@ import styles from './HomePage.module.css';
 // ============================================================================
 // ICONS
 // ============================================================================
-
-const PlusIcon: FC<{ size?: number }> = ({ size = 15 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <line x1="12" y1="5" x2="12" y2="19" />
-    <line x1="5" y1="12" x2="19" y2="12" />
-  </svg>
-);
 
 const CompassIcon: FC<{ size?: number }> = ({ size = 15 }) => (
   <svg
@@ -149,14 +128,7 @@ export function HomePage() {
 
   // Local state seeded from shared mock data
   const [cards, setCards] = useState<Card[]>(mockCards);
-  const [starredCardIds, setStarredCardIds] = useState<string[]>(['card-1']);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
-
-  // Quick Create Modal state
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newTitleError, setNewTitleError] = useState<string | undefined>(undefined);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(mockProjects[0].id);
 
   const currentUser = mockCurrentUser;
   const currentUserId = currentUser.id;
@@ -216,12 +188,6 @@ export function HomePage() {
 
   const activeSpacesCount = mockProjects.length;
 
-  const handleToggleStar = (cardId: string) => {
-    setStarredCardIds((prev) =>
-      prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId]
-    );
-  };
-
   const handleSaveCard = (updatedCard: Card) => {
     setCards((prev) => updateCardInList(prev, updatedCard));
     setSelectedCard(updatedCard);
@@ -229,51 +195,8 @@ export function HomePage() {
 
   const handleDeleteCard = (cardId: string) => {
     setCards((prev) => deleteCardFromList(prev, cardId));
-    setStarredCardIds((prev) => prev.filter((id) => id !== cardId));
     setSelectedCard(null);
   };
-
-  const handleOpenCreateModal = () => {
-    setNewTitle('');
-    setNewTitleError(undefined);
-    setIsCreateOpen(true);
-  };
-
-  const handleConfirmCreateCard = () => {
-    const validation = processCardTitleChange(newTitle);
-    if (validation.error) {
-      setNewTitleError(validation.error);
-      return;
-    }
-
-    const targetProject =
-      mockProjects.find((p) => p.id === selectedProjectId) ?? mockProjects[0];
-
-    const newCard = createCard({
-      title: validation.title,
-      projectId: targetProject.id,
-      projectKey: targetProject.key,
-      columnId: 'col-todo',
-      cardIndex: cards.length + 1,
-      order: cards.filter((c) => c.columnId === 'col-todo').length,
-    });
-
-    setCards((prev) => [newCard, ...prev]);
-    setIsCreateOpen(false);
-    setNewTitle('');
-    setNewTitleError(undefined);
-    setSelectedCard(newCard);
-  };
-
-  const handleFormSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    handleConfirmCreateCard();
-  };
-
-  const projectOptions: DropdownOption[] = mockProjects.map((p) => ({
-    label: `${p.name} (${p.key})`,
-    value: p.id,
-  }));
 
   return (
     <div className={styles.container}>
@@ -292,17 +215,10 @@ export function HomePage() {
           <div className={styles.headerActions}>
             <Button
               label="Explore spaces"
-              variant="secondary"
+              variant="primary"
               size="md"
               leftIcon={<CompassIcon size={15} />}
               onPress={() => navigate(ROUTES.PROTECTED.SPACES)}
-            />
-            <Button
-              label="Create issue"
-              variant="primary"
-              size="md"
-              leftIcon={<PlusIcon size={15} />}
-              onPress={handleOpenCreateModal}
             />
           </div>
         </header>
@@ -394,10 +310,7 @@ export function HomePage() {
               columns={mockColumns}
               users={mockUsers}
               currentUserId={currentUserId}
-              starredCardIds={starredCardIds}
-              onToggleStar={handleToggleStar}
               onSelectCard={(card) => setSelectedCard(card)}
-              onCreateCard={handleOpenCreateModal}
             />
           </div>
 
@@ -423,56 +336,6 @@ export function HomePage() {
           onDelete={handleDeleteCard}
         />
       )}
-
-      {/* Quick Create Card Modal */}
-      <Modal
-        visible={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        title="Create Issue"
-        subtitle="Quickly add a task to any workspace"
-        presentation="dialog"
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button
-              label="Cancel"
-              variant="secondary"
-              size="sm"
-              onPress={() => setIsCreateOpen(false)}
-            />
-            <Button
-              label="Create issue"
-              variant="primary"
-              size="sm"
-              disabled={!newTitle.trim()}
-              onPress={handleConfirmCreateCard}
-            />
-          </div>
-        }
-      >
-        <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Dropdown
-            label="Project Space"
-            value={selectedProjectId}
-            options={projectOptions}
-            onSelect={setSelectedProjectId}
-            placeholder="Select project..."
-          />
-
-          <Input
-            label="Issue Summary"
-            placeholder="What needs to be done?"
-            value={newTitle}
-            onChangeText={(text) => {
-              const { title, error } = processCardTitleChange(text);
-              setNewTitle(title);
-              if (newTitleError && !error) setNewTitleError(undefined);
-            }}
-            error={newTitleError}
-            autoFocus
-            containerStyle={{ marginBottom: 0 }}
-          />
-        </form>
-      </Modal>
     </div>
   );
 }

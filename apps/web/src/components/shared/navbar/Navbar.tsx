@@ -139,6 +139,7 @@ const HomeIcon: FC<IconProps> = ({ size = 16 }) => (
   </svg>
 );
 
+/*
 const BellIcon: FC<IconProps> = ({ size = 16 }) => (
   <svg
     width={size}
@@ -173,6 +174,7 @@ const PlusIcon: FC<IconProps> = ({ size = 16 }) => (
     <line x1="5" y1="12" x2="19" y2="12" />
   </svg>
 );
+*/
 
 const ChevronDownIcon: FC<IconProps> = ({ size = 12 }) => (
   <svg
@@ -299,8 +301,8 @@ export const Navbar: FC<NavbarProps> = ({
   onSignUp,
   onOpenApp,
   onLogout,
-  onCreate,
-  onOpenNotifications,
+  onCreate: _onCreate,
+  onOpenNotifications: _onOpenNotifications,
   onOpenProfile,
   searchValue,
   onSearchChange,
@@ -308,7 +310,7 @@ export const Navbar: FC<NavbarProps> = ({
   searchPlaceholder,
   isDark,
   onToggleTheme,
-  notifications,
+  notifications: _notifications,
   showModeBadge = false,
   sticky = true,
   style,
@@ -348,6 +350,7 @@ export const Navbar: FC<NavbarProps> = ({
     }
   };
 
+  /*
   const handleViewAllNotifications = () => {
     closePopover();
     if (onOpenNotifications) {
@@ -356,13 +359,14 @@ export const Navbar: FC<NavbarProps> = ({
       onNavigate?.("/notifications");
     }
   };
+  */
 
   const handleLogout = () => {
     closePopover();
     onLogout?.();
   };
 
-  const unreadCount = notifications?.filter((n) => n.unread).length ?? 0;
+  // const unreadCount = notifications?.filter((n) => n.unread).length ?? 0;
 
   const renderAvatarButton = (
     onPress: (() => void) | null,
@@ -426,8 +430,9 @@ export const Navbar: FC<NavbarProps> = ({
     </form>
   );
 
+  /*
   const renderNotificationsPanel = () => {
-    const items = notifications ?? [];
+    const items = _notifications ?? [];
 
     return (
       <div
@@ -526,7 +531,7 @@ export const Navbar: FC<NavbarProps> = ({
           )}
         </div>
 
-        {onOpenNotifications && (
+        {_onOpenNotifications && (
           <Button
             label="View all notifications"
             variant="ghost"
@@ -541,6 +546,22 @@ export const Navbar: FC<NavbarProps> = ({
           />
         )}
       </div>
+    );
+  };
+  */
+
+  const renderThemeToggle = () => {
+    if (!onToggleTheme) return null;
+    return (
+      <IconButton
+        variant="ghost"
+        size="sm"
+        rounded
+        label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        icon={isDark ? <SunIcon size={16} /> : <MoonIcon size={16} />}
+        onPress={onToggleTheme}
+      />
     );
   };
 
@@ -804,6 +825,7 @@ export const Navbar: FC<NavbarProps> = ({
 
         {mode === "guest-landing" && (
           <>
+            {renderThemeToggle()}
             {onLogIn && (
               <Button
                 label="Log in"
@@ -833,6 +855,7 @@ export const Navbar: FC<NavbarProps> = ({
                 onPress={onOpenApp}
               />
             )}
+            {renderThemeToggle()}
             {user && renderAvatarButton(handleViewProfile, false)}
             {onLogout && (
               <Button
@@ -849,54 +872,9 @@ export const Navbar: FC<NavbarProps> = ({
           <>
             {onSearchChange && renderSearch()}
 
-            {onCreate && (
-              <IconButton
-                variant="primary"
-                size="sm"
-                rounded
-                label="Create"
-                icon={<PlusIcon size={16} />}
-                onPress={onCreate}
-              />
-            )}
 
-            {/* Notifications bell → dropdown panel */}
-            {user && (
-              <div style={{ position: "relative" }}>
-                <IconButton
-                  variant="ghost"
-                  size="sm"
-                  rounded
-                  label="Notifications"
-                  icon={<BellIcon size={16} />}
-                  onPress={() => togglePopover("notifications")}
-                />
-                {unreadCount > 0 && (
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: -2,
-                      right: -2,
-                      minWidth: 16,
-                      height: 16,
-                      padding: "0 4px",
-                      borderRadius: "var(--radius-pill)",
-                      backgroundColor: "var(--color-warn)",
-                      color: "#FFFFFF",
-                      fontSize: 9,
-                      fontWeight: 700,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    {unreadCount}
-                  </span>
-                )}
-                {activePopover === "notifications" &&
-                  renderNotificationsPanel()}
-              </div>
-            )}
+            {/* Theme mode toggle */}
+            {renderThemeToggle()}
 
             {/* Avatar → profile dropdown menu */}
             {user && (

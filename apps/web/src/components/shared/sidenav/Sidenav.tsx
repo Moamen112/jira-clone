@@ -81,6 +81,7 @@ const ProjectsIcon: FC<{ size?: number }> = ({ size = 17 }) => (
   </svg>
 );
 
+/*
 const ActivityIcon: FC<{ size?: number }> = ({ size = 17 }) => (
   <svg
     width={size}
@@ -111,6 +112,7 @@ const BellIcon: FC<{ size?: number }> = ({ size = 17 }) => (
     <path d="M13.73 21a2 2 0 0 1-3.46 0" />
   </svg>
 );
+*/
 
 /*
 const SettingsIcon: FC<{ size?: number }> = ({ size = 17 }) => (
@@ -247,7 +249,7 @@ export const Sidenav: FC<SidenavProps> = ({
   currentProject,
   onSelectProject,
   currentUser,
-  unreadNotificationsCount = 0,
+  unreadNotificationsCount: _unreadNotificationsCount = 0,
   collapsed = false,
   onToggleCollapse,
   isDark = false,
@@ -612,7 +614,8 @@ export const Sidenav: FC<SidenavProps> = ({
           </div>
         </div>
 
-        {/* Section 3: ACTIVITY & NOTIFICATIONS */}
+        {/* Section 3: ACTIVITY & NOTIFICATIONS (hidden for now) */}
+        {/*
         <div>
           {!collapsed && (
             <Text
@@ -633,14 +636,14 @@ export const Sidenav: FC<SidenavProps> = ({
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {renderNavItem('activity', 'Activity Stream', <ActivityIcon size={17} />)}
+            {renderNavItem('activity', 'Activity Stream', <_ActivityIcon size={17} />)}
             {renderNavItem(
               'notifications',
               'Notifications',
-              <BellIcon size={17} />,
-              unreadNotificationsCount > 0 ? (
+              <_BellIcon size={17} />,
+              _unreadNotificationsCount > 0 ? (
                 <Badge
-                  label={String(unreadNotificationsCount)}
+                  label={String(_unreadNotificationsCount)}
                   variant="accent"
                   size="sm"
                 />
@@ -648,6 +651,7 @@ export const Sidenav: FC<SidenavProps> = ({
             )}
           </div>
         </div>
+        */}
 
         {/* Section 4: ADMINISTRATION (commented out for now) */}
         {/*

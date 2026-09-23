@@ -19,7 +19,9 @@ export interface CardFilterCriteria {
   searchQuery?: string;
   assignedToMe?: boolean;
   createdByMe?: boolean;
+  sharedWithMe?: boolean;
   hasComments?: boolean;
   selectedUserIds?: string[];
+  type?: string;
   currentUserId?: string;
 }

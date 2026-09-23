@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { CSSProperties, FC, ReactNode } from 'react';
 import { Text } from '../typography/Text';
 import { Input } from '../input/Input';
@@ -12,7 +12,7 @@ export interface DropdownOption {
 
 export interface DropdownAction {
   label: string;
-  onPress: () => void;
+  onPress: (query?: string) => void;
   icon?: ReactNode;
 }
 
@@ -39,6 +39,43 @@ export interface DropdownProps {
   style?: CSSProperties;
 }
 
+const ChevronIcon: FC<{ size?: number; isOpen?: boolean }> = ({ size = 14, isOpen = false }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{
+      flexShrink: 0,
+      color: 'var(--color-ink-muted)',
+      transform: isOpen ? 'rotate(180deg)' : 'none',
+      transition: 'transform 150ms ease',
+    }}
+  >
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
+const CheckIcon: FC<{ size?: number; color?: string }> = ({ size = 14, color = 'var(--color-accent)' }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ flexShrink: 0 }}
+  >
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
 export const Dropdown: FC<DropdownProps> = ({
   label,
   value,
@@ -53,6 +90,8 @@ export const Dropdown: FC<DropdownProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [hoveredValue, setHoveredValue] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
@@ -67,7 +106,31 @@ export const Dropdown: FC<DropdownProps> = ({
     onSelect(val);
     setIsOpen(false);
     setSearchQuery('');
+    setHoveredValue(null);
   };
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
 
   const borderColor = error
     ? 'var(--color-warn)'
@@ -77,6 +140,7 @@ export const Dropdown: FC<DropdownProps> = ({
 
   return (
     <div
+      ref={containerRef}
       style={{
         position: 'relative',
         width: '100%',
@@ -95,12 +159,14 @@ export const Dropdown: FC<DropdownProps> = ({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen((open) => !open)}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           width: '100%',
-          minHeight: 44,
+          minHeight: 40,
           border: `1px solid ${borderColor}`,
           borderRadius: 'var(--radius-input)',
           paddingInline: 12,
@@ -108,11 +174,13 @@ export const Dropdown: FC<DropdownProps> = ({
           opacity: disabled ? 0.5 : 1,
           cursor: disabled ? 'default' : 'pointer',
           color: 'var(--color-ink)',
+          transition: 'border-color 150ms ease, box-shadow 150ms ease',
+          boxShadow: isOpen ? '0 0 0 2px var(--color-accent-soft)' : 'none',
         }}
       >
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
           {selectedOption?.icon && (
-            <span style={{ display: 'inline-flex', color: 'var(--color-ink-muted)' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
               {selectedOption.icon}
             </span>
           )}
@@ -120,14 +188,12 @@ export const Dropdown: FC<DropdownProps> = ({
             variant="body"
             numberOfLines={1}
             color={selectedOption ? 'var(--color-ink)' : 'var(--color-ink-muted)'}
-            style={{ flex: 1, minWidth: 0 }}
+            style={{ flex: 1, minWidth: 0, textAlign: 'left' }}
           >
             {selectedOption ? selectedOption.label : placeholder}
           </Text>
         </span>
-        <span style={{ fontSize: 10, color: 'var(--color-ink-muted)' }} aria-hidden="true">
-          ▼
-        </span>
+        <ChevronIcon size={14} isOpen={isOpen} />
       </button>
 
       {error && (
@@ -137,148 +203,185 @@ export const Dropdown: FC<DropdownProps> = ({
       )}
 
       {isOpen && (
-        <>
-          {/* Click-away backdrop */}
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 998 }}
-            onClick={() => setIsOpen(false)}
-          />
-
-          {/* Options panel */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              right: 0,
-              marginTop: 4,
-              zIndex: 999,
-              borderRadius: 'var(--radius-card)',
-              border: '1px solid var(--color-line)',
-              backgroundColor: 'var(--color-surface)',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.14)',
-              padding: 4,
-              maxHeight: 260,
-              overflowY: 'auto',
-            }}
-          >
-            {searchable && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            zIndex: 1100,
+            borderRadius: 'var(--radius-card, 8px)',
+            border: '1px solid var(--color-line)',
+            backgroundColor: 'var(--color-paper)',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            padding: 4,
+            maxHeight: 260,
+            overflowY: 'auto',
+          }}
+        >
+          {searchable && (
+            <div style={{ padding: '2px 4px 6px' }}>
               <Input
                 placeholder="Search options..."
                 value={searchQuery}
                 onChangeText={setSearchQuery}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (filteredOptions.length === 0 && action) {
+                      setIsOpen(false);
+                      action.onPress(searchQuery.trim());
+                    } else if (filteredOptions.length === 1) {
+                      handleSelect(filteredOptions[0].value);
+                    }
+                  }
+                }}
                 autoFocus
-                containerStyle={{ marginBottom: 8 }}
+                containerStyle={{ marginBottom: 0 }}
+                inputWrapperStyle={{ minHeight: 34, paddingInline: 8 }}
+                style={{ fontSize: 12 }}
               />
-            )}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {filteredOptions.map((opt) => {
               const isSelected = opt.value === value;
+              const isHovered = hoveredValue === opt.value;
+
               return (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => handleSelect(opt.value)}
+                  onMouseEnter={() => setHoveredValue(opt.value)}
+                  onMouseLeave={() => setHoveredValue(null)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     width: '100%',
-                    padding: '8px 10px',
+                    padding: '7px 10px',
                     background: isSelected
                       ? 'var(--color-accent-soft)'
-                      : 'transparent',
+                      : isHovered
+                        ? 'var(--color-surface)'
+                        : 'transparent',
                     border: 'none',
-                    borderBottom: '1px solid var(--color-line)',
-                    borderRadius: isSelected ? 'var(--radius-input)' : 0,
+                    borderRadius: 'var(--radius-input, 6px)',
                     cursor: 'pointer',
-                    color: 'inherit',
+                    textAlign: 'left',
+                    color: isSelected ? 'var(--color-accent)' : 'var(--color-ink)',
+                    transition: 'background-color 120ms ease',
                   }}
                 >
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
-                    {opt.icon}
-                    <span style={{ display: 'block', minWidth: 0 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                    {opt.icon && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
+                        {opt.icon}
+                      </span>
+                    )}
+                    <span style={{ display: 'block', minWidth: 0, flex: 1 }}>
                       <Text
                         variant="body"
                         bold={isSelected}
                         color={isSelected ? 'var(--color-accent)' : 'var(--color-ink)'}
-                        style={{ display: 'block' }}
+                        style={{ display: 'block', fontSize: 13 }}
                       >
                         {opt.label}
                       </Text>
                       {opt.description && (
-                        <Text variant="caption" muted style={{ display: 'block' }}>
+                        <Text variant="caption" muted style={{ display: 'block', fontSize: 11 }}>
                           {opt.description}
                         </Text>
                       )}
                     </span>
                   </span>
-                  {isSelected && (
-                    <Text variant="body" bold color="var(--color-accent)">
-                      ✓
-                    </Text>
-                  )}
+                  {isSelected && <CheckIcon size={14} color="var(--color-accent)" />}
                 </button>
               );
             })}
 
             {filteredOptions.length === 0 && (
-              <Text
-                variant="bodySmall"
-                muted
-                align="center"
-                style={{ padding: 24, display: 'block' }}
-              >
-                No matching options found.
-              </Text>
-            )}
-
-            {action && (
-              <div
-                style={{
-                  borderTop: '1px solid var(--color-line)',
-                  paddingTop: 4,
-                  marginTop: 4,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsOpen(false);
-                    action.onPress();
-                  }}
+              action ? (
+                <div
                   style={{
+                    padding: '10px 6px 6px',
                     display: 'flex',
-                    alignItems: 'center',
+                    flexDirection: 'column',
                     gap: 8,
-                    width: '100%',
-                    padding: '8px 10px',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    borderRadius: 'var(--radius-input)',
-                    cursor: 'pointer',
-                    color: 'var(--color-accent)',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    textAlign: 'left',
-                    transition: 'background-color 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--color-accent-soft)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
+                    alignItems: 'center',
                   }}
                 >
-                  {action.icon ?? (
-                    <span style={{ fontSize: 16, lineHeight: 1, fontWeight: 'bold' }}>+</span>
-                  )}
-                  <span>{action.label}</span>
-                </button>
-              </div>
+                  <Text variant="caption" muted align="center" style={{ fontSize: 11 }}>
+                    {searchQuery.trim()
+                      ? `No matches found for "${searchQuery.trim()}"`
+                      : 'No options available.'}
+                  </Text>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsOpen(false);
+                      action.onPress(searchQuery.trim());
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      width: '100%',
+                      padding: '8px 12px',
+                      backgroundColor: 'var(--color-accent-soft)',
+                      color: 'var(--color-accent)',
+                      border: '1px dashed var(--color-accent)',
+                      borderRadius: 'var(--radius-input, 6px)',
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      textAlign: 'center',
+                      transition: 'all 150ms ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--color-accent)';
+                      e.currentTarget.style.color = '#ffffff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--color-accent-soft)';
+                      e.currentTarget.style.color = 'var(--color-accent)';
+                    }}
+                  >
+                    <span style={{ fontSize: 14, lineHeight: 1, fontWeight: 'bold' }}>+</span>
+                    <span>{searchQuery.trim() ? `Add "${searchQuery.trim()}"` : action.label}</span>
+                    <kbd
+                      style={{
+                        marginLeft: 'auto',
+                        fontSize: 10,
+                        padding: '1px 5px',
+                        borderRadius: 3,
+                        backgroundColor: 'var(--color-surface)',
+                        border: '1px solid var(--color-line)',
+                        color: 'var(--color-ink-muted)',
+                        lineHeight: '14px',
+                      }}
+                    >
+                      ↵ Enter
+                    </kbd>
+                  </button>
+                </div>
+              ) : (
+                <Text
+                  variant="bodySmall"
+                  muted
+                  align="center"
+                  style={{ padding: '16px 8px', display: 'block' }}
+                >
+                  No matching options found.
+                </Text>
+              )
             )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
