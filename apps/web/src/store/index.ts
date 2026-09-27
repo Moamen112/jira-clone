@@ -2,12 +2,14 @@ import { configureStore } from '@reduxjs/toolkit';
 import {
   themeReducer,
   authReducer,
+  initialAuthState,
   toggleTheme,
   setThemeMode,
   selectThemeMode,
   type ThemeMode,
   getStorageItem,
   setStorageItem,
+  removeStorageItem,
   STORAGE_KEYS,
 } from '@jira-clone/shared';
 import { type TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
@@ -21,17 +23,29 @@ export const store = configureStore({
     theme: {
       mode: getStorageItem<ThemeMode>(STORAGE_KEYS.THEME_MODE, 'web', 'light') ?? 'light',
     },
+    auth: initialAuthState,
   },
 });
 
 if (typeof window !== 'undefined') {
   let previousMode = store.getState().theme.mode;
+  let previousUser = store.getState().auth.user;
 
   store.subscribe(() => {
     const currentMode = store.getState().theme.mode;
     if (currentMode !== previousMode) {
       previousMode = currentMode;
       setStorageItem(STORAGE_KEYS.THEME_MODE, currentMode, 'web');
+    }
+
+    const currentUser = store.getState().auth.user;
+    if (currentUser !== previousUser) {
+      previousUser = currentUser;
+      if (currentUser) {
+        setStorageItem(STORAGE_KEYS.CURRENT_USER, currentUser, 'web');
+      } else {
+        removeStorageItem(STORAGE_KEYS.CURRENT_USER, 'web');
+      }
     }
   });
 }

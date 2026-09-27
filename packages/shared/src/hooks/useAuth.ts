@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import {
   getAuthState,
   subscribeAuthState,
@@ -202,6 +202,23 @@ export function useAuth() {
     } catch {
       setInternalAuthState({ isLoading: false });
       return null;
+    }
+  }, []);
+
+  // Quietly validate/refresh user session on mount if authenticated
+  useEffect(() => {
+    if (state.isAuthenticated) {
+      void authService
+        .getCurrentUser()
+        .then((latestUser) => {
+          setInternalAuthState({ user: latestUser });
+        })
+        .catch(() => {
+          // If session expired and token refresh failed
+          if (!getAuthTokens()?.accessToken) {
+            setInternalAuthState({ ...initialAuthState });
+          }
+        });
     }
   }, []);
 

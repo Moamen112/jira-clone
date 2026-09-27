@@ -2,6 +2,9 @@ import { configureStore } from '@reduxjs/toolkit';
 import {
   themeReducer,
   authReducer,
+  initialAuthState,
+  setMobileAuthAdapter,
+  setMobileTokenAdapter,
   toggleTheme,
   setThemeMode,
   selectThemeMode,
@@ -28,6 +31,7 @@ export const store = configureStore({
     theme: {
       mode: initialMode,
     },
+    auth: initialAuthState,
   },
 });
 
@@ -39,6 +43,9 @@ let mobileStorageAdapter: AsyncStorageAdapter | undefined;
  */
 export function setMobileStorageAdapter(adapter: AsyncStorageAdapter) {
   mobileStorageAdapter = adapter;
+  setMobileAuthAdapter(adapter);
+  setMobileTokenAdapter(adapter);
+
   getStorageItem<ThemeMode>(STORAGE_KEYS.THEME_MODE, 'mobile', null, adapter).then((stored) => {
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
       store.dispatch(setThemeMode(stored));

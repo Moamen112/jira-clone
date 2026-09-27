@@ -1,5 +1,13 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { UserProfile, Pending2FAState } from '../types/auth';
+import {
+  getStorageItem,
+  setStorageItem,
+  removeStorageItem,
+  STORAGE_KEYS,
+  type AsyncStorageAdapter,
+} from '../services/storageService';
+import { getAuthTokens } from '../lib/authTokens';
 
 export interface AuthState {
   user: UserProfile | null;
@@ -9,9 +17,30 @@ export interface AuthState {
   pending2FA: Pending2FAState | null;
 }
 
+let mobileAuthAdapter: AsyncStorageAdapter | undefined;
+
+/**
+ * Configure an AsyncStorage adapter for native mobile user state persistence.
+ */
+export function setMobileAuthAdapter(adapter: AsyncStorageAdapter): void {
+  mobileAuthAdapter = adapter;
+  getStorageItem<UserProfile>(STORAGE_KEYS.CURRENT_USER, 'mobile', null, adapter).then((stored) => {
+    if (stored) {
+      setInternalAuthState({ user: stored, isAuthenticated: true });
+    }
+  });
+}
+
+function loadInitialUser(): UserProfile | null {
+  return getStorageItem<UserProfile>(STORAGE_KEYS.CURRENT_USER, 'web', null);
+}
+
+const initialTokens = getAuthTokens();
+const initialUser = loadInitialUser();
+
 export const initialAuthState: AuthState = {
-  user: null,
-  isAuthenticated: false,
+  user: initialUser,
+  isAuthenticated: Boolean(initialTokens?.accessToken && initialUser),
   isLoading: false,
   error: null,
   pending2FA: null,
@@ -37,6 +66,22 @@ export function setInternalAuthState(
 ): void {
   const next = typeof updater === 'function' ? updater(currentAuthState) : updater;
   currentAuthState = { ...currentAuthState, ...next };
+
+  // Persist or remove user profile in storage
+  if (next.user !== undefined) {
+    if (next.user) {
+      setStorageItem(STORAGE_KEYS.CURRENT_USER, next.user, 'web');
+      if (mobileAuthAdapter) {
+        void setStorageItem(STORAGE_KEYS.CURRENT_USER, next.user, 'mobile', mobileAuthAdapter);
+      }
+    } else {
+      removeStorageItem(STORAGE_KEYS.CURRENT_USER, 'web');
+      if (mobileAuthAdapter) {
+        void removeStorageItem(STORAGE_KEYS.CURRENT_USER, 'mobile', mobileAuthAdapter);
+      }
+    }
+  }
+
   listeners.forEach((listener) => listener());
 }
 
@@ -65,6 +110,11 @@ export const authSlice = createSlice({
       state.pending2FA = null;
       state.isLoading = false;
       state.error = null;
+
+      setStorageItem(STORAGE_KEYS.CURRENT_USER, action.payload, 'web');
+      if (mobileAuthAdapter) {
+        void setStorageItem(STORAGE_KEYS.CURRENT_USER, action.payload, 'mobile', mobileAuthAdapter);
+      }
     },
     logoutAction: (state) => {
       state.user = null;
@@ -72,6 +122,11 @@ export const authSlice = createSlice({
       state.pending2FA = null;
       state.isLoading = false;
       state.error = null;
+
+      removeStorageItem(STORAGE_KEYS.CURRENT_USER, 'web');
+      if (mobileAuthAdapter) {
+        void removeStorageItem(STORAGE_KEYS.CURRENT_USER, 'mobile', mobileAuthAdapter);
+      }
     },
   },
 });

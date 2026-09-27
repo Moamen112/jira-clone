@@ -4,4 +4,6 @@ export * from './activity';
 export * from './validation';
 export * from './spaces';
 export * from './board';
+export * from './cookies';
+
 

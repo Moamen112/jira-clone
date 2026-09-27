@@ -10,6 +10,7 @@ export const STORAGE_KEYS = {
   THEME_MODE: 'jira-theme-mode',
   CURRENT_USER: 'jira-current-user',
   RECENT_PROJECTS: 'jira-recent-projects',
+  AUTH_TOKENS: 'jira-auth-tokens',
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS] | (string & {});
