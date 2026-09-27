@@ -8,7 +8,7 @@ import {
 import { CameraIcon } from '../../assets/icon';
 import { launchImageLibraryAsync } from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { mockCurrentUser } from '@jira-clone/shared';
+import { mockCurrentUser, useAuth } from '@jira-clone/shared';
 import { Text, Avatar, Badge, Divider, Button } from '../../src/components/base';
 import { useTheme, spacing, radius, ThemeMode } from '../../src/tokens';
 
@@ -20,13 +20,26 @@ const THEME_MODE_LABELS: Record<ThemeMode, string> = {
 };
 
 /**
- * Profile tab — shows the signed-in (mock) user's details and lets them
- * pick a profile photo from the device media library (demo: local URI only).
+ * Profile tab — shows the signed-in user's details and lets them
+ * pick a profile photo from the device media library.
  */
 export default function ProfileScreen() {
   const { colors, mode, setThemeMode } = useTheme();
   const router = useRouter();
-  const user = mockCurrentUser;
+  const { user: authUser, signOut } = useAuth();
+
+  const user = {
+    name: authUser?.full_name || mockCurrentUser.name,
+    email: authUser?.email || mockCurrentUser.email,
+    id: authUser ? String(authUser.id) : mockCurrentUser.id,
+    avatarUrl: authUser?.avatar ?? mockCurrentUser.avatarUrl,
+    initials: (authUser?.full_name || mockCurrentUser.name)
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2),
+  };
 
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
@@ -48,8 +61,8 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleLogout = () => {
-    // No auth slice yet — just return to the auth screen.
+  const handleLogout = async () => {
+    await signOut();
     router.replace('/auth');
   };
 

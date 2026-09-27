@@ -1,26 +1,28 @@
 import React, { useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { useAuth } from "@jira-clone/shared";
 import { Text, Spinner } from "../src/components/base";
 import { useTheme, spacing, radius } from "../src/tokens";
 
-const SPLASH_DURATION_MS = 2000;
+const SPLASH_DURATION_MS = 1500;
 
 /**
  * Splash screen — shown first on app launch. After a short delay it
- * navigates to the main tabs so the splash is never part of history.
+ * navigates to the main tabs if authenticated or the auth screen.
  */
 export default function SplashScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.replace("/(tabs)");
+      router.replace(isAuthenticated ? "/(tabs)" : "/auth");
     }, SPLASH_DURATION_MS);
 
     return () => clearTimeout(timer);
-  }, [router]);
+  }, [router, isAuthenticated]);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.paper }]}>

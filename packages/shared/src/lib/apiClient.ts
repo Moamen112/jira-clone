@@ -4,10 +4,12 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios';
 import { clearAuthTokens, getAuthTokens, setAuthTokens } from './authTokens';
-import { API_ENDPOINTS } from './endpoints';
+import { API_BASE_URL, API_ENDPOINTS } from './endpoints';
 
 interface RefreshResponse {
-  accessToken: string;
+  access?: string;
+  refresh?: string;
+  accessToken?: string;
   refreshToken?: string;
 }
 
@@ -18,8 +20,9 @@ interface RetryRequestConfig extends InternalAxiosRequestConfig {
 /**
  * Creates the Axios instance used by an application.
  * Create it once and reuse it for every API request.
+ * Defaults to http://localhost:5000 if no baseURL is provided.
  */
-export function createApiClient(baseURL: string): AxiosInstance {
+export function createApiClient(baseURL: string = API_BASE_URL): AxiosInstance {
   const apiClient = axios.create({ baseURL });
   const refreshClient = axios.create({ baseURL });
 
@@ -48,12 +51,23 @@ export function createApiClient(baseURL: string): AxiosInstance {
       try {
         const response = await refreshClient.post<RefreshResponse>(
           API_ENDPOINTS.AUTH.REFRESH,
-          { refreshToken: currentTokens.refreshToken }
+          {
+            refresh: currentTokens.refreshToken,
+            refreshToken: currentTokens.refreshToken,
+          }
         );
 
+        const data = response.data;
+        const nextAccessToken = data.access ?? data.accessToken;
+        const nextRefreshToken = data.refresh ?? data.refreshToken ?? currentTokens.refreshToken;
+
+        if (!nextAccessToken) {
+          throw new Error('No access token received from refresh endpoint');
+        }
+
         const nextTokens = {
-          accessToken: response.data.accessToken,
-          refreshToken: response.data.refreshToken ?? currentTokens.refreshToken,
+          accessToken: nextAccessToken,
+          refreshToken: nextRefreshToken,
         };
 
         setAuthTokens(nextTokens);
@@ -69,3 +83,8 @@ export function createApiClient(baseURL: string): AxiosInstance {
 
   return apiClient;
 }
+
+/**
+ * Default shared API client pointing to API_BASE_URL.
+ */
+export const apiClient = createApiClient();

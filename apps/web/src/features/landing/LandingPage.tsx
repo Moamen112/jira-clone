@@ -2,20 +2,18 @@ import { HeroSection } from './components/hero';
 import { FeaturesOverview } from './components/features-overview';
 import { CtaSection } from './components/cta-section';
 import { LandingFooter } from './components/footer';
-import { mockCurrentUser } from '@jira-clone/shared';
+import { useAuth } from '@jira-clone/shared';
 import styles from './LandingPage.module.css';
 
 export function LandingPage() {
-  // TODO(backend): replace the mocked session with the real authenticated user
-  // returned by the backend once the auth API is wired up.
-  const currentUser = mockCurrentUser;
-  const isAuthenticated = Boolean(currentUser);
+  const { user, isAuthenticated } = useAuth();
+  const userName = user?.full_name;
 
   return (
     <div className={styles.container}>
-      <HeroSection isAuthenticated={isAuthenticated} userName={currentUser?.name} />
+      <HeroSection isAuthenticated={isAuthenticated} userName={userName} />
       <FeaturesOverview isAuthenticated={isAuthenticated} />
-      <CtaSection isAuthenticated={isAuthenticated} userName={currentUser?.name} />
+      <CtaSection isAuthenticated={isAuthenticated} userName={userName} />
       <LandingFooter isAuthenticated={isAuthenticated} />
     </div>
   );

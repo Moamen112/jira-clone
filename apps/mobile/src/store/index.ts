@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 import {
   themeReducer,
+  authReducer,
   toggleTheme,
   setThemeMode,
   selectThemeMode,
@@ -21,6 +22,7 @@ const initialMode: ThemeMode =
 export const store = configureStore({
   reducer: {
     theme: themeReducer,
+    auth: authReducer,
   },
   preloadedState: {
     theme: {
