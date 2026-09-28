@@ -16,8 +16,11 @@ import {
   useProjects,
   useTasks,
   useAuth,
+  useDebounce,
   backendTaskToCard,
   columnIdToStatus,
+  isStatusAllowedForUser,
+  getStatusPermissionHint,
   projectService,
   taskService,
   taskTypeToCardTypeOption,
@@ -135,7 +138,36 @@ export function SpaceDetailPage() {
     directProject?.key ||
     (id && isNaN(Number(id)) ? id : '');
 
-  // Real backend tasks hook
+  // Board Filter States (connected to backend API)
+  const [boardSearch, setBoardSearch] = useState('');
+  const debouncedBoardSearch = useDebounce(boardSearch, 300);
+  const [assignedToMeFilter, setAssignedToMeFilter] = useState(false);
+  const [createdByMeFilter, setCreatedByMeFilter] = useState(false);
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState('all');
+  const [selectedUserIdsFilter, setSelectedUserIdsFilter] = useState<string[]>([]);
+
+  // Derive server query params
+  const serverAssignee = useMemo(() => {
+    if (selectedUserIdsFilter.length === 1 && selectedUserIdsFilter[0] !== 'unassigned') {
+      const parsed = Number(selectedUserIdsFilter[0]);
+      return !isNaN(parsed) && parsed > 0 ? parsed : undefined;
+    }
+    return undefined;
+  }, [selectedUserIdsFilter]);
+
+  const serverUnassigned = useMemo(() => {
+    return selectedUserIdsFilter.includes('unassigned') ? true : undefined;
+  }, [selectedUserIdsFilter]);
+
+  const serverType = useMemo(() => {
+    if (selectedTypeFilter && selectedTypeFilter !== 'all') {
+      const parsed = Number(selectedTypeFilter);
+      return !isNaN(parsed) && parsed > 0 ? parsed : undefined;
+    }
+    return undefined;
+  }, [selectedTypeFilter]);
+
+  // Real backend tasks hook with query filters
   const {
     cards,
     columns,
@@ -155,7 +187,26 @@ export function SpaceDetailPage() {
     projectId: currentProjectId,
     projectKey: currentProjectKey,
     autoFetch: Boolean(currentProjectId),
+    search: debouncedBoardSearch.trim() || undefined,
+    mine: assignedToMeFilter ? true : undefined,
+    type: serverType,
+    assignee: serverAssignee,
+    unassigned: serverUnassigned,
   });
+
+  const handleClearBoardFilters = () => {
+    setBoardSearch('');
+    setAssignedToMeFilter(false);
+    setCreatedByMeFilter(false);
+    setSelectedTypeFilter('all');
+    setSelectedUserIdsFilter([]);
+  };
+
+  const handleToggleUserIdFilter = (userId: string) => {
+    setSelectedUserIdsFilter((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
 
   // Current authenticated user ID
   const currentUserId = user ? String(user.id) : undefined;
@@ -274,6 +325,10 @@ export function SpaceDetailPage() {
 
   const handleCardMove = async (card: Card, toColumnId?: string) => {
     if (!toColumnId || card.columnId === toColumnId) return;
+    if (!isStatusAllowedForUser(currentUserId, card, toColumnId)) {
+      alert(getStatusPermissionHint(currentUserId, card));
+      return;
+    }
     try {
       await updateTaskStatus(card.id, toColumnId);
     } catch (err: unknown) {
@@ -295,6 +350,15 @@ export function SpaceDetailPage() {
   const handleSaveCardDetail = async (updated: Card) => {
     try {
       const targetStatus = columnIdToStatus(updated.columnId);
+
+      if (
+        selectedCard &&
+        columnIdToStatus(selectedCard.columnId) !== targetStatus &&
+        !isStatusAllowedForUser(currentUserId, selectedCard, updated.columnId)
+      ) {
+        alert(getStatusPermissionHint(currentUserId, selectedCard));
+        return;
+      }
 
       let resolvedTypeId: number | undefined = updated.typeId;
       if (!resolvedTypeId && updated.type) {
@@ -425,6 +489,19 @@ export function SpaceDetailPage() {
           cardTypes={cardTypeOptions}
           boardTitle={`${space.project.name} Board`}
           projectKey={space.project.key}
+          searchQuery={boardSearch}
+          onSearchChange={setBoardSearch}
+          assignedToMe={assignedToMeFilter}
+          onToggleAssignedToMe={() => setAssignedToMeFilter((v) => !v)}
+          createdByMe={createdByMeFilter}
+          onToggleCreatedByMe={() => setCreatedByMeFilter((v) => !v)}
+          selectedType={selectedTypeFilter}
+          onSelectType={setSelectedTypeFilter}
+          selectedUserIds={selectedUserIdsFilter}
+          onToggleUserId={handleToggleUserIdFilter}
+          onClearFilters={handleClearBoardFilters}
+          isServerFiltered={true}
+          totalCardsCount={space.project.taskCount}
           onCardPress={handleCardPress}
           onAddCardPress={handleAddCardPress}
           onCardMove={handleCardMove}

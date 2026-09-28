@@ -53,6 +53,36 @@ export interface BoardProps {
   renderHeader?: () => ReactNode;
   /** Custom slot below board */
   renderFooter?: () => ReactNode;
+  /** Controlled search query */
+  searchQuery?: string;
+  /** Search query change handler */
+  onSearchChange?: (query: string) => void;
+  /** Controlled "Assigned to me" flag */
+  assignedToMe?: boolean;
+  /** Toggle "Assigned to me" handler */
+  onToggleAssignedToMe?: () => void;
+  /** Controlled "Shared with me" flag */
+  sharedWithMe?: boolean;
+  /** Toggle "Shared with me" handler */
+  onToggleSharedWithMe?: () => void;
+  /** Controlled "Created by me" flag */
+  createdByMe?: boolean;
+  /** Toggle "Created by me" handler */
+  onToggleCreatedByMe?: () => void;
+  /** Controlled selected card type */
+  selectedType?: string;
+  /** Select card type handler */
+  onSelectType?: (type: string) => void;
+  /** Controlled selected user IDs */
+  selectedUserIds?: string[];
+  /** Toggle user ID selection handler */
+  onToggleUserId?: (userId: string) => void;
+  /** Clear all filters handler */
+  onClearFilters?: () => void;
+  /** Whether filtering is handled by backend server (cards are already filtered) */
+  isServerFiltered?: boolean;
+  /** Total count of cards before server filtering (for match count display) */
+  totalCardsCount?: number;
   /** Custom container style */
   style?: CSSProperties;
   /** Test identifier */
@@ -68,6 +98,21 @@ export const Board: FC<BoardProps> = ({
   boardTitle,
   projectKey,
   showFilterBar = true,
+  searchQuery: controlledSearchQuery,
+  onSearchChange,
+  assignedToMe: controlledAssignedToMe,
+  onToggleAssignedToMe,
+  sharedWithMe: controlledSharedWithMe,
+  onToggleSharedWithMe,
+  createdByMe: controlledCreatedByMe,
+  onToggleCreatedByMe,
+  selectedType: controlledSelectedType,
+  onSelectType,
+  selectedUserIds: controlledSelectedUserIds,
+  onToggleUserId,
+  onClearFilters,
+  isServerFiltered = false,
+  totalCardsCount,
   onCardPress,
   onCardMove,
   onCardAssigneeChange,
@@ -83,24 +128,60 @@ export const Board: FC<BoardProps> = ({
   style,
   testID,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [assignedToMe, setAssignedToMe] = useState(false);
-  const [sharedWithMe, setSharedWithMe] = useState(false);
-  const [selectedType, setSelectedType] = useState('all');
-  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  // Internal filter states for uncontrolled mode
+  const [internalSearchQuery, setInternalSearchQuery] = useState('');
+  const [internalAssignedToMe, setInternalAssignedToMe] = useState(false);
+  const [internalSharedWithMe, setInternalSharedWithMe] = useState(false);
+  const [internalCreatedByMe, setInternalCreatedByMe] = useState(false);
+  const [internalSelectedType, setInternalSelectedType] = useState('all');
+  const [internalSelectedUserIds, setInternalSelectedUserIds] = useState<string[]>([]);
   const [movingCard, setMovingCard] = useState<CardType | null>(null);
+
+  // Active filter values (controlled or internal)
+  const activeSearchQuery = controlledSearchQuery !== undefined ? controlledSearchQuery : internalSearchQuery;
+  const activeAssignedToMe = controlledAssignedToMe !== undefined ? controlledAssignedToMe : internalAssignedToMe;
+  const activeSharedWithMe = controlledSharedWithMe !== undefined ? controlledSharedWithMe : internalSharedWithMe;
+  const activeCreatedByMe = controlledCreatedByMe !== undefined ? controlledCreatedByMe : internalCreatedByMe;
+  const activeSelectedType = controlledSelectedType !== undefined ? controlledSelectedType : internalSelectedType;
+  const activeSelectedUserIds = controlledSelectedUserIds !== undefined ? controlledSelectedUserIds : internalSelectedUserIds;
+
+  const handleSearchChange = onSearchChange || setInternalSearchQuery;
+  const handleToggleAssignedToMe = onToggleAssignedToMe || (() => setInternalAssignedToMe((v) => !v));
+  const handleToggleSharedWithMe = onToggleSharedWithMe || (() => setInternalSharedWithMe((v) => !v));
+  const handleToggleCreatedByMe = onToggleCreatedByMe || (() => setInternalCreatedByMe((v) => !v));
+  const handleSelectType = onSelectType || setInternalSelectedType;
+  const handleToggleUserId = onToggleUserId || ((uid: string) =>
+    setInternalSelectedUserIds((prev) =>
+      prev.includes(uid) ? prev.filter((id) => id !== uid) : [...prev, uid]
+    )
+  );
+  const handleClearFilters = onClearFilters || (() => {
+    setInternalSearchQuery('');
+    setInternalAssignedToMe(false);
+    setInternalSharedWithMe(false);
+    setInternalCreatedByMe(false);
+    setInternalSelectedType('all');
+    setInternalSelectedUserIds([]);
+  });
 
   const currentUser = users.find((u) => u.id === currentUserId) || null;
 
-  // Filter cards across all columns using shared filterCards
-  const filteredCards = filterCards(cards, {
-    searchQuery,
-    assignedToMe,
-    sharedWithMe,
-    selectedUserIds,
-    type: selectedType !== 'all' ? selectedType : undefined,
-    currentUserId,
-  });
+  // Filter cards across all columns:
+  // If isServerFiltered is true, server filtered the tasks; we only apply client-side
+  // user filter if multiple users are selected (since backend API accepts single assignee).
+  const filteredCards = isServerFiltered
+    ? activeSelectedUserIds.length > 1
+      ? filterCards(cards, { selectedUserIds: activeSelectedUserIds })
+      : cards
+    : filterCards(cards, {
+        searchQuery: activeSearchQuery,
+        assignedToMe: activeAssignedToMe,
+        sharedWithMe: activeSharedWithMe,
+        createdByMe: activeCreatedByMe,
+        selectedUserIds: activeSelectedUserIds,
+        type: activeSelectedType !== 'all' ? activeSelectedType : undefined,
+        currentUserId,
+      });
 
   return (
     <div
@@ -141,32 +222,24 @@ export const Board: FC<BoardProps> = ({
       {/* Integrated Filter Bar */}
       {showFilterBar && (
         <BoardFilterBar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          assignedToMe={assignedToMe}
-          onToggleAssignedToMe={() => setAssignedToMe((v) => !v)}
-          sharedWithMe={sharedWithMe}
-          onToggleSharedWithMe={() => setSharedWithMe((v) => !v)}
-          selectedType={selectedType}
-          onSelectType={setSelectedType}
+          searchQuery={activeSearchQuery}
+          onSearchChange={handleSearchChange}
+          assignedToMe={activeAssignedToMe}
+          onToggleAssignedToMe={handleToggleAssignedToMe}
+          sharedWithMe={activeSharedWithMe}
+          onToggleSharedWithMe={handleToggleSharedWithMe}
+          createdByMe={activeCreatedByMe}
+          onToggleCreatedByMe={handleToggleCreatedByMe}
+          selectedType={activeSelectedType}
+          onSelectType={handleSelectType}
           cardTypes={cardTypes}
-          selectedUserIds={selectedUserIds}
-          onToggleUserId={(uid) =>
-            setSelectedUserIds((prev) =>
-              prev.includes(uid) ? prev.filter((id) => id !== uid) : [...prev, uid]
-            )
-          }
+          selectedUserIds={activeSelectedUserIds}
+          onToggleUserId={handleToggleUserId}
           users={users}
           currentUser={currentUser}
           matchCount={filteredCards.length}
-          totalCount={cards.length}
-          onClearFilters={() => {
-            setSearchQuery('');
-            setAssignedToMe(false);
-            setSharedWithMe(false);
-            setSelectedType('all');
-            setSelectedUserIds([]);
-          }}
+          totalCount={totalCardsCount !== undefined ? totalCardsCount : cards.length}
+          onClearFilters={handleClearFilters}
         />
       )}
 

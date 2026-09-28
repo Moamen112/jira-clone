@@ -19,6 +19,8 @@ import {
   columnIdToStatus,
   createDefaultBoardColumns,
   taskTypeToCardTypeOption,
+  isStatusAllowedForUser,
+  getStatusPermissionHint,
   useAuth,
   useProjects,
 } from '@jira-clone/shared';
@@ -41,6 +43,7 @@ export default function SpacesCardScreen() {
     from?: string;
   }>();
   const { user } = useAuth();
+  const currentUserId = user?.id ? String(user.id) : undefined;
   const { spaces } = useProjects();
 
   const [card, setCard] = useState<CardType | null>(() => {
@@ -183,6 +186,15 @@ export default function SpacesCardScreen() {
 
   // Save changes callback
   const handleSaveCard = async (updatedCard: CardType) => {
+    if (
+      card &&
+      columnIdToStatus(updatedCard.columnId) !== columnIdToStatus(card.columnId) &&
+      !isStatusAllowedForUser(currentUserId, card, updatedCard.columnId)
+    ) {
+      Alert.alert('Permission Denied', getStatusPermissionHint(currentUserId, card));
+      return;
+    }
+
     const numericCardId = Number(updatedCard.id);
     if (!isNaN(numericCardId)) {
       try {

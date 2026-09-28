@@ -64,6 +64,32 @@ export interface BoardProps {
   refreshing?: boolean;
   /** Pull-to-refresh trigger callback */
   onRefresh?: () => void;
+  /** Controlled search query */
+  searchQuery?: string;
+  /** Search query change handler */
+  onSearchChange?: (query: string) => void;
+  /** Controlled "Assigned to me" flag */
+  assignedToMe?: boolean;
+  /** Toggle "Assigned to me" handler */
+  onToggleAssignedToMe?: () => void;
+  /** Controlled "Created by me" flag */
+  createdByMe?: boolean;
+  /** Toggle "Created by me" handler */
+  onToggleCreatedByMe?: () => void;
+  /** Controlled "Has comments" flag */
+  hasComments?: boolean;
+  /** Toggle "Has comments" handler */
+  onToggleHasComments?: () => void;
+  /** Controlled selected user IDs */
+  selectedUserIds?: string[];
+  /** Toggle user ID selection handler */
+  onToggleUserId?: (userId: string) => void;
+  /** Clear all filters handler */
+  onClearFilters?: () => void;
+  /** Whether filtering is handled by backend server (cards are already filtered) */
+  isServerFiltered?: boolean;
+  /** Total count of cards before server filtering (for match count display) */
+  totalCardsCount?: number;
   /** Custom column width (default: Math.min(SCREEN_WIDTH * 0.82, 330)) */
   columnWidth?: number;
   /** Custom gap between columns (default: spacing[3] = 12) */
@@ -89,6 +115,19 @@ export const Board: React.FC<BoardProps> = ({
   projectKey,
   showFilterBar = true,
   showColumnTabs = true,
+  searchQuery: controlledSearchQuery,
+  onSearchChange,
+  assignedToMe: controlledAssignedToMe,
+  onToggleAssignedToMe,
+  createdByMe: controlledCreatedByMe,
+  onToggleCreatedByMe,
+  hasComments: controlledHasComments,
+  onToggleHasComments,
+  selectedUserIds: controlledSelectedUserIds,
+  onToggleUserId,
+  onClearFilters,
+  isServerFiltered = false,
+  totalCardsCount,
   onCardPress,
   onCardMove,
   onCardAssigneeChange,
@@ -111,38 +150,51 @@ export const Board: React.FC<BoardProps> = ({
   const tabsScrollRef = useRef<ScrollView>(null);
   const [activeColumnIndex, setActiveColumnIndex] = useState(0);
 
-  // Integrated filter bar states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [assignedToMe, setAssignedToMe] = useState(false);
-  const [createdByMe, setCreatedByMe] = useState(false);
-  const [hasCommentsFilter, setHasCommentsFilter] = useState(false);
-  const [selectedFilterUserIds, setSelectedFilterUserIds] = useState<string[]>([]);
+  // Controlled vs uncontrolled filter states
+  const [internalSearchQuery, setInternalSearchQuery] = useState('');
+  const [internalAssignedToMe, setInternalAssignedToMe] = useState(false);
+  const [internalCreatedByMe, setInternalCreatedByMe] = useState(false);
+  const [internalHasCommentsFilter, setInternalHasCommentsFilter] = useState(false);
+  const [internalSelectedFilterUserIds, setInternalSelectedFilterUserIds] = useState<string[]>([]);
 
-  const handleToggleFilterUserId = (userId: string) => {
-    setSelectedFilterUserIds((prev) =>
+  const activeSearchQuery = controlledSearchQuery !== undefined ? controlledSearchQuery : internalSearchQuery;
+  const activeAssignedToMe = controlledAssignedToMe !== undefined ? controlledAssignedToMe : internalAssignedToMe;
+  const activeCreatedByMe = controlledCreatedByMe !== undefined ? controlledCreatedByMe : internalCreatedByMe;
+  const activeHasComments = controlledHasComments !== undefined ? controlledHasComments : internalHasCommentsFilter;
+  const activeSelectedUserIds = controlledSelectedUserIds !== undefined ? controlledSelectedUserIds : internalSelectedFilterUserIds;
+
+  const handleSearchChange = onSearchChange || setInternalSearchQuery;
+  const handleToggleAssignedToMe = onToggleAssignedToMe || (() => setInternalAssignedToMe((v) => !v));
+  const handleToggleCreatedByMe = onToggleCreatedByMe || (() => setInternalCreatedByMe((v) => !v));
+  const handleToggleHasComments = onToggleHasComments || (() => setInternalHasCommentsFilter((v) => !v));
+  const handleToggleFilterUserId = onToggleUserId || ((userId: string) => {
+    setInternalSelectedFilterUserIds((prev) =>
       prev.includes(userId)
         ? prev.filter((id) => id !== userId)
         : [...prev, userId]
     );
-  };
-
-  const handleClearFilters = () => {
-    setSearchQuery('');
-    setAssignedToMe(false);
-    setCreatedByMe(false);
-    setHasCommentsFilter(false);
-    setSelectedFilterUserIds([]);
-  };
+  });
+  const handleClearFilters = onClearFilters || (() => {
+    setInternalSearchQuery('');
+    setInternalAssignedToMe(false);
+    setInternalCreatedByMe(false);
+    setInternalHasCommentsFilter(false);
+    setInternalSelectedFilterUserIds([]);
+  });
 
   // Filter cards across all columns
-  const filteredCards = filterCards(cards, {
-    searchQuery,
-    assignedToMe,
-    createdByMe,
-    hasComments: hasCommentsFilter,
-    selectedUserIds: selectedFilterUserIds,
-    currentUserId,
-  });
+  const filteredCards = isServerFiltered
+    ? activeSelectedUserIds.length > 1
+      ? filterCards(cards, { selectedUserIds: activeSelectedUserIds })
+      : cards
+    : filterCards(cards, {
+        searchQuery: activeSearchQuery,
+        assignedToMe: activeAssignedToMe,
+        createdByMe: activeCreatedByMe,
+        hasComments: activeHasComments,
+        selectedUserIds: activeSelectedUserIds,
+        currentUserId,
+      });
 
   // Track active column on horizontal scroll
   const handleBoardScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -216,20 +268,20 @@ export const Board: React.FC<BoardProps> = ({
       {/* Integrated Filter Bar */}
       {showFilterBar && (
         <BoardFilterBar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          assignedToMe={assignedToMe}
-          onToggleAssignedToMe={() => setAssignedToMe((prev) => !prev)}
-          createdByMe={createdByMe}
-          onToggleCreatedByMe={() => setCreatedByMe((prev) => !prev)}
-          hasComments={hasCommentsFilter}
-          onToggleHasComments={() => setHasCommentsFilter((prev) => !prev)}
-          selectedUserIds={selectedFilterUserIds}
+          searchQuery={activeSearchQuery}
+          onSearchChange={handleSearchChange}
+          assignedToMe={activeAssignedToMe}
+          onToggleAssignedToMe={handleToggleAssignedToMe}
+          createdByMe={activeCreatedByMe}
+          onToggleCreatedByMe={handleToggleCreatedByMe}
+          hasComments={activeHasComments}
+          onToggleHasComments={handleToggleHasComments}
+          selectedUserIds={activeSelectedUserIds}
           onToggleUserId={handleToggleFilterUserId}
           users={users}
           currentUser={users.find((u) => u.id === currentUserId)}
           matchCount={filteredCards.length}
-          totalCount={cards.length}
+          totalCount={totalCardsCount !== undefined ? totalCardsCount : cards.length}
           onClearFilters={handleClearFilters}
           style={styles.filterBar}
         />

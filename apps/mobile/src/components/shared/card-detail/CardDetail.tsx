@@ -20,6 +20,12 @@ import {
   Comment,
   getCardRole,
   cardPermissions,
+  getAllowedStatusesForUser,
+  isStatusAllowedForUser,
+  getStatusPermissionHint,
+  isCardPublisher,
+  isCardAssignee,
+  columnIdToStatus,
   CardTypeOption,
   createStatusColumn,
   createCardType,
@@ -263,16 +269,73 @@ export const CardDetail: React.FC<CardDetailProps> = ({
     }
   }, [card, visible, cardTypes]);
 
-  const statusOptions: DropdownOption[] = useMemo(() => [
-    ...allColumns.map((col) => ({
-      label: col.title,
-      value: col.id,
-    })),
-    {
-      label: '+ Add new status...',
-      value: '__add_status__',
-    },
-  ], [allColumns]);
+  // Construct effective card participant info (including current draft assignee)
+  const effectiveCard = useMemo(() => {
+    if (!card) return null;
+    return {
+      ...card,
+      publisherId: card.publisherId || currentUserId || '',
+      assigneeId: assigneeId !== undefined ? assigneeId : card.assigneeId,
+      assigneeIds:
+        assigneeIds && assigneeIds.length > 0
+          ? assigneeIds
+          : card.assigneeId
+          ? [card.assigneeId]
+          : (card.assigneeIds || []),
+    };
+  }, [card, currentUserId, assigneeId, assigneeIds]);
+
+  const allowedStatuses = useMemo(() => {
+    if (!effectiveCard) return [];
+    return getAllowedStatusesForUser(currentUserId, effectiveCard);
+  }, [effectiveCard, currentUserId]);
+
+  const statusHint = useMemo(() => {
+    if (!effectiveCard) return '';
+    return getStatusPermissionHint(currentUserId, effectiveCard);
+  }, [effectiveCard, currentUserId]);
+
+  const isPublisher = isCardPublisher(currentUserId, effectiveCard);
+  const isAssignee = isCardAssignee(currentUserId, effectiveCard);
+
+  const role: CardRole =
+    currentUserRole ||
+    (isPublisher ? 'publisher' : isAssignee ? 'assignee' : 'viewer');
+
+  const canEditTitle = cardPermissions.canEditTitle(role);
+  const canEditDescription = cardPermissions.canEditDescription(role);
+  const canChangeAssignee = cardPermissions.canChangeAssignee(role);
+  const canMoveStatus =
+    (isPublisher || isAssignee || cardPermissions.canMoveStatus(role)) && allowedStatuses.length > 0;
+  const canDeleteCard = cardPermissions.canDeleteCard(role);
+
+  const statusOptions: DropdownOption[] = useMemo(() => {
+    const filtered = allColumns.filter((col) => {
+      if (!card) return true;
+      if (col.id === columnId || col.id === card.columnId) return true;
+      const st = columnIdToStatus(col.id);
+      return allowedStatuses.includes(st);
+    });
+
+    const opts: DropdownOption[] = filtered.map((col) => {
+      const isCurrent = Boolean(card && col.id === card.columnId);
+      const st = columnIdToStatus(col.id);
+      const isAllowed = allowedStatuses.includes(st);
+      return {
+        label: isCurrent && !isAllowed ? `${col.title} (Current)` : col.title,
+        value: col.id,
+      };
+    });
+
+    if (role === 'publisher') {
+      opts.push({
+        label: '+ Add new status...',
+        value: '__add_status__',
+      });
+    }
+
+    return opts;
+  }, [allColumns, card, columnId, allowedStatuses, role]);
 
   const typeOptions: DropdownOption[] = useMemo(() => [
     ...displayedCardTypes.map((t) => ({
@@ -288,6 +351,9 @@ export const CardDetail: React.FC<CardDetailProps> = ({
   const handleStatusSelect = (val: string) => {
     if (val === '__add_status__') {
       setIsAddStatusOpen(true);
+      return;
+    }
+    if (card && val !== card.columnId && !isStatusAllowedForUser(currentUserId, effectiveCard, val)) {
       return;
     }
     handleColumnSelect(val);
@@ -395,28 +461,15 @@ export const CardDetail: React.FC<CardDetailProps> = ({
     }
   };
 
-  if (!card) return null;
-
-  // Derive permissions
-  const role: CardRole =
-    currentUserRole ||
-    (currentUserId ? getCardRole(currentUserId, card) : 'viewer');
-
-  const canEditTitle = cardPermissions.canEditTitle(role);
-  const canEditDescription = cardPermissions.canEditDescription(role);
-  const canChangeAssignee = cardPermissions.canChangeAssignee(role);
-  const canMoveStatus = cardPermissions.canMoveStatus(role);
-  const canDeleteCard = cardPermissions.canDeleteCard(role);
-
-  const publisher = users.find((u) => u.id === card.publisherId);
+  const publisher = users.find((u) => u.id === card?.publisherId);
   const currentAssignee = users.find((u) => u.id === assigneeId);
   const currentUser = users.find((u) => u.id === currentUserId) || null;
 
   const relevantLogs = useMemo(() => {
-    if (!activityLogs) return [];
+    if (!activityLogs || !card) return [];
     const matched = activityLogs.filter((log) => log.cardId === card.id);
     return matched.length > 0 ? matched : activityLogs;
-  }, [activityLogs, card.id]);
+  }, [activityLogs, card?.id]);
 
   const handleTitleChange = (text: string) => {
     setTitle(text);
@@ -430,6 +483,9 @@ export const CardDetail: React.FC<CardDetailProps> = ({
 
   const handleColumnSelect = (colId: string) => {
     if (!canMoveStatus) return;
+    if (card && colId !== card.columnId && !isStatusAllowedForUser(currentUserId, effectiveCard, colId)) {
+      return;
+    }
     setColumnId(colId);
     setHasChanges(true);
   };
@@ -456,6 +512,9 @@ export const CardDetail: React.FC<CardDetailProps> = ({
 
   const handleSave = () => {
     if (!card) return;
+    if (columnId !== card.columnId && !isStatusAllowedForUser(currentUserId, effectiveCard, columnId)) {
+      return;
+    }
     const matchedType = cardTypes.find((t) => t.id === type);
     const parsedTypeId = !isNaN(Number(type)) ? Number(type) : card.typeId;
 
@@ -486,23 +545,29 @@ export const CardDetail: React.FC<CardDetailProps> = ({
   };
 
   // Role pill styling
-  const roleConfig = {
-    publisher: {
-      label: 'Publisher',
-      variant: 'accent' as const,
-      hint: 'You are the creator. You have full edit and delete permissions.',
-    },
-    assignee: {
-      label: 'Assignee',
-      variant: 'warn' as const,
-      hint: 'You are assigned. You can update the status and description.',
-    },
-    viewer: {
-      label: 'Viewer',
-      variant: 'neutral' as const,
-      hint: 'Read-only access. You cannot edit this card.',
-    },
-  }[role];
+  const roleConfig = isPublisher && isAssignee
+    ? {
+        label: 'Publisher & Assignee',
+        variant: 'accent' as const,
+        hint: 'You are both publisher and assignee. You can set any status.',
+      }
+    : {
+        publisher: {
+          label: 'Publisher',
+          variant: 'accent' as const,
+          hint: 'You are the creator. You have full edit and delete permissions.',
+        },
+        assignee: {
+          label: 'Assignee',
+          variant: 'warn' as const,
+          hint: 'You are assigned. You can update the status.',
+        },
+        viewer: {
+          label: 'Viewer',
+          variant: 'neutral' as const,
+          hint: 'Read-only access. You cannot edit this card.',
+        },
+      }[role];
 
   const cardBody = (
     <View style={styles.content}>
@@ -536,11 +601,11 @@ export const CardDetail: React.FC<CardDetailProps> = ({
             placeholder="Select status..."
             disabled={!canMoveStatus}
           />
-          {!canMoveStatus && (
+          {statusHint ? (
             <Text variant="caption" muted style={styles.helperText}>
-              Only the publisher or assignee can move card status.
+              {statusHint}
             </Text>
-          )}
+          ) : null}
         </View>
 
         <View style={styles.dropdownColumn}>
@@ -604,7 +669,7 @@ export const CardDetail: React.FC<CardDetailProps> = ({
           />
           {!canEditDescription && (
             <Text variant="caption" muted style={styles.helperText}>
-              Only the publisher or assignee can update the description.
+              Only the publisher can update the description.
             </Text>
           )}
         </View>
@@ -898,6 +963,8 @@ export const CardDetail: React.FC<CardDetailProps> = ({
       </View>
     </Modal>
   );
+
+  if (!card) return null;
 
   // 1. Full Screen Layout (Default)
   if (fullScreen) {

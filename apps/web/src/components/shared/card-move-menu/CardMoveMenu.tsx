@@ -3,6 +3,8 @@ import type { FC } from 'react';
 import {
   getCardRole,
   cardPermissions,
+  isStatusAllowedForUser,
+  getStatusPermissionHint,
   type CardRole,
 } from '@jira-clone/shared';
 import { Modal } from '../modal/Modal';
@@ -117,12 +119,21 @@ export const CardMoveMenu: FC<CardMoveMenuProps> = ({
     currentUserRole ||
     (currentUserId ? getCardRole(currentUserId, card) : 'viewer');
   const canMove = cardPermissions.canMoveStatus(role);
+  const statusHint = getStatusPermissionHint(currentUserId, card);
 
   const currentColumn = columns.find((c) => c.id === card.columnId);
   const sortedColumns = [...columns].sort((a, b) => a.order - b.order);
 
   const handleSelectColumn = async (colId: string) => {
-    if (!canMove || colId === card.columnId || loading || submittingColumnId) return;
+    if (
+      !canMove ||
+      colId === card.columnId ||
+      !isStatusAllowedForUser(currentUserId, card, colId) ||
+      loading ||
+      submittingColumnId
+    ) {
+      return;
+    }
 
     try {
       setSubmittingColumnId(colId);
@@ -203,25 +214,23 @@ export const CardMoveMenu: FC<CardMoveMenuProps> = ({
         </div>
 
         {/* Permission Banner */}
-        {!canMove && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '10px 12px',
-              borderRadius: 'var(--radius-card)',
-              backgroundColor: 'rgba(234, 179, 8, 0.12)',
-              border: '1px solid var(--color-warn, #eab308)',
-              color: 'var(--color-warn, #ca8a04)',
-            }}
-          >
-            <LockClosedIcon size={16} />
-            <Text variant="caption" style={{ color: 'inherit', fontWeight: 500 }}>
-              Only the publisher or assignee can move this card to another column.
-            </Text>
-          </div>
-        )}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 12px',
+            borderRadius: 'var(--radius-card)',
+            backgroundColor: !canMove ? 'rgba(234, 179, 8, 0.12)' : 'var(--color-paper)',
+            border: `1px solid ${!canMove ? 'var(--color-warn, #eab308)' : 'var(--color-line)'}`,
+            color: !canMove ? 'var(--color-warn, #ca8a04)' : 'var(--color-ink-muted)',
+          }}
+        >
+          <LockClosedIcon size={16} />
+          <Text variant="caption" style={{ color: 'inherit', fontWeight: 500 }}>
+            {statusHint}
+          </Text>
+        </div>
 
         {/* Position Placement Selector */}
         {canMove && (
@@ -314,8 +323,14 @@ export const CardMoveMenu: FC<CardMoveMenuProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {sortedColumns.map((col) => {
               const isCurrent = col.id === card.columnId;
+              const isAllowed = isStatusAllowedForUser(currentUserId, card, col.id);
               const isSubmitting = submittingColumnId === col.id;
-              const isRowDisabled = !canMove || isCurrent || loading || Boolean(submittingColumnId);
+              const isRowDisabled =
+                !canMove ||
+                isCurrent ||
+                !isAllowed ||
+                loading ||
+                Boolean(submittingColumnId);
 
               return (
                 <button
@@ -335,7 +350,7 @@ export const CardMoveMenu: FC<CardMoveMenuProps> = ({
                       ? 'var(--color-accent-soft, rgba(37, 99, 235, 0.08))'
                       : 'var(--color-surface)',
                     cursor: isRowDisabled ? 'not-allowed' : 'pointer',
-                    opacity: !canMove ? 0.6 : 1,
+                    opacity: !canMove || (!isCurrent && !isAllowed) ? 0.5 : 1,
                     textAlign: 'left',
                     transition: 'all 150ms ease',
                   }}
@@ -359,7 +374,11 @@ export const CardMoveMenu: FC<CardMoveMenuProps> = ({
                         width: 9,
                         height: 9,
                         borderRadius: 'var(--radius-pill)',
-                        backgroundColor: isCurrent ? 'var(--color-accent)' : 'var(--color-ink-muted)',
+                        backgroundColor: isCurrent
+                          ? 'var(--color-accent)'
+                          : !isAllowed
+                          ? 'var(--color-line)'
+                          : 'var(--color-ink-muted)',
                         flexShrink: 0,
                       }}
                     />
@@ -371,11 +390,15 @@ export const CardMoveMenu: FC<CardMoveMenuProps> = ({
                       >
                         {col.title}
                       </Text>
-                      {isCurrent && (
+                      {isCurrent ? (
                         <Text variant="caption" muted style={{ fontSize: 11 }}>
                           Current position
                         </Text>
-                      )}
+                      ) : !isAllowed ? (
+                        <Text variant="caption" muted style={{ fontSize: 11, color: 'var(--color-ink-muted)' }}>
+                          Not allowed for your role
+                        </Text>
+                      ) : null}
                     </div>
                   </div>
 
@@ -386,6 +409,10 @@ export const CardMoveMenu: FC<CardMoveMenuProps> = ({
                     ) : isCurrent ? (
                       <span style={{ color: 'var(--color-accent)' }}>
                         <CheckmarkCircleIcon size={18} />
+                      </span>
+                    ) : !isAllowed ? (
+                      <span style={{ color: 'var(--color-ink-muted)', opacity: 0.5 }}>
+                        <LockClosedIcon size={14} />
                       </span>
                     ) : (
                       <span style={{ color: 'var(--color-ink-muted)' }}>

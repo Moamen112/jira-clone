@@ -153,6 +153,7 @@ export function SpacesPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedSort, setSelectedSort] = useState('updated');
   const [currentPage, setCurrentPage] = useState(1);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
@@ -161,7 +162,7 @@ export function SpacesPage() {
   // Reset page to 1 when filters or ordering change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchQuery, selectedSort]);
+  }, [debouncedSearchQuery, selectedStatus, selectedSort]);
 
   // Load available users for the member picker in Create Space modal
   useEffect(() => {
@@ -181,6 +182,7 @@ export function SpacesPage() {
     refetch,
   } = useProjects({
     search: debouncedSearchQuery.trim() || undefined,
+    status: selectedStatus !== 'all' ? (selectedStatus as 'active' | 'done' | 'archived') : undefined,
     ordering: mapSortToOrdering(selectedSort),
     page: currentPage,
     pageSize,
@@ -203,7 +205,7 @@ export function SpacesPage() {
     setCurrentPage(1);
   };
 
-  const isSearchActive = Boolean(debouncedSearchQuery.trim());
+  const isFilterActive = Boolean(debouncedSearchQuery.trim()) || selectedStatus !== 'all';
 
   return (
     <div className={styles.container}>
@@ -238,6 +240,34 @@ export function SpacesPage() {
               inputWrapperStyle={{ minHeight: 38 }}
             />
           </div>
+
+          {/* Status Dropdown Filter */}
+          <div className={styles.filterDropdown}>
+            <Dropdown
+              value={selectedStatus}
+              options={[
+                { value: 'all', label: 'All Statuses' },
+                { value: 'active', label: 'Active' },
+                { value: 'done', label: 'Done' },
+                { value: 'archived', label: 'Archived' },
+              ]}
+              onSelect={setSelectedStatus}
+              placeholder="Filter by status"
+            />
+          </div>
+
+          {/* Clear Filter Button */}
+          {isFilterActive && (
+            <Button
+              label="Clear filters"
+              variant="tertiary"
+              size="sm"
+              onPress={() => {
+                setSearchQuery('');
+                setSelectedStatus('all');
+              }}
+            />
+          )}
         </div>
 
         {/* Sort Dropdown */}
@@ -275,8 +305,8 @@ export function SpacesPage() {
         </div>
       ) : !isLoading && spaces.length === 0 ? (
         /* Empty State */
-        isSearchActive ? (
-          /* Case 1: Search query returned 0 results */
+        isFilterActive ? (
+          /* Case 1: Search / filter query returned 0 results */
           <div className={styles.emptyCard} role="status">
             <div className={styles.emptyGraphicWrapper}>
               <div className={styles.emptyGraphicGlow} />
@@ -284,15 +314,18 @@ export function SpacesPage() {
             </div>
             <h2 className={styles.emptyTitle}>No spaces found</h2>
             <p className={styles.emptyDescription}>
-              We couldn&apos;t find any spaces matching &ldquo;<strong>{debouncedSearchQuery}</strong>&rdquo;.
-              Check for typos or try searching with a different name or project key.
+              We couldn&apos;t find any spaces matching your current filters.
+              Try adjusting your search terms or clearing the status filter.
             </p>
             <div className={styles.emptyActions}>
               <Button
-                label="Clear search"
+                label="Clear filters"
                 variant="secondary"
                 size="md"
-                onPress={() => setSearchQuery('')}
+                onPress={() => {
+                  setSearchQuery('');
+                  setSelectedStatus('all');
+                }}
               />
               <Button
                 label="Create space"

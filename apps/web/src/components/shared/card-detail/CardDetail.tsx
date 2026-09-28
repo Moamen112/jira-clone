@@ -11,6 +11,14 @@ import {
   type CardTypeOption,
   getCardRole,
   cardPermissions,
+  getAllowedStatusesForUser,
+  isStatusAllowedForUser,
+  getStatusPermissionHint,
+  isCardPublisher,
+  isCardAssignee,
+  PUBLISHER_ALLOWED_STATUSES,
+  ALL_TASK_STATUSES,
+  columnIdToStatus,
   createStatusColumn,
   createCardType,
   DEFAULT_CARD_TYPES,
@@ -360,17 +368,61 @@ export const CardDetail: FC<CardDetailProps> = ({
     }
   }
 
-  if (!visible) return null;
-  if (!isCreating && !card) return null;
+  // Construct effective card participant info (including current draft assignee)
+  const effectiveCard = useMemo(() => {
+    if (!card) {
+      if (isCreating && currentUserId) {
+        return {
+          publisherId: currentUserId,
+          assigneeId: draftAssigneeId,
+          assigneeIds: draftAssigneeIds,
+        };
+      }
+      return null;
+    }
+    return {
+      ...card,
+      publisherId: card.publisherId || currentUserId || '',
+      assigneeId: draftAssigneeId !== undefined ? draftAssigneeId : card.assigneeId,
+      assigneeIds:
+        draftAssigneeIds && draftAssigneeIds.length > 0
+          ? draftAssigneeIds
+          : card.assigneeId
+          ? [card.assigneeId]
+          : (card.assigneeIds || []),
+    };
+  }, [card, isCreating, currentUserId, draftAssigneeId, draftAssigneeIds]);
+
+  // Derive allowed destination statuses for the current user
+  const allowedStatuses = useMemo(() => {
+    if (!effectiveCard) {
+      return isCreating ? PUBLISHER_ALLOWED_STATUSES : [];
+    }
+    return getAllowedStatusesForUser(currentUserId, effectiveCard);
+  }, [effectiveCard, isCreating, currentUserId]);
+
+  const statusHint = useMemo(() => {
+    if (!effectiveCard) {
+      return isCreating
+        ? "New tasks start in To Do by default. Publishers can choose To Do or Done."
+        : "";
+    }
+    return getStatusPermissionHint(currentUserId, effectiveCard);
+  }, [effectiveCard, isCreating, currentUserId]);
+
+  const isPublisher = isCardPublisher(currentUserId, effectiveCard);
+  const isAssignee = isCardAssignee(currentUserId, effectiveCard);
 
   // Derive permissions
   const role: CardRole =
     currentUserRole ||
-    (currentUserId && card ? getCardRole(currentUserId, card) : "publisher");
+    (isPublisher ? 'publisher' : isAssignee ? 'assignee' : 'viewer');
 
   const canEditTitle = isCreating ? true : cardPermissions.canEditTitle(role);
   const canEditDescription = isCreating ? true : cardPermissions.canEditDescription(role);
-  const canMoveStatus = isCreating ? true : cardPermissions.canMoveStatus(role);
+  const canMoveStatus = isCreating
+    ? true
+    : (isPublisher || isAssignee || cardPermissions.canMoveStatus(role)) && allowedStatuses.length > 0;
   const canChangeAssignee = isCreating ? true : cardPermissions.canChangeAssignee(role);
   const canEditDates = isCreating ? true : cardPermissions.canEditDates(role);
   const canDeleteCard = isCreating ? false : cardPermissions.canDeleteCard(role);
@@ -406,40 +458,65 @@ export const CardDetail: FC<CardDetailProps> = ({
       : [];
 
   const roleLabel =
-    role === "publisher"
-      ? "Publisher"
-      : role === "assignee"
-        ? "Assignee"
-        : "Viewer";
+    isPublisher && isAssignee
+      ? "Publisher & Assignee"
+      : role === "publisher"
+        ? "Publisher"
+        : role === "assignee"
+          ? "Assignee"
+          : "Viewer";
 
-  const statusOptions: DropdownOption[] = allColumns.map((col) => {
-    const colColor =
-      col.color ||
-      (col.id.includes("done")
-        ? "#10B981"
-        : col.id.includes("review")
-          ? "var(--color-accent)"
-          : col.id.includes("progress")
-            ? "#3B82F6"
-            : "var(--color-ink-muted)");
+  const statusOptions: DropdownOption[] = allColumns
+    .filter((col) => {
+      if (isCreating) {
+        const st = columnIdToStatus(col.id);
+        return allowedStatuses.includes(st);
+      }
+      if (!card) return true;
+      // Always include current column so it displays in the selector
+      if (col.id === draftColumnId || col.id === card.columnId) {
+        return true;
+      }
+      const st = columnIdToStatus(col.id);
+      return allowedStatuses.includes(st);
+    })
+    .map((col) => {
+      const colColor =
+        col.color ||
+        (col.id.includes("done")
+          ? "#10B981"
+          : col.id.includes("review")
+            ? "var(--color-accent)"
+            : col.id.includes("progress")
+              ? "#3B82F6"
+              : "var(--color-ink-muted)");
 
-    return {
-      label: col.title,
-      value: col.id,
-      icon: (
-        <span
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: "var(--radius-pill)",
-            backgroundColor: colColor,
-            display: "inline-block",
-            flexShrink: 0,
-          }}
-        />
-      ),
-    };
-  });
+      const isCurrent = Boolean(card && col.id === card.columnId);
+      const st = columnIdToStatus(col.id);
+      const isAllowed = allowedStatuses.includes(st);
+
+      let label = col.title;
+      if (isCurrent && !isAllowed) {
+        label = `${col.title} (Current)`;
+      }
+
+      return {
+        label,
+        value: col.id,
+        icon: (
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "var(--radius-pill)",
+              backgroundColor: colColor,
+              display: "inline-block",
+              flexShrink: 0,
+            }}
+          />
+        ),
+      };
+    });
 
   const typeOptions: DropdownOption[] = displayedCardTypes.map((t) => ({
     label: t.label,
@@ -515,6 +592,13 @@ export const CardDetail: FC<CardDetailProps> = ({
 
   const handleSave = async () => {
     if (!onSave || !hasChanges || !card) return;
+
+    if (draftColumnId && card.columnId !== draftColumnId) {
+      if (!isStatusAllowedForUser(currentUserId, effectiveCard, draftColumnId)) {
+        setStatusFieldError(statusHint || "You are not allowed to transition this card to this status.");
+        return;
+      }
+    }
 
     try {
       setIsSaving(true);
@@ -636,6 +720,8 @@ export const CardDetail: FC<CardDetailProps> = ({
     setDeleteConfirmVisible(false);
     onClose?.();
   };
+
+  if (!visible || (!isCreating && !card)) return null;
 
   return (
     <>
@@ -929,19 +1015,39 @@ export const CardDetail: FC<CardDetailProps> = ({
 
               {/* Status Selector (Mandatory) */}
               {allColumns.length > 0 && (
-                <Dropdown
-                  label="Status"
-                  value={draftColumnId}
-                  options={statusOptions}
-                  onSelect={(val) => {
-                    setDraftColumnId(val);
-                    if (statusFieldError) setStatusFieldError(undefined);
-                  }}
-                  error={statusFieldError}
-                  disabled={!canMoveStatus}
-                  placeholder="Select status..."
-                  style={{ marginBottom: 0 }}
-                />
+                <div>
+                  <Dropdown
+                    label="Status"
+                    value={draftColumnId}
+                    options={statusOptions}
+                    onSelect={(val) => {
+                      if (!isCreating && card && !isStatusAllowedForUser(currentUserId, card, val)) {
+                        setStatusFieldError(statusHint || "You do not have permission to choose this status.");
+                        return;
+                      }
+                      setDraftColumnId(val);
+                      if (statusFieldError) setStatusFieldError(undefined);
+                    }}
+                    error={statusFieldError}
+                    disabled={!canMoveStatus}
+                    placeholder="Select status..."
+                    style={{ marginBottom: 0 }}
+                  />
+                  {statusHint && (
+                    <Text
+                      variant="caption"
+                      muted
+                      style={{
+                        display: "block",
+                        marginTop: 4,
+                        fontSize: 11,
+                        lineHeight: "14px",
+                      }}
+                    >
+                      {statusHint}
+                    </Text>
+                  )}
+                </div>
               )}
 
               {/* Type Selector (Mandatory) */}

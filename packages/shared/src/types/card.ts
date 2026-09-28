@@ -22,6 +22,7 @@ export interface Card {
   dueDate?: string;
   createdAt: string;
   updatedAt: string;
+  allowedStatuses?: string[];
 }
 
 export interface CreateCardInput {

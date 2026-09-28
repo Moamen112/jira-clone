@@ -107,6 +107,7 @@ export function backendTaskToCard(task: BackendTask): Card {
     dueDate: task.due_date ? task.due_date : undefined,
     createdAt: task.created_at,
     updatedAt: task.updated_at,
+    allowedStatuses: task.allowed_statuses ? (task.allowed_statuses as string[]) : undefined,
   };
 }
 

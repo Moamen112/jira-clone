@@ -13,6 +13,8 @@ import {
   CardRole,
   getCardRole,
   cardPermissions,
+  isStatusAllowedForUser,
+  getStatusPermissionHint,
 } from '@jira-clone/shared';
 import { Modal } from '../../base/modal/Modal';
 import { Text } from '../../base/typography/Text';
@@ -75,12 +77,20 @@ export const CardMoveMenu: React.FC<CardMoveMenuProps> = ({
     currentUserRole ||
     (currentUserId ? getCardRole(currentUserId, card) : 'viewer');
   const canMove = cardPermissions.canMoveStatus(role);
+  const statusHint = getStatusPermissionHint(currentUserId, card);
 
   const currentColumn = columns.find((c) => c.id === card.columnId);
   const sortedColumns = [...columns].sort((a, b) => a.order - b.order);
 
   const handleSelectColumn = async (colId: string) => {
-    if (!canMove || colId === card.columnId || loading) return;
+    if (
+      !canMove ||
+      colId === card.columnId ||
+      !isStatusAllowedForUser(currentUserId, card, colId) ||
+      loading
+    ) {
+      return;
+    }
 
     try {
       setSubmittingColumnId(colId);
@@ -133,17 +143,30 @@ export const CardMoveMenu: React.FC<CardMoveMenuProps> = ({
         </View>
 
         {/* Permission Notice */}
-        {!canMove && (
-          <View style={[styles.permissionBanner, { backgroundColor: colors.warnSoft }]}>
-            <LockClosedIcon
-              size={16}
-              color={colors.warn}
-            />
-            <Text variant="caption" style={[styles.permissionText, { color: colors.warn }]}>
-              Only the publisher or assignee can move this card to another column.
-            </Text>
-          </View>
-        )}
+        <View
+          style={[
+            styles.permissionBanner,
+            {
+              backgroundColor: !canMove ? colors.warnSoft : colors.paper,
+              borderColor: !canMove ? colors.warn : colors.line,
+              borderWidth: 1,
+            },
+          ]}
+        >
+          <LockClosedIcon
+            size={16}
+            color={!canMove ? colors.warn : colors.inkMuted}
+          />
+          <Text
+            variant="caption"
+            style={[
+              styles.permissionText,
+              { color: !canMove ? colors.warn : colors.inkMuted },
+            ]}
+          >
+            {statusHint}
+          </Text>
+        </View>
 
         {/* Position Placement Selector */}
         {canMove && (
@@ -226,19 +249,26 @@ export const CardMoveMenu: React.FC<CardMoveMenuProps> = ({
           <View style={styles.columnList}>
             {sortedColumns.map((col) => {
               const isCurrent = col.id === card.columnId;
+              const isAllowed = isStatusAllowedForUser(currentUserId, card, col.id);
               const isSubmitting = submittingColumnId === col.id;
+              const isRowDisabled =
+                !canMove ||
+                isCurrent ||
+                !isAllowed ||
+                loading ||
+                Boolean(isSubmitting);
 
               return (
                 <Pressable
                   key={col.id}
-                  disabled={!canMove || isCurrent || loading || isSubmitting}
+                  disabled={isRowDisabled}
                   onPress={() => handleSelectColumn(col.id)}
                   style={({ pressed }) => [
                     styles.columnRow,
                     { backgroundColor: colors.surface, borderColor: colors.line },
                     isCurrent && { backgroundColor: colors.accentSoft, borderColor: colors.accent },
-                    pressed && canMove && !isCurrent && { backgroundColor: colors.paper },
-                    !canMove && styles.columnRowDisabled,
+                    pressed && canMove && isAllowed && !isCurrent && { backgroundColor: colors.paper },
+                    (!canMove || (!isCurrent && !isAllowed)) && styles.columnRowDisabled,
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel={`Move to ${col.title}`}
@@ -248,7 +278,7 @@ export const CardMoveMenu: React.FC<CardMoveMenuProps> = ({
                     <View
                       style={[
                         styles.statusDot,
-                        { backgroundColor: colors.inkMuted },
+                        { backgroundColor: !isAllowed ? colors.line : colors.inkMuted },
                         isCurrent && { backgroundColor: colors.accent },
                       ]}
                     />
@@ -260,15 +290,20 @@ export const CardMoveMenu: React.FC<CardMoveMenuProps> = ({
                           styles.columnTitleText,
                           { color: colors.ink },
                           isCurrent && { color: colors.accent },
+                          !isCurrent && !isAllowed && { color: colors.inkMuted },
                         ]}
                       >
                         {col.title}
                       </Text>
-                      {isCurrent && (
+                      {isCurrent ? (
                         <Text variant="caption" muted style={{ fontSize: 11 }}>
                           Current position
                         </Text>
-                      )}
+                      ) : !isAllowed ? (
+                        <Text variant="caption" muted style={{ fontSize: 11, color: colors.inkMuted }}>
+                          Not allowed for your role
+                        </Text>
+                      ) : null}
                     </View>
                   </View>
 
@@ -278,6 +313,11 @@ export const CardMoveMenu: React.FC<CardMoveMenuProps> = ({
                       <CheckmarkCircleIcon
                         size={18}
                         color={colors.accent}
+                      />
+                    ) : !isAllowed ? (
+                      <LockClosedIcon
+                        size={14}
+                        color={colors.inkMuted}
                       />
                     ) : (
                       <ArrowForwardIcon

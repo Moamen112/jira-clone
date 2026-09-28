@@ -10,6 +10,9 @@ import {
   useProjects,
   useTasks,
   useAuth,
+  useDebounce,
+  isStatusAllowedForUser,
+  getStatusPermissionHint,
   projectService,
 } from '@jira-clone/shared';
 import { Text, Modal, Button, Input, Dropdown } from '../../../src/components/base';
@@ -29,6 +32,7 @@ export default function SpacesProjectScreen() {
   const router = useRouter();
   const { projectId, from } = useLocalSearchParams<{ projectId?: string; from?: string }>();
   const { user } = useAuth();
+  const currentUserId = user?.id ? String(user.id) : undefined;
   const { spaces, projects } = useProjects();
 
   const [directProject, setDirectProject] = useState<BackendProject | null>(null);
@@ -99,7 +103,27 @@ export default function SpacesProjectScreen() {
   const activeProjectId = project?.id;
   const activeProjectKey = project?.key;
 
-  // Real backend tasks hook
+  // Board filter states (connected to backend API)
+  const [boardSearch, setBoardSearch] = useState('');
+  const debouncedBoardSearch = useDebounce(boardSearch, 300);
+  const [assignedToMeFilter, setAssignedToMeFilter] = useState(false);
+  const [createdByMeFilter, setCreatedByMeFilter] = useState(false);
+  const [selectedUserIdsFilter, setSelectedUserIdsFilter] = useState<string[]>([]);
+
+  // Derive server query params
+  const serverAssignee = useMemo(() => {
+    if (selectedUserIdsFilter.length === 1 && selectedUserIdsFilter[0] !== 'unassigned') {
+      const parsed = Number(selectedUserIdsFilter[0]);
+      return !isNaN(parsed) && parsed > 0 ? parsed : undefined;
+    }
+    return undefined;
+  }, [selectedUserIdsFilter]);
+
+  const serverUnassigned = useMemo(() => {
+    return selectedUserIdsFilter.includes('unassigned') ? true : undefined;
+  }, [selectedUserIdsFilter]);
+
+  // Real backend tasks hook with query filters
   const {
     cards,
     columns,
@@ -112,7 +136,24 @@ export default function SpacesProjectScreen() {
     projectId: activeProjectId,
     projectKey: activeProjectKey,
     autoFetch: Boolean(activeProjectId),
+    search: debouncedBoardSearch.trim() || undefined,
+    mine: assignedToMeFilter ? true : undefined,
+    assignee: serverAssignee,
+    unassigned: serverUnassigned,
   });
+
+  const handleClearBoardFilters = () => {
+    setBoardSearch('');
+    setAssignedToMeFilter(false);
+    setCreatedByMeFilter(false);
+    setSelectedUserIdsFilter([]);
+  };
+
+  const handleToggleUserIdFilter = (userId: string) => {
+    setSelectedUserIdsFilter((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
 
   // Show status error alert when permission is denied on status transition
   useEffect(() => {
@@ -192,6 +233,13 @@ export default function SpacesProjectScreen() {
     targetCard: CardType,
     _position?: CardPosition
   ) => {
+    if (!isStatusAllowedForUser(currentUserId, targetCard, columnId)) {
+      Alert.alert(
+        'Permission Denied',
+        getStatusPermissionHint(currentUserId, targetCard)
+      );
+      return;
+    }
     try {
       await updateTaskStatus(targetCard.id, columnId);
     } catch (err: unknown) {
@@ -363,6 +411,17 @@ export default function SpacesProjectScreen() {
         cards={cards}
         users={members}
         currentUserId={currentUserId}
+        searchQuery={boardSearch}
+        onSearchChange={setBoardSearch}
+        assignedToMe={assignedToMeFilter}
+        onToggleAssignedToMe={() => setAssignedToMeFilter((v) => !v)}
+        createdByMe={createdByMeFilter}
+        onToggleCreatedByMe={() => setCreatedByMeFilter((v) => !v)}
+        selectedUserIds={selectedUserIdsFilter}
+        onToggleUserId={handleToggleUserIdFilter}
+        onClearFilters={handleClearBoardFilters}
+        isServerFiltered={true}
+        totalCardsCount={project?.taskCount}
         onCardPress={handleCardPress}
         onCardMove={handleCardMove}
         onCardAssigneeChange={handleCardAssigneeChange}

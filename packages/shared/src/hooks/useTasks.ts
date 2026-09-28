@@ -20,6 +20,7 @@ import type {
   BackendTaskType,
   CreateTaskPayload,
   UpdateTaskPayload,
+  TaskListParams,
   BackendComment,
   BackendActivityEntry,
 } from '../types/task';
@@ -32,6 +33,14 @@ export interface UseTasksOptions {
   projectId?: string | number;
   projectKey?: string;
   autoFetch?: boolean;
+  search?: string;
+  status?: string;
+  type?: string | number;
+  assignee?: string | number;
+  reporter?: string | number;
+  unassigned?: boolean;
+  mine?: boolean;
+  ordering?: string;
 }
 
 export interface CreateTaskInput {
@@ -49,7 +58,19 @@ export interface CreateTaskInput {
  * and activity logs for a project across Web and Mobile.
  */
 export function useTasks(options: UseTasksOptions = {}) {
-  const { projectId, projectKey, autoFetch = true } = options;
+  const {
+    projectId,
+    projectKey,
+    autoFetch = true,
+    search,
+    status,
+    type,
+    assignee,
+    reporter,
+    unassigned,
+    mine,
+    ordering,
+  } = options;
 
   const state = useSyncExternalStore(
     subscribeTaskState,
@@ -61,9 +82,10 @@ export function useTasks(options: UseTasksOptions = {}) {
 
   // Get tasks for the current project
   const tasks = useMemo<BackendTask[]>(() => {
-    if (!projKeyStr) return [];
-    return state.tasksByProject[projKeyStr] || [];
-  }, [state.tasksByProject, projKeyStr]);
+    const key = projKeyStr || (projectKey ? projectKey.toLowerCase() : '');
+    if (!key) return [];
+    return state.tasksByProject[key] || [];
+  }, [state.tasksByProject, projKeyStr, projectKey]);
 
   // Get task types for the current project
   const taskTypes = useMemo<BackendTaskType[]>(() => {
@@ -97,66 +119,138 @@ export function useTasks(options: UseTasksOptions = {}) {
   /**
    * Fetches tasks for the project from backend API.
    */
-  const fetchTasks = useCallback(async (): Promise<BackendTask[]> => {
-    if (!projectId && !projectKey) return [];
-    setInternalTaskState({ isLoading: true, error: null });
+  const fetchTasks = useCallback(
+    async (overrideParams?: TaskListParams): Promise<BackendTask[]> => {
+      if (!projectId && !projectKey) return [];
+      setInternalTaskState({ isLoading: true, error: null });
 
-    try {
-      const numericProjectId = projectId ? Number(projectId) : undefined;
-      const data = await taskService.getTasks({
-        project: numericProjectId && !isNaN(numericProjectId) ? numericProjectId : undefined,
-        project_key: projectKey || (!numericProjectId ? String(projectId) : undefined),
-      });
+      try {
+        const numericProjectId = projectId ? Number(projectId) : undefined;
+        const params: TaskListParams = {
+          project:
+            overrideParams?.project !== undefined
+              ? overrideParams.project
+              : numericProjectId && !isNaN(numericProjectId)
+              ? numericProjectId
+              : undefined,
+          project_key:
+            overrideParams?.project_key !== undefined
+              ? overrideParams.project_key
+              : projectKey || (!numericProjectId ? String(projectId) : undefined),
+          search:
+            overrideParams?.search !== undefined
+              ? overrideParams.search
+              : search
+              ? search.trim()
+              : undefined,
+          status: overrideParams?.status !== undefined ? overrideParams.status : status || undefined,
+          type:
+            overrideParams?.type !== undefined
+              ? overrideParams.type
+              : type && !isNaN(Number(type))
+              ? Number(type)
+              : undefined,
+          assignee:
+            overrideParams?.assignee !== undefined
+              ? overrideParams.assignee
+              : assignee && !isNaN(Number(assignee))
+              ? Number(assignee)
+              : undefined,
+          reporter:
+            overrideParams?.reporter !== undefined
+              ? overrideParams.reporter
+              : reporter && !isNaN(Number(reporter))
+              ? Number(reporter)
+              : undefined,
+          unassigned:
+            overrideParams?.unassigned !== undefined
+              ? overrideParams.unassigned
+              : unassigned
+              ? true
+              : undefined,
+          mine: overrideParams?.mine !== undefined ? overrideParams.mine : mine ? true : undefined,
+          ordering:
+            overrideParams?.ordering !== undefined ? overrideParams.ordering : ordering || undefined,
+        };
 
-      const targetKey = projKeyStr || String(data[0]?.project?.id || 'default');
+        const cleanedParams = Object.entries(params).reduce<Record<string, unknown>>(
+          (acc, [key, value]) => {
+            if (value !== undefined && value !== '') {
+              acc[key] = value;
+            }
+            return acc;
+          },
+          {}
+        ) as TaskListParams;
 
-      // Preserve existing descriptions in store (from card creation or prior detail fetches)
-      const existingTasks = getTaskState().tasksByProject[targetKey] || [];
-      const existingDescMap = new Map<number, string>();
-      for (const t of existingTasks) {
-        if (t.description) {
-          existingDescMap.set(t.id, t.description);
+        const data = await taskService.getTasks(cleanedParams);
+
+        const targetKey =
+          projKeyStr ||
+          (projectKey ? projectKey.toLowerCase() : '') ||
+          String(data[0]?.project?.id || 'default');
+
+        // Preserve existing descriptions in store (from card creation or prior detail fetches)
+        const existingTasks = getTaskState().tasksByProject[targetKey] || [];
+        const existingDescMap = new Map<number, string>();
+        for (const t of existingTasks) {
+          if (t.description) {
+            existingDescMap.set(t.id, t.description);
+          }
         }
-      }
 
-      const mergedData = data.map((task) => {
-        if (!task.description && existingDescMap.has(task.id)) {
-          return { ...task, description: existingDescMap.get(task.id) };
-        }
-        return task;
-      });
-
-      setInternalTaskState({
-        tasksByProject: {
-          ...getTaskState().tasksByProject,
-          [targetKey]: mergedData,
-        },
-        isLoading: false,
-        error: null,
-      });
-
-      // Background-fetch full task details for each task to get description, comment_count, activity_count
-      if (data.length > 0) {
-        Promise.allSettled(data.map((t) => taskService.getTask(t.id))).then((results) => {
-          const detailedTasks = results.map((res, i) =>
-            res.status === 'fulfilled' ? res.value : mergedData[i]
-          );
-          setInternalTaskState({
-            tasksByProject: {
-              ...getTaskState().tasksByProject,
-              [targetKey]: detailedTasks,
-            },
-          });
+        const mergedData = data.map((task) => {
+          if (!task.description && existingDescMap.has(task.id)) {
+            return { ...task, description: existingDescMap.get(task.id) };
+          }
+          return task;
         });
-      }
 
-      return mergedData;
-    } catch (err: unknown) {
-      const errorMsg = parseErrorMessage(err);
-      setInternalTaskState({ isLoading: false, error: errorMsg });
-      throw new Error(errorMsg);
-    }
-  }, [projectId, projectKey, projKeyStr]);
+        setInternalTaskState({
+          tasksByProject: {
+            ...getTaskState().tasksByProject,
+            [targetKey]: mergedData,
+          },
+          isLoading: false,
+          error: null,
+        });
+
+        // Background-fetch full task details for each task to get description, comment_count, activity_count
+        if (data.length > 0) {
+          Promise.allSettled(data.map((t) => taskService.getTask(t.id))).then((results) => {
+            const detailedTasks = results.map((res, i) =>
+              res.status === 'fulfilled' ? res.value : mergedData[i]
+            );
+            setInternalTaskState({
+              tasksByProject: {
+                ...getTaskState().tasksByProject,
+                [targetKey]: detailedTasks,
+              },
+            });
+          });
+        }
+
+        return mergedData;
+      } catch (err: unknown) {
+        const errorMsg = parseErrorMessage(err);
+        setInternalTaskState({ isLoading: false, error: errorMsg });
+        throw new Error(errorMsg);
+      }
+    },
+    [
+      projectId,
+      projectKey,
+      projKeyStr,
+      search,
+      status,
+      type,
+      assignee,
+      reporter,
+      unassigned,
+      mine,
+      ordering,
+    ]
+  );
 
   /**
    * Fetches task types for the project.
@@ -188,12 +282,19 @@ export function useTasks(options: UseTasksOptions = {}) {
     await Promise.allSettled([fetchTasks(), fetchTaskTypes()]);
   }, [fetchTasks, fetchTaskTypes]);
 
-  // Auto-fetch on mount or when projectId changes
+  // Auto-fetch tasks when project or filters change
   useEffect(() => {
     if (autoFetch && (projectId || projectKey)) {
-      refetch();
+      fetchTasks();
     }
-  }, [autoFetch, projectId, projectKey, refetch]);
+  }, [autoFetch, projectId, projectKey, fetchTasks]);
+
+  // Auto-fetch task types when project changes
+  useEffect(() => {
+    if (autoFetch && projectId) {
+      fetchTaskTypes();
+    }
+  }, [autoFetch, projectId, fetchTaskTypes]);
 
   /**
    * Creates a new task.

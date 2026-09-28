@@ -108,6 +108,7 @@ export default function SpacesIndexScreen() {
   const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   // Fetch projects from the API
@@ -117,6 +118,7 @@ export default function SpacesIndexScreen() {
     refetch,
   } = useProjects({
     search: debouncedSearchQuery.trim() || undefined,
+    status: selectedStatus !== 'all' ? (selectedStatus as 'active' | 'done' | 'archived') : undefined,
   });
 
   // Use API projects if available; fallback to mockProjects when offline or empty during dev
@@ -147,11 +149,16 @@ export default function SpacesIndexScreen() {
       .filter((p): p is Project => Boolean(p));
   }, [recentlyViewedIds, projects]);
 
+  const isFilterActive = Boolean(debouncedSearchQuery.trim()) || selectedStatus !== 'all';
+
   // Filtered list for "All Spaces" container (default sorted by updated / latest)
   const filteredProjects = useMemo(() => {
-    const filtered = filterProjects(projects, debouncedSearchQuery);
+    let filtered = filterProjects(projects, debouncedSearchQuery);
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter((p) => p.status === selectedStatus);
+    }
     return sortProjects(filtered, 'updated');
-  }, [projects, debouncedSearchQuery]);
+  }, [projects, debouncedSearchQuery, selectedStatus]);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.paper }]}>
@@ -281,6 +288,47 @@ export default function SpacesIndexScreen() {
             containerStyle={styles.searchInput}
           />
 
+          {/* Status Filter Pills */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.statusPillsContainer}
+          >
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'active', label: 'Active' },
+              { id: 'done', label: 'Done' },
+              { id: 'archived', label: 'Archived' },
+            ].map((st) => {
+              const isSelected = selectedStatus === st.id;
+              return (
+                <Pressable
+                  key={st.id}
+                  onPress={() => setSelectedStatus(st.id)}
+                  style={[
+                    styles.statusPill,
+                    {
+                      backgroundColor: isSelected ? colors.accent : colors.paper,
+                      borderColor: isSelected ? colors.accent : colors.line,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                >
+                  <Text
+                    variant="caption"
+                    bold={isSelected}
+                    style={{
+                      color: isSelected ? '#FFFFFF' : colors.inkMuted,
+                    }}
+                  >
+                    {st.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
           {filteredProjects.length > 0 ? (
             <View style={styles.verticalCardList}>
               {filteredProjects.map((project) => (
@@ -296,16 +344,17 @@ export default function SpacesIndexScreen() {
             </View>
           ) : (
             <EmptyState
-              title={debouncedSearchQuery ? 'No spaces found' : 'No spaces yet'}
+              title={isFilterActive ? 'No spaces found' : 'No spaces yet'}
               description={
-                debouncedSearchQuery
-                  ? `No spaces match "${debouncedSearchQuery}".`
+                isFilterActive
+                  ? 'No spaces match your active search or status filters.'
                   : 'Spaces help you track and organize your team Kanban projects.'
               }
-              actionLabel={debouncedSearchQuery ? 'Clear Filter' : 'Refresh Spaces'}
+              actionLabel={isFilterActive ? 'Clear Filters' : 'Refresh Spaces'}
               onAction={() => {
-                if (debouncedSearchQuery) {
+                if (isFilterActive) {
                   setSearchQuery('');
+                  setSelectedStatus('all');
                 } else {
                   refetch();
                 }
@@ -372,6 +421,18 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     marginBottom: 0,
+  },
+  statusPillsContainer: {
+    flexDirection: 'row',
+    gap: spacing[2],
+    paddingTop: spacing[1],
+    paddingBottom: spacing[1],
+  },
+  statusPill: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+    borderWidth: 1,
   },
   verticalCardList: {
     gap: spacing[3],
