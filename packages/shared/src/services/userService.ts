@@ -1,7 +1,7 @@
 import { apiClient } from '../lib/apiClient';
 import { API_ENDPOINTS } from '../lib/endpoints';
 import type { BackendProjectOwner, PaginatedResponse } from '../types/project';
-import type { User } from '../types/user';
+import type { User, DashboardResponse } from '../types/user';
 import { getInitials } from '../utils/spaces';
 
 /**
@@ -32,4 +32,20 @@ export const userService = {
     const response = await apiClient.get<BackendProjectOwner>(API_ENDPOINTS.USERS.ME);
     return response.data;
   },
+
+  /**
+   * Retrieves dashboard statistics and recent tasks for the current user.
+   */
+  async getDashboard(params?: {
+    limit?: number;
+    created_after?: string;
+    created_before?: string;
+  }): Promise<DashboardResponse> {
+    const response = await apiClient.get<DashboardResponse>(
+      API_ENDPOINTS.USERS.DASHBOARD,
+      { params }
+    );
+    return response.data;
+  },
 };
+

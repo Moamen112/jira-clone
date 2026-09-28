@@ -1,24 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { View, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   mockCards,
-  mockColumns,
   mockProjects,
   mockUsers,
   mockCurrentUser,
   mockActivityLogs,
   Card as CardType,
   BoardColumn,
+  User,
+  Project,
+  DashboardStats,
+  ActivityLog as ActivityLogType,
   useAuth,
   useProjects,
+  userService,
   taskService,
   backendTaskToCard,
+  backendActivityToActivityLog,
+  createDefaultBoardColumns,
 } from '@jira-clone/shared';
 import { Text, Badge, Avatar } from '../../src/components/base';
 import { StatusBar } from '../../src/components/shared/status-bar';
 import { PriorityBadge } from '../../src/components/shared/priority-badge';
 import { ActivityLog } from '../../src/components/shared/activity-log';
+import { EmptyState } from '../../src/components/shared/empty-state';
 import { useTheme, spacing, radius } from '../../src/tokens';
 
 function getGreeting(): string {
@@ -28,12 +35,21 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
-function getStatus(columnId: string): BoardColumn {
+function getStatus(card: CardType): BoardColumn {
+  const cols = createDefaultBoardColumns(card.projectId || 'default');
   return (
-    mockColumns.find((c) => c.id === columnId) ?? {
-      id: columnId,
-      projectId: '',
-      title: 'Unknown',
+    cols.find((c) => c.id === card.columnId) ?? {
+      id: card.columnId,
+      projectId: card.projectId || '',
+      title: card.columnId.includes('done')
+        ? 'Done'
+        : card.columnId.includes('review')
+          ? 'In Review'
+          : card.columnId.includes('qa')
+            ? 'QA Review'
+            : card.columnId.includes('progress')
+              ? 'In Progress'
+              : 'To Do',
       order: 0,
     }
   );
@@ -47,31 +63,85 @@ function isAssignedToUser(card: CardType, userId: string): boolean {
 }
 
 /**
- * Home dashboard — greeting, theme switcher, quick stats, my work,
- * project shortcuts, and recent activity. Deep-links into the Spaces stack.
+ * Home dashboard — greeting, live KPIs, my work tasks, project shortcuts,
+ * and recent activity. Deep-links into the Spaces stack.
  */
 export default function HomeScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
-  const { projects } = useProjects();
+  const { plainProjects, fetchProjects } = useProjects();
+
   const [liveCards, setLiveCards] = useState<CardType[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [liveActivityLogs, setLiveActivityLogs] = useState<ActivityLogType[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadData = useCallback(async () => {
+    try {
+      // 1. Fetch dashboard stats
+      userService
+        .getDashboard()
+        .then((res) => {
+          if (res?.stats) {
+            setDashboardStats(res.stats);
+          }
+        })
+        .catch(() => {});
+
+      // 2. Fetch all user accessible tasks, newest first
+      const tasks = await taskService.getTasks({ ordering: '-updated_at' }).catch(() => []);
+      if (tasks && tasks.length > 0) {
+        const converted = tasks.map(backendTaskToCard);
+        setLiveCards(converted);
+
+        // Fetch activity for top 5 tasks
+        const topTasks = converted.slice(0, 5);
+        Promise.all(
+          topTasks.map((c) =>
+            taskService
+              .getActivity(c.id)
+              .then((entries) =>
+                entries.map((entry) => backendActivityToActivityLog(entry, c.id))
+              )
+              .catch(() => [])
+          )
+        ).then((logGroups) => {
+          const merged = logGroups.flat().sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          if (merged.length > 0) {
+            setLiveActivityLogs(merged);
+          }
+        });
+      }
+
+      // 3. Fetch user directory
+      userService
+        .getUsers()
+        .then((u) => {
+          if (u && u.length > 0) setUsers(u);
+        })
+        .catch(() => {});
+
+      // 4. Refresh projects list
+      fetchProjects().catch(() => {});
+    } catch {
+      // Handled gracefully with fallback data
+    }
+  }, [fetchProjects]);
 
   useEffect(() => {
-    let isMounted = true;
-    taskService
-      .getTasks({ mine: true })
-      .then((res) => {
-        if (!isMounted) return;
-        if (res && res.length > 0) {
-          setLiveCards(res.map(backendTaskToCard));
-        }
-      })
-      .catch(() => {});
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    loadData();
+  }, [loadData]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, [loadData]);
 
   const todayLabel = new Date().toLocaleDateString(undefined, {
     weekday: 'long',
@@ -83,29 +153,40 @@ export default function HomeScreen() {
   const currentUserName = user?.full_name || mockCurrentUser.name;
 
   const displayCards = liveCards.length > 0 ? liveCards : mockCards;
-  const displayProjects = projects.length > 0 ? projects : mockProjects;
+  const displayProjects: Project[] = plainProjects.length > 0 ? plainProjects : mockProjects;
 
-  const assignedCount = displayCards.filter((c) =>
-    isAssignedToUser(c, currentUserId)
-  ).length;
-  const createdCount = displayCards.filter(
-    (c) => c.publisherId === currentUserId
-  ).length;
+  const assignedCount =
+    dashboardStats?.assigned_tasks !== undefined
+      ? dashboardStats.assigned_tasks
+      : displayCards.filter((c) => isAssignedToUser(c, currentUserId)).length;
 
-  const myWork = displayCards
-    .filter(
-      (c) =>
-        isAssignedToUser(c, currentUserId) ||
-        c.publisherId === currentUserId
-    )
-    .sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    );
+  const createdCount =
+    dashboardStats?.reported_tasks !== undefined
+      ? dashboardStats.reported_tasks
+      : displayCards.filter((c) => c.publisherId === currentUserId).length;
 
-  const openCard = (cardId: string) => {
+  const projectCount =
+    dashboardStats?.active_projects !== undefined
+      ? dashboardStats.active_projects
+      : displayProjects.length;
+
+  const myWork = useMemo(() => {
+    return displayCards
+      .filter(
+        (c) =>
+          isAssignedToUser(c, currentUserId) ||
+          c.publisherId === currentUserId
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+  }, [displayCards, currentUserId]);
+
+  const openCard = (card: CardType) => {
     router.push({
       pathname: '/(tabs)/spaces/card',
-      params: { cardId, from: 'home' },
+      params: { cardId: card.id, projectId: card.projectId, from: 'home' },
     });
   };
 
@@ -121,6 +202,13 @@ export default function HomeScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.accent}
+          />
+        }
       >
         {/* Header */}
         <View style={styles.headerRow}>
@@ -157,7 +245,7 @@ export default function HomeScreen() {
           {[
             { label: 'Assigned', count: assignedCount },
             { label: 'Created', count: createdCount },
-            { label: 'Projects', count: displayProjects.length },
+            { label: 'Projects', count: projectCount },
           ].map((stat) => (
             <View
               key={stat.label}
@@ -180,44 +268,55 @@ export default function HomeScreen() {
         <Text variant="sectionLabel" muted style={styles.sectionTitle}>
           MY WORK ({myWork.length})
         </Text>
-        {myWork.map((card) => (
-          <Pressable
-            key={card.id}
-            onPress={() => openCard(card.id)}
-            accessibilityRole="button"
-            accessibilityLabel={`Open card ${card.key}: ${card.title}`}
-            style={({ pressed }) => [
-              styles.workRow,
-              {
-                backgroundColor: pressed ? colors.paper : colors.surface,
-                borderColor: pressed ? colors.accent : colors.line,
-              },
-            ]}
-          >
-            <View style={styles.workText}>
-              <Text variant="monoKey" muted>
-                {card.key}
-              </Text>
-              <Text
-                variant="bodySmall"
-                bold
-                numberOfLines={2}
-                style={styles.workTitle}
-              >
-                {card.title}
-              </Text>
-            </View>
+        {myWork.length > 0 ? (
+          myWork.map((card) => (
+            <Pressable
+              key={card.id}
+              onPress={() => openCard(card)}
+              accessibilityRole="button"
+              accessibilityLabel={`Open card ${card.key}: ${card.title}`}
+              style={({ pressed }) => [
+                styles.workRow,
+                {
+                  backgroundColor: pressed ? colors.paper : colors.surface,
+                  borderColor: pressed ? colors.accent : colors.line,
+                },
+              ]}
+            >
+              <View style={styles.workText}>
+                <Text variant="monoKey" muted>
+                  {card.key}
+                </Text>
+                <Text
+                  variant="bodySmall"
+                  bold
+                  numberOfLines={2}
+                  style={styles.workTitle}
+                >
+                  {card.title}
+                </Text>
+              </View>
 
-            <View style={styles.workMeta}>
-              <StatusBar status={getStatus(card.columnId)} size="sm" />
-              <PriorityBadge
-                priority={card.priority}
-                size="sm"
-                showLabel={false}
-              />
-            </View>
-          </Pressable>
-        ))}
+              <View style={styles.workMeta}>
+                <StatusBar status={getStatus(card)} size="sm" />
+                <PriorityBadge
+                  priority={card.priority}
+                  size="sm"
+                  showLabel={false}
+                />
+              </View>
+            </Pressable>
+          ))
+        ) : (
+          <EmptyState
+            title="No active tasks"
+            description="You currently have no tasks assigned to you or authored by you."
+            actionLabel="Explore Projects"
+            onAction={() => router.push('/(tabs)/spaces')}
+            style={{ paddingVertical: spacing[3] }}
+          />
+        )}
+
         {/* Projects */}
         <Text variant="sectionLabel" muted style={styles.sectionTitle}>
           YOUR PROJECTS ({displayProjects.length})
@@ -256,8 +355,8 @@ export default function HomeScreen() {
 
         {/* Recent activity */}
         <ActivityLog
-          logs={mockActivityLogs}
-          users={mockUsers}
+          logs={liveActivityLogs.length > 0 ? liveActivityLogs : mockActivityLogs}
+          users={users.length > 0 ? users : mockUsers}
           title="RECENT ACTIVITY"
           maxItems={6}
         />
@@ -265,6 +364,7 @@ export default function HomeScreen() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   screen: {

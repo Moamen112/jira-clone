@@ -1,27 +1,39 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { FC } from 'react';
 import { useNavigate } from 'react-router';
 import {
   mockCards,
-  mockColumns,
   mockProjects,
   mockUsers,
   mockCurrentUser,
-  mockComments,
-  mockActivityLogs,
+  mockSpaces,
   type Card,
+  type Project,
+  type User,
+  type Comment,
+  type ActivityLog,
+  type CardTypeOption,
+  type SpaceItem,
+  type DashboardStats,
   updateCardInList,
   deleteCardFromList,
   useAuth,
   useProjects,
+  userService,
   taskService,
   backendTaskToCard,
+  backendCommentToComment,
+  backendActivityToActivityLog,
+  columnIdToStatus,
+  isStatusAllowedForUser,
+  getStatusPermissionHint,
+  createDefaultBoardColumns,
+  taskTypeToCardTypeOption,
 } from '@jira-clone/shared';
 import { Button } from '../../components/base';
 import { CardDetail } from '../../components/shared/card-detail';
 import { ForYouSection } from './components/for-you';
 import { RecommendedSpaces } from './components/recommended-spaces';
-import type { SpaceItem } from '@jira-clone/shared';
 import { ROUTES } from '../../routes/paths';
 import styles from './HomePage.module.css';
 
@@ -130,16 +142,36 @@ function getGreeting(userName: string): string {
 export function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { spaces } = useProjects();
+  const { spaces, plainProjects } = useProjects();
 
-  // Local state seeded from shared mock data or live backend tasks
   const [cards, setCards] = useState<Card[]>(mockCards);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
 
+  // Selected card detail data
+  const [selectedCardComments, setSelectedCardComments] = useState<Comment[]>([]);
+  const [selectedCardActivity, setSelectedCardActivity] = useState<ActivityLog[]>([]);
+  const [selectedCardTypes, setSelectedCardTypes] = useState<CardTypeOption[]>([]);
+
+  // Fetch live tasks and dashboard summary from backend
   useEffect(() => {
     let isMounted = true;
+
+    // Fetch dashboard stats
+    userService
+      .getDashboard()
+      .then((data) => {
+        if (!isMounted) return;
+        if (data?.stats) {
+          setDashboardStats(data.stats);
+        }
+      })
+      .catch(() => {});
+
+    // Fetch all tasks across member projects, newest first
     taskService
-      .getTasks({ mine: true })
+      .getTasks({ ordering: '-updated_at' })
       .then((backendTasks) => {
         if (!isMounted) return;
         if (backendTasks && backendTasks.length > 0) {
@@ -147,6 +179,18 @@ export function HomePage() {
         }
       })
       .catch(() => {});
+
+    // Fetch users for assignees
+    userService
+      .getUsers()
+      .then((loadedUsers) => {
+        if (!isMounted) return;
+        if (loadedUsers && loadedUsers.length > 0) {
+          setUsers(loadedUsers);
+        }
+      })
+      .catch(() => {});
+
     return () => {
       isMounted = false;
     };
@@ -163,62 +207,230 @@ export function HomePage() {
     });
   }, []);
 
-  // Compute live KPIs
+  // Compute live KPIs (prioritizing backend /api/users/me/dashboard/)
   const assignedCount = useMemo(() => {
+    if (dashboardStats?.assigned_tasks !== undefined) {
+      return dashboardStats.assigned_tasks;
+    }
     return cards.filter(
       (c) =>
         c.assigneeId === currentUserId ||
         (c.assigneeIds && c.assigneeIds.includes(currentUserId))
     ).length;
-  }, [cards, currentUserId]);
+  }, [dashboardStats, cards, currentUserId]);
 
   const inProgressCount = useMemo(() => {
+    if (dashboardStats?.tasks_by_status?.in_progress !== undefined) {
+      return dashboardStats.tasks_by_status.in_progress;
+    }
     return cards.filter((c) => c.columnId.includes('progress')).length;
-  }, [cards]);
+  }, [dashboardStats, cards]);
 
   const createdCount = useMemo(() => {
+    if (dashboardStats?.reported_tasks !== undefined) {
+      return dashboardStats.reported_tasks;
+    }
     return cards.filter((c) => c.publisherId === currentUserId).length;
-  }, [cards, currentUserId]);
+  }, [dashboardStats, cards, currentUserId]);
 
-  // Derive recommended spaces dynamically from local cards & mockProjects (frontend workaround)
+  const activeSpacesCount = useMemo(() => {
+    if (dashboardStats?.active_projects !== undefined) {
+      return dashboardStats.active_projects;
+    }
+    return spaces.length > 0 ? spaces.length : mockProjects.length;
+  }, [dashboardStats, spaces.length]);
+
+  // Derive recommended spaces dynamically from useProjects() spaces or fallback
   const recommendedSpaces: SpaceItem[] = useMemo(() => {
-    const countsByProject: Record<string, { todo: number; inProgress: number; done: number }> = {};
+    if (spaces && spaces.length > 0) {
+      return spaces.slice(0, 4);
+    }
+    return mockSpaces.slice(0, 4);
+  }, [spaces]);
+
+  // Complete list of projects (from store + any project referenced in tasks)
+  const allProjects: Project[] = useMemo(() => {
+    const map = new Map<string, Project>();
+    plainProjects.forEach((p) => map.set(p.id, p));
+    if (map.size === 0) {
+      mockProjects.forEach((p) => map.set(p.id, p));
+    }
     cards.forEach((c) => {
-      if (!countsByProject[c.projectId]) {
-        countsByProject[c.projectId] = { todo: 0, inProgress: 0, done: 0 };
-      }
-      if (c.columnId.includes('done')) {
-        countsByProject[c.projectId].done += 1;
-      } else if (c.columnId.includes('progress')) {
-        countsByProject[c.projectId].inProgress += 1;
-      } else {
-        countsByProject[c.projectId].todo += 1;
+      if (c.projectId && !map.has(c.projectId)) {
+        map.set(c.projectId, {
+          id: c.projectId,
+          name: c.key.split('-')[0] || 'Project',
+          key: c.key.split('-')[0] || 'PROJ',
+          description: '',
+          ownerId: '',
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+        });
       }
     });
+    return Array.from(map.values());
+  }, [plainProjects, cards]);
 
-    return mockProjects.slice(0, 4).map((project, idx) => ({
-      project,
-      members: mockUsers.slice(0, 3).map((u) => ({ id: u.id, name: u.name })),
-      issueCounts: countsByProject[project.id] ?? {
-        todo: 4 + (idx % 3),
-        inProgress: 2 + (idx % 2),
-        done: 5 + idx,
-      },
-      category: idx % 2 === 0 ? 'software' : 'business',
-    }));
-  }, [cards]);
+  // Load comments, activity and task types when a card is selected
+  useEffect(() => {
+    if (!selectedCard) {
+      setSelectedCardComments([]);
+      setSelectedCardActivity([]);
+      setSelectedCardTypes([]);
+      return;
+    }
 
-  const activeSpacesCount = mockProjects.length;
+    const cardId = selectedCard.id;
+    const numericCardId = Number(cardId);
 
-  const handleSaveCard = (updatedCard: Card) => {
+    // 1. Comments
+    taskService
+      .getComments(cardId)
+      .then((backendComments) => {
+        setSelectedCardComments(
+          backendComments.map((bc) => backendCommentToComment(bc, cardId))
+        );
+      })
+      .catch(() => setSelectedCardComments([]));
+
+    // 2. Activity
+    taskService
+      .getActivity(cardId)
+      .then((backendEntries) => {
+        setSelectedCardActivity(
+          backendEntries.map((ba) => backendActivityToActivityLog(ba, cardId))
+        );
+      })
+      .catch(() => setSelectedCardActivity([]));
+
+    // 3. Full task details for fresh permissions and descriptions
+    if (!isNaN(numericCardId) && numericCardId > 0) {
+      taskService
+        .getTask(numericCardId)
+        .then((fullTask) => {
+          setSelectedCard((prev) => {
+            if (!prev || prev.id !== cardId) return prev;
+            return backendTaskToCard(fullTask);
+          });
+        })
+        .catch(() => {});
+    }
+
+    // 4. Task types
+    const projId = selectedCard.projectId;
+    if (projId && !isNaN(Number(projId))) {
+      taskService
+        .getTaskTypes(projId)
+        .then((types) => {
+          if (types && types.length > 0) {
+            setSelectedCardTypes(types.map(taskTypeToCardTypeOption));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [selectedCard?.id]);
+
+  const handleSaveCard = async (updatedCard: Card) => {
+    const targetStatus = columnIdToStatus(updatedCard.columnId);
+
+    if (
+      selectedCard &&
+      columnIdToStatus(selectedCard.columnId) !== targetStatus &&
+      !isStatusAllowedForUser(currentUserId, selectedCard, updatedCard.columnId)
+    ) {
+      alert(getStatusPermissionHint(currentUserId, selectedCard));
+      return;
+    }
+
+    // Optimistic update
     setCards((prev) => updateCardInList(prev, updatedCard));
     setSelectedCard(updatedCard);
+
+    const numId = Number(updatedCard.id);
+    if (!isNaN(numId) && numId > 0) {
+      try {
+        let resolvedTypeId: number | undefined = updatedCard.typeId;
+        if (!resolvedTypeId && updatedCard.type) {
+          const num = Number(updatedCard.type);
+          if (!isNaN(num) && num > 0) {
+            resolvedTypeId = num;
+          } else {
+            const found = selectedCardTypes.find(
+              (t) =>
+                t.label.toLowerCase() === updatedCard.type?.toLowerCase() ||
+                t.id === updatedCard.type
+            );
+            if (found && !isNaN(Number(found.id))) {
+              resolvedTypeId = Number(found.id);
+            }
+          }
+        }
+
+        const updatedTask = await taskService.updateTask(numId, {
+          title: updatedCard.title,
+          description: updatedCard.description,
+          assignee: updatedCard.assigneeId ? Number(updatedCard.assigneeId) : null,
+          due_date: updatedCard.dueDate || null,
+          status: targetStatus,
+          type: resolvedTypeId,
+        });
+
+        const syncedCard = backendTaskToCard(updatedTask);
+        setCards((prev) => updateCardInList(prev, syncedCard));
+        setSelectedCard(syncedCard);
+      } catch (err: unknown) {
+        console.error('Failed to update card on server:', err);
+        alert(err instanceof Error ? err.message : 'Failed to update task');
+      }
+    }
   };
 
-  const handleDeleteCard = (cardId: string) => {
+  const handleDeleteCard = async (cardId: string) => {
     setCards((prev) => deleteCardFromList(prev, cardId));
     setSelectedCard(null);
+
+    const numId = Number(cardId);
+    if (!isNaN(numId) && numId > 0) {
+      try {
+        await taskService.deleteTask(numId);
+      } catch (err) {
+        console.error('Failed to delete card on server:', err);
+      }
+    }
   };
+
+  const handleAddComment = async (content: string, cardId?: string) => {
+    const targetId = cardId || selectedCard?.id;
+    if (!targetId) return;
+
+    const numId = Number(targetId);
+    if (!isNaN(numId) && numId > 0) {
+      try {
+        const backendComment = await taskService.addComment(numId, { body: content });
+        const frontendComment = backendCommentToComment(backendComment, targetId);
+        setSelectedCardComments((prev) => [...prev, frontendComment]);
+      } catch (err: unknown) {
+        console.error('Failed to add comment:', err);
+        alert(err instanceof Error ? err.message : 'Failed to post comment');
+      }
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!selectedCard) return;
+    const numTaskId = Number(selectedCard.id);
+    const numCommentId = Number(commentId);
+    if (!isNaN(numTaskId) && !isNaN(numCommentId)) {
+      try {
+        await taskService.deleteComment(numTaskId, numCommentId);
+        setSelectedCardComments((prev) => prev.filter((c) => c.id !== commentId));
+      } catch (err: unknown) {
+        console.error('Failed to delete comment:', err);
+        alert(err instanceof Error ? err.message : 'Failed to delete comment');
+      }
+    }
+  };
+
 
   return (
     <div className={styles.container}>
@@ -328,15 +540,16 @@ export function HomePage() {
             {/* Jira Your Work Tabbed Section */}
             <ForYouSection
               cards={cards}
-              projects={mockProjects}
-              columns={mockColumns}
-              users={mockUsers}
+              projects={allProjects}
+              columns={createDefaultBoardColumns('default')}
+              users={users.length > 0 ? users : mockUsers}
               currentUserId={currentUserId}
               onSelectCard={(card) => setSelectedCard(card)}
+              onCreateCard={() => navigate(ROUTES.PROTECTED.SPACES)}
             />
           </div>
 
-          {/* Right Column: Recommended Spaces (Client-derived workaround) */}
+          {/* Right Column: Recommended Spaces */}
           <div className={styles.rightColumn}>
             <RecommendedSpaces spaces={recommendedSpaces} maxItems={4} />
           </div>
@@ -348,14 +561,18 @@ export function HomePage() {
         <CardDetail
           visible={Boolean(selectedCard)}
           card={selectedCard}
-          columns={mockColumns}
-          users={mockUsers}
-          comments={mockComments}
-          activityLogs={mockActivityLogs}
+          projectId={selectedCard.projectId}
+          columns={createDefaultBoardColumns(selectedCard.projectId || 'default')}
+          users={users.length > 0 ? users : mockUsers}
+          comments={selectedCardComments}
+          activityLogs={selectedCardActivity}
+          cardTypes={selectedCardTypes}
           currentUserId={currentUserId}
           onClose={() => setSelectedCard(null)}
           onSave={handleSaveCard}
           onDelete={handleDeleteCard}
+          onAddComment={handleAddComment}
+          onDeleteComment={handleDeleteComment}
         />
       )}
     </div>
