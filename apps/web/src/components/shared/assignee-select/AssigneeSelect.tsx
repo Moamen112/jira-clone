@@ -324,7 +324,7 @@ export const AssigneeSelect: FC<AssigneeSelectProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
           }}
-          title={`Assignees: ${
+          title={`${multiple ? 'Assignees' : 'Assignee'}: ${
             selectedUsers.length > 0
               ? selectedUsers.map((u) => u.name).join(', ')
               : placeholder

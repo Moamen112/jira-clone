@@ -2,7 +2,9 @@ import { configureStore } from '@reduxjs/toolkit';
 import {
   themeReducer,
   authReducer,
+  projectReducer,
   initialAuthState,
+  initialProjectState,
   setMobileAuthAdapter,
   setMobileTokenAdapter,
   toggleTheme,
@@ -26,12 +28,14 @@ export const store = configureStore({
   reducer: {
     theme: themeReducer,
     auth: authReducer,
+    project: projectReducer,
   },
   preloadedState: {
     theme: {
       mode: initialMode,
     },
     auth: initialAuthState,
+    project: initialProjectState,
   },
 });
 

@@ -2,7 +2,9 @@ import { configureStore } from '@reduxjs/toolkit';
 import {
   themeReducer,
   authReducer,
+  projectReducer,
   initialAuthState,
+  initialProjectState,
   toggleTheme,
   setThemeMode,
   selectThemeMode,
@@ -18,12 +20,14 @@ export const store = configureStore({
   reducer: {
     theme: themeReducer,
     auth: authReducer,
+    project: projectReducer,
   },
   preloadedState: {
     theme: {
       mode: getStorageItem<ThemeMode>(STORAGE_KEYS.THEME_MODE, 'web', 'light') ?? 'light',
     },
     auth: initialAuthState,
+    project: initialProjectState,
   },
 });
 

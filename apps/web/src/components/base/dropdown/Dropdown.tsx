@@ -35,6 +35,12 @@ export interface DropdownProps {
   disabled?: boolean;
   /** Enable a search filter inside the panel */
   searchable?: boolean;
+  /** Custom search placeholder */
+  searchPlaceholder?: string;
+  /** Callback fired when search text changes (useful for debounced async search) */
+  onSearchChange?: (query: string) => void;
+  /** Loading state indicator while fetching options */
+  isLoading?: boolean;
   /** Additional inline styles */
   style?: CSSProperties;
 }
@@ -86,6 +92,9 @@ export const Dropdown: FC<DropdownProps> = ({
   error,
   disabled = false,
   searchable = false,
+  searchPlaceholder,
+  onSearchChange,
+  isLoading = false,
   style,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -106,6 +115,7 @@ export const Dropdown: FC<DropdownProps> = ({
     onSelect(val);
     setIsOpen(false);
     setSearchQuery('');
+    onSearchChange?.('');
     setHoveredValue(null);
   };
 
@@ -115,12 +125,20 @@ export const Dropdown: FC<DropdownProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        if (searchQuery) {
+          setSearchQuery('');
+          onSearchChange?.('');
+        }
       }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsOpen(false);
+        if (searchQuery) {
+          setSearchQuery('');
+          onSearchChange?.('');
+        }
       }
     };
 
@@ -130,7 +148,7 @@ export const Dropdown: FC<DropdownProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, searchQuery, onSearchChange]);
 
   const borderColor = error
     ? 'var(--color-warn)'
@@ -222,9 +240,12 @@ export const Dropdown: FC<DropdownProps> = ({
           {searchable && (
             <div style={{ padding: '2px 4px 6px' }}>
               <Input
-                placeholder="Search options..."
+                placeholder={searchPlaceholder || "Search options..."}
                 value={searchQuery}
-                onChangeText={setSearchQuery}
+                onChangeText={(text) => {
+                  setSearchQuery(text);
+                  onSearchChange?.(text);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -241,6 +262,22 @@ export const Dropdown: FC<DropdownProps> = ({
                 inputWrapperStyle={{ minHeight: 34, paddingInline: 8 }}
                 style={{ fontSize: 12 }}
               />
+            </div>
+          )}
+
+          {isLoading && (
+            <div
+              style={{
+                padding: '6px 10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                color: 'var(--color-ink-muted)',
+              }}
+            >
+              <Text variant="caption" muted style={{ fontSize: 11 }}>
+                Searching...
+              </Text>
             </div>
           )}
 
@@ -301,6 +338,50 @@ export const Dropdown: FC<DropdownProps> = ({
                 </button>
               );
             })}
+
+            {action && filteredOptions.length > 0 && (
+              <div
+                style={{
+                  borderTop: '1px solid var(--color-line)',
+                  paddingTop: 4,
+                  marginTop: 4,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsOpen(false);
+                    action.onPress(searchQuery.trim());
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    width: '100%',
+                    padding: '7px 10px',
+                    backgroundColor: 'transparent',
+                    color: 'var(--color-accent)',
+                    border: 'none',
+                    borderRadius: 'var(--radius-input, 6px)',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    textAlign: 'left',
+                    transition: 'all 120ms ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--color-accent-soft)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <span style={{ fontSize: 14, lineHeight: 1, fontWeight: 'bold' }}>+</span>
+                  <span>{searchQuery.trim() ? `Add "${searchQuery.trim()}"` : action.label}</span>
+                </button>
+              </div>
+            )}
 
             {filteredOptions.length === 0 && (
               action ? (

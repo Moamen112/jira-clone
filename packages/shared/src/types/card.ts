@@ -14,6 +14,8 @@ export interface Card {
   assigneeIds?: string[]; // for multi-assignee support
   priority: CardPriority;
   type?: string;
+  typeId?: number;
+  typeName?: string;
   order: number;
   commentCount: number;
   startDate?: string;
@@ -32,6 +34,8 @@ export interface CreateCardInput {
   assigneeIds?: string[];
   priority?: CardPriority;
   type?: string;
+  typeId?: number;
+  typeName?: string;
   dueDate?: string;
   description?: string;
   cardIndex?: number;
@@ -41,7 +45,7 @@ export interface CreateCardInput {
 export interface CardTypeOption {
   id: string;
   label: string;
-  color: string;
+  color?: string;
 }
 
 export interface CreateStatusInput {

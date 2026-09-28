@@ -1,6 +1,89 @@
-import type { Project } from '../types/project';
-import type { SpaceItem, CreateSpaceInput } from '../types/space';
+import type { Project, BackendProject } from '../types/project';
+import type { SpaceItem, SpaceMember, CreateSpaceInput } from '../types/space';
 import { mockCurrentUser } from '../data/mockData';
+
+/**
+ * Derives uppercase initials from a user's full name or email (e.g. "Ada Lovelace" -> "AL").
+ */
+export function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'U';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/**
+ * Maps a backend project payload from the REST API to the frontend Project model.
+ */
+export function backendProjectToProject(bp: BackendProject): Project {
+  return {
+    id: String(bp.id),
+    name: bp.name,
+    key: bp.key,
+    description: bp.description || '',
+    ownerId: String(bp.owner?.id || ''),
+    createdAt: bp.created_at,
+    updatedAt: bp.updated_at,
+    taskCount: bp.task_count,
+    openTaskCount: bp.open_task_count,
+    status: bp.status,
+    owner: bp.owner,
+  };
+}
+
+/**
+ * Converts a BackendProject into a SpaceItem with members and issue counts.
+ */
+export function backendProjectToSpaceItem(bp: BackendProject): SpaceItem {
+  const members: SpaceMember[] = [];
+
+  if (bp.members && bp.members.length > 0) {
+    bp.members.forEach((m) => {
+      members.push({
+        id: String(m.user.id),
+        name: m.user.full_name || m.user.email,
+        avatarUrl: m.user.avatar ?? undefined,
+      });
+    });
+  } else if (bp.owner) {
+    members.push({
+      id: String(bp.owner.id),
+      name: bp.owner.full_name || bp.owner.email,
+      avatarUrl: bp.owner.avatar ?? undefined,
+    });
+  }
+
+  const doneCount = Math.max(0, (bp.task_count ?? 0) - (bp.open_task_count ?? 0));
+  const openCount = bp.open_task_count ?? 0;
+
+  return {
+    project: backendProjectToProject(bp),
+    members,
+    issueCounts: {
+      todo: openCount,
+      inProgress: 0,
+      done: doneCount,
+    },
+    category: 'software',
+  };
+}
+
+/**
+ * Maps frontend sort keys to backend DRF ordering query strings.
+ */
+export function mapSortToOrdering(sortBy: string): string {
+  switch (sortBy) {
+    case 'name-asc':
+      return 'name';
+    case 'name-desc':
+      return '-name';
+    case 'issues':
+      return '-task_count';
+    case 'updated':
+    default:
+      return '-updated_at';
+  }
+}
 
 /**
  * Creates a new SpaceItem based on input, matching the web implementation.
@@ -31,7 +114,6 @@ export function createSpace(input: CreateSpaceInput): SpaceItem {
     category: 'software',
   };
 }
-
 
 /**
  * Checks if a project matches a search query by name, key, or description.

@@ -5,5 +5,5 @@ export * from './validation';
 export * from './spaces';
 export * from './board';
 export * from './cookies';
-
-
+export * from './errors';
+export * from './tasks';

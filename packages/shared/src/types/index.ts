@@ -6,3 +6,4 @@ export * from './card';
 export * from './comment';
 export * from './activity';
 export * from './space';
+export * from './task';

@@ -5,7 +5,6 @@ import { Card as CardType, CardRole, User } from '@jira-clone/shared';
 import { Text } from '../../base/typography/Text';
 import { Badge } from '../../base/badge/Badge';
 import { Avatar } from '../../base/avatar/Avatar';
-import { AvatarGroup } from '../../base/avatar-group/AvatarGroup';
 import { IconButton } from '../../base/icon-button/IconButton';
 import { AssigneeSelect } from '../assignee-select/AssigneeSelect';
 import { radius } from '../../../tokens/radius';
@@ -151,16 +150,12 @@ export const Card: React.FC<CardProps> = ({
           <AssigneeSelect
             variant="avatarOnly"
             avatarSize="xs"
-            multiple={true}
+            multiple={false}
             selectedUserId={card.assigneeId}
-            selectedUserIds={
-              card.assigneeIds ||
-              (assignees ? assignees.map((u) => u.id) : card.assigneeId ? [card.assigneeId] : [])
-            }
             users={
               users && users.length > 0
                 ? users
-                : assignees || (assignee ? [assignee] : [])
+                : assignee ? [assignee] : []
             }
             disabled={
               currentUserRole
@@ -168,17 +163,10 @@ export const Card: React.FC<CardProps> = ({
                 : !onAssigneeChange && !onAssigneesChange
             }
             onSelect={(userId) => {
-              if (onAssigneesChange) {
+              if (onAssigneeChange) {
+                onAssigneeChange(userId, card);
+              } else if (onAssigneesChange) {
                 onAssigneesChange(userId ? [userId] : [], card);
-              } else {
-                onAssigneeChange?.(userId, card);
-              }
-            }}
-            onSelectMultiple={(userIds) => {
-              if (onAssigneesChange) {
-                onAssigneesChange(userIds, card);
-              } else if (onAssigneeChange) {
-                onAssigneeChange(userIds[0] || null, card);
               }
             }}
           />

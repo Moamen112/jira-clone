@@ -38,6 +38,17 @@ export interface DropdownProps {
   disabled?: boolean;
   /** Enable search filter in bottom sheet */
   searchable?: boolean;
+  /** Custom search placeholder */
+  searchPlaceholder?: string;
+  /** Callback fired when search text changes (for debounced search) */
+  onSearchChange?: (query: string) => void;
+  /** Loading state indicator while fetching options */
+  isLoading?: boolean;
+  /** Optional bottom action item (e.g. + Add new...) */
+  action?: {
+    label: string;
+    onPress: (queryText?: string) => void;
+  };
   /** Style override */
   style?: ViewStyle;
 }
@@ -51,6 +62,10 @@ export const Dropdown: React.FC<DropdownProps> = ({
   error,
   disabled = false,
   searchable = false,
+  searchPlaceholder,
+  onSearchChange,
+  isLoading = false,
+  action,
   style,
 }) => {
   const { colors } = useTheme();
@@ -69,6 +84,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
     onSelect(val);
     setIsOpen(false);
     setSearchQuery('');
+    onSearchChange?.('');
   };
 
   const borderColor = error
@@ -130,18 +146,42 @@ export const Dropdown: React.FC<DropdownProps> = ({
         onClose={() => {
           setIsOpen(false);
           setSearchQuery('');
+          onSearchChange?.('');
         }}
         title={label || 'Select'}
         presentation="bottomSheet"
       >
         {searchable && (
           <Input
-            placeholder="Search options..."
+            placeholder={searchPlaceholder || "Search options..."}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              onSearchChange?.(text);
+            }}
+            returnKeyType={action ? 'done' : 'search'}
+            onSubmitEditing={() => {
+              if (action && searchQuery.trim()) {
+                const q = searchQuery.trim();
+                setIsOpen(false);
+                setSearchQuery('');
+                onSearchChange?.('');
+                action.onPress(q);
+              }
+            }}
             autoFocus
             containerStyle={{ marginBottom: spacing[3] }}
           />
+        )}
+
+        {isLoading && (
+          <Text
+            variant="caption"
+            muted
+            style={{ marginBottom: spacing[2], textAlign: 'center' }}
+          >
+            Searching...
+          </Text>
         )}
 
         <View style={styles.optionsList}>
@@ -185,11 +225,55 @@ export const Dropdown: React.FC<DropdownProps> = ({
             );
           })}
 
+          {action && filteredOptions.length > 0 && (
+            <View style={{ borderTopWidth: 1, borderTopColor: colors.line, marginTop: spacing[1], paddingTop: spacing[1] }}>
+              <Pressable
+                onPress={() => {
+                  setIsOpen(false);
+                  const q = searchQuery.trim();
+                  setSearchQuery('');
+                  onSearchChange?.('');
+                  action.onPress(q);
+                }}
+                style={({ pressed }) => [
+                  styles.optionRow,
+                  { borderBottomWidth: 0 },
+                  { opacity: pressed ? 0.7 : 1 },
+                ]}
+              >
+                <Text variant="body" bold color={colors.accent}>
+                  + {searchQuery.trim() ? `Add "${searchQuery.trim()}"` : action.label}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
           {filteredOptions.length === 0 && (
             <View style={styles.emptySearch}>
               <Text variant="bodySmall" muted align="center">
-                No matching options found.
+                {searchQuery.trim()
+                  ? `No matching options found for "${searchQuery.trim()}".`
+                  : 'No options available.'}
               </Text>
+              {action && (
+                <Pressable
+                  onPress={() => {
+                    setIsOpen(false);
+                    const q = searchQuery.trim();
+                    setSearchQuery('');
+                    onSearchChange?.('');
+                    action.onPress(q);
+                  }}
+                  style={({ pressed }) => [
+                    styles.actionButtonEmpty,
+                    { opacity: pressed ? 0.7 : 1 },
+                  ]}
+                >
+                  <Text variant="bodySmall" bold color={colors.accent}>
+                    + {searchQuery.trim() ? `Add "${searchQuery.trim()}"` : action.label}
+                  </Text>
+                </Pressable>
+              )}
             </View>
           )}
         </View>
@@ -252,6 +336,12 @@ const styles = StyleSheet.create({
   },
   emptySearch: {
     paddingVertical: spacing[5],
+  },
+  actionButtonEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing[3],
+    paddingVertical: spacing[2],
   },
 });
 

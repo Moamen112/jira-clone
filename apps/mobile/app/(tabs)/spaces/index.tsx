@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { TimeIcon, GridIcon, SearchIcon, SunnyIcon, MoonIcon } from '../../../assets/icon';
 import {
@@ -7,15 +7,13 @@ import {
   mockCards,
   mockColumns,
   mockUsers,
-  Project,
+  type Project,
+  useProjects,
   useDebounce,
   filterProjects,
   sortProjects,
-  createSpace,
+  getInitials,
 } from '@jira-clone/shared';
-import type { CreateSpaceInput } from '@jira-clone/shared';
-
-
 
 import { Text, Badge, Input } from '../../../src/components/base';
 import { ProjectCard, ProjectIssueCounts } from '../../../src/components/shared/project-card';
@@ -23,13 +21,23 @@ import { EmptyState } from '../../../src/components/shared/empty-state';
 import { useTheme, spacing, radius } from '../../../src/tokens';
 
 /**
- * Derives project members from the card assignments and project owner.
+ * Derives project members from the backend owner or legacy card assignments.
  */
-function getProjectMembers(projectId: string) {
-  const projectCards = mockCards.filter((c) => c.projectId === projectId);
+function getProjectMembers(project: Project) {
+  if (project.owner) {
+    return [
+      {
+        id: String(project.owner.id),
+        name: project.owner.full_name || project.owner.email,
+        avatarUrl: project.owner.avatar ?? undefined,
+        initials: getInitials(project.owner.full_name || project.owner.email),
+      },
+    ];
+  }
+
+  const projectCards = mockCards.filter((c) => c.projectId === project.id);
   const memberIdSet = new Set<string>();
 
-  const project = mockProjects.find((p) => p.id === projectId);
   if (project?.ownerId) memberIdSet.add(project.ownerId);
 
   projectCards.forEach((c) => {
@@ -46,11 +54,21 @@ function getProjectMembers(projectId: string) {
 }
 
 /**
- * Computes issue counts (To Do, Active, Done) for a project.
+ * Computes issue counts (To Do, Active, Done) for a project from backend fields or column cards.
  */
-function getProjectIssueCounts(projectId: string): ProjectIssueCounts {
-  const projectCards = mockCards.filter((c) => c.projectId === projectId);
-  const projectColumns = mockColumns.filter((col) => col.projectId === projectId);
+function getProjectIssueCounts(project: Project): ProjectIssueCounts {
+  if (project.taskCount !== undefined || project.openTaskCount !== undefined) {
+    const total = project.taskCount ?? 0;
+    const open = project.openTaskCount ?? 0;
+    return {
+      todo: open,
+      inProgress: 0,
+      done: Math.max(0, total - open),
+    };
+  }
+
+  const projectCards = mockCards.filter((c) => c.projectId === project.id);
+  const projectColumns = mockColumns.filter((col) => col.projectId === project.id);
 
   const todoColIds = new Set(
     projectColumns
@@ -89,20 +107,26 @@ export default function SpacesIndexScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
   const router = useRouter();
 
-  const [projects, setProjects] = useState<Project[]>(mockProjects);
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  // Fetch projects from the API
+  const {
+    plainProjects: apiProjects,
+    isLoading,
+    refetch,
+  } = useProjects({
+    search: debouncedSearchQuery.trim() || undefined,
+  });
+
+  // Use API projects if available; fallback to mockProjects when offline or empty during dev
+  const projects = apiProjects.length > 0 ? apiProjects : mockProjects;
 
   // Recently viewed space IDs (seeded with popular active spaces)
   const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([
     'proj-1',
     'proj-2',
   ]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearchQuery = useDebounce(searchQuery, 300);
-
-  const handleCreateSpace = (input: CreateSpaceInput) => {
-    const newSpace = createSpace(input);
-    setProjects((prev) => [newSpace.project, ...prev]);
-  };
 
   // Open project board and bump to front of recently viewed
   const handleOpenSpace = (projectId: string) => {
@@ -129,14 +153,18 @@ export default function SpacesIndexScreen() {
     return sortProjects(filtered, 'updated');
   }, [projects, debouncedSearchQuery]);
 
-
-
-
   return (
     <View style={[styles.screen, { backgroundColor: colors.paper }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={refetch}
+            tintColor={colors.accent}
+          />
+        }
       >
         {/* Page Header */}
         <View style={styles.header}>
@@ -199,8 +227,8 @@ export default function SpacesIndexScreen() {
                 <View key={project.id} style={styles.horizontalCardWrapper}>
                   <ProjectCard
                     project={project}
-                    members={getProjectMembers(project.id)}
-                    issueCounts={getProjectIssueCounts(project.id)}
+                    members={getProjectMembers(project)}
+                    issueCounts={getProjectIssueCounts(project)}
                     onPress={() => handleOpenSpace(project.id)}
                     style={{ backgroundColor: colors.paper }}
                   />
@@ -259,8 +287,8 @@ export default function SpacesIndexScreen() {
                 <ProjectCard
                   key={project.id}
                   project={project}
-                  members={getProjectMembers(project.id)}
-                  issueCounts={getProjectIssueCounts(project.id)}
+                  members={getProjectMembers(project)}
+                  issueCounts={getProjectIssueCounts(project)}
                   onPress={() => handleOpenSpace(project.id)}
                   style={{ backgroundColor: colors.paper }}
                 />
@@ -268,10 +296,21 @@ export default function SpacesIndexScreen() {
             </View>
           ) : (
             <EmptyState
-              title="No spaces found"
-              description={`No spaces match "${debouncedSearchQuery}".`}
-              actionLabel="Clear Filter"
-              onAction={() => setSearchQuery('')}
+              title={debouncedSearchQuery ? 'No spaces found' : 'No spaces yet'}
+              description={
+                debouncedSearchQuery
+                  ? `No spaces match "${debouncedSearchQuery}".`
+                  : 'Spaces help you track and organize your team Kanban projects.'
+              }
+              actionLabel={debouncedSearchQuery ? 'Clear Filter' : 'Refresh Spaces'}
+              onAction={() => {
+                if (debouncedSearchQuery) {
+                  setSearchQuery('');
+                } else {
+                  refetch();
+                }
+              }}
+              icon={<GridIcon size={30} color={colors.accent} />}
             />
           )}
         </View>

@@ -12,6 +12,10 @@ import {
   type Card,
   updateCardInList,
   deleteCardFromList,
+  useAuth,
+  useProjects,
+  taskService,
+  backendTaskToCard,
 } from '@jira-clone/shared';
 import { Button } from '../../components/base';
 import { CardDetail } from '../../components/shared/card-detail';
@@ -125,13 +129,31 @@ function getGreeting(userName: string): string {
 
 export function HomePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { spaces } = useProjects();
 
-  // Local state seeded from shared mock data
+  // Local state seeded from shared mock data or live backend tasks
   const [cards, setCards] = useState<Card[]>(mockCards);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
 
-  const currentUser = mockCurrentUser;
-  const currentUserId = currentUser.id;
+  useEffect(() => {
+    let isMounted = true;
+    taskService
+      .getTasks({ mine: true })
+      .then((backendTasks) => {
+        if (!isMounted) return;
+        if (backendTasks && backendTasks.length > 0) {
+          setCards(backendTasks.map(backendTaskToCard));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const currentUserName = user?.full_name || mockCurrentUser.name;
+  const currentUserId = user ? String(user.id) : mockCurrentUser.id;
 
   const todayFormatted = useMemo(() => {
     return new Date().toLocaleDateString(undefined, {
@@ -205,7 +227,7 @@ export function HomePage() {
         <header className={styles.headerRow}>
           <div className={styles.headerText}>
             <div className={styles.greetingRow}>
-              <h1 className={styles.title}>{getGreeting(currentUser.name)}</h1>
+              <h1 className={styles.title}>{getGreeting(currentUserName)}</h1>
             </div>
             <p className={styles.subtitle}>
               {todayFormatted} · Here is your cross-space sprint summary and active work items.

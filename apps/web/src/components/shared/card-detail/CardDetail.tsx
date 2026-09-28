@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { CSSProperties, FC } from "react";
 import {
   type Card as CardType,
@@ -16,6 +16,9 @@ import {
   DEFAULT_CARD_TYPES,
   PRESET_STATUS_COLORS,
   handleCardTitleChange,
+  useDebounce,
+  taskService,
+  taskTypeToCardTypeOption,
 } from "@jira-clone/shared";
 import { Modal } from "../modal/Modal";
 import { Text, Input, Textarea, Button, Badge, Dropdown } from "../../base";
@@ -88,17 +91,6 @@ export interface CardDetailProps {
 }
 
 export type { CardTypeOption };
-
-const PRESET_TYPE_COLORS: string[] = [
-  '#3B82F6',
-  '#10B981',
-  '#F59E0B',
-  '#EF4444',
-  '#8B5CF6',
-  '#EC4899',
-  '#06B6D4',
-  '#64748B',
-];
 
 const toDateInputValue = (dateStr?: string | null): string => {
   if (!dateStr) return "";
@@ -200,24 +192,121 @@ export const CardDetail: FC<CardDetailProps> = ({
       ? targetColumnId || (columns && columns.length > 0 ? columns[0].id : "")
       : card?.columnId ?? ""
   );
+  // Search query for types in dropdown
+  const [typeSearch, setTypeSearch] = useState("");
+  const debouncedTypeSearch = useDebounce(typeSearch, 300);
+  const [isSearchingTypes, setIsSearchingTypes] = useState(false);
+  const [apiCardTypes, setApiCardTypes] = useState<CardTypeOption[]>([]);
   // Custom card types added locally
   const [customCardTypes, setCustomCardTypes] = useState<CardTypeOption[]>([]);
-  const baseCardTypes =
-    passedCardTypes && passedCardTypes.length > 0
-      ? passedCardTypes
-      : DEFAULT_CARD_TYPES.slice(0, 3);
-  const cardTypes = [
-    ...baseCardTypes,
-    ...customCardTypes.filter((c) => !baseCardTypes.some((b) => b.id === c.id)),
-  ];
-  const [draftType, setDraftType] = useState<string>(
-    isCreating ? "" : card?.type || "task"
+
+  const effectiveProjectId = projectId || card?.projectId;
+  const numericProjectId = effectiveProjectId ? Number(effectiveProjectId) : undefined;
+  const hasValidNumericProjectId = Boolean(
+    numericProjectId && !isNaN(numericProjectId) && numericProjectId > 0
   );
+
+  // Fetch project task types from backend API when modal opens, project changes, or debounced search changes
+  useEffect(() => {
+    if (!visible || !hasValidNumericProjectId || !numericProjectId) return;
+
+    let isMounted = true;
+    setIsSearchingTypes(true);
+
+    taskService
+      .getTaskTypes(numericProjectId, {
+        search: debouncedTypeSearch.trim() || undefined,
+        limit: "all",
+      })
+      .then((backendTypes) => {
+        if (!isMounted) return;
+        if (backendTypes && backendTypes.length > 0) {
+          setApiCardTypes(backendTypes.map(taskTypeToCardTypeOption));
+        } else if (!debouncedTypeSearch.trim()) {
+          setApiCardTypes([]);
+        } else {
+          setApiCardTypes([]);
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch task types from API:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsSearchingTypes(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [visible, hasValidNumericProjectId, numericProjectId, debouncedTypeSearch]);
+
+  // Master list of all known task types for resolution & fallback
+  const masterCardTypes = useMemo(() => {
+    const list: CardTypeOption[] = [];
+    const seen = new Set<string>();
+
+    const addType = (t: CardTypeOption) => {
+      if (!seen.has(t.id)) {
+        seen.add(t.id);
+        list.push(t);
+      }
+    };
+
+    apiCardTypes.forEach(addType);
+    if (passedCardTypes) passedCardTypes.forEach(addType);
+    customCardTypes.forEach(addType);
+
+    if (list.length === 0) {
+      DEFAULT_CARD_TYPES.slice(0, 4).forEach(addType);
+    }
+    return list;
+  }, [apiCardTypes, passedCardTypes, customCardTypes]);
+
+  const cardTypes = masterCardTypes;
+
+  // Helper to match card type to cardTypes option id
+  const resolveTypeId = (typeVal?: string) => {
+    if (!typeVal) return "";
+    const matched = masterCardTypes.find(
+      (c) =>
+        c.id === typeVal ||
+        c.label.toLowerCase() === typeVal.toLowerCase() ||
+        (card?.typeName && c.label.toLowerCase() === card.typeName.toLowerCase())
+    );
+    return matched ? matched.id : typeVal;
+  };
+
+  const [draftType, setDraftType] = useState<string>(() => {
+    if (isCreating) return masterCardTypes[0]?.id || "";
+    return resolveTypeId(card?.type) || card?.type || "";
+  });
+
+  // Displayed types inside the dropdown panel (filtered by API or search)
+  const displayedCardTypes = useMemo(() => {
+    let result = apiCardTypes.length > 0 ? apiCardTypes : masterCardTypes;
+    if (debouncedTypeSearch.trim() && apiCardTypes.length === 0) {
+      const q = debouncedTypeSearch.trim().toLowerCase();
+      result = masterCardTypes.filter((t) => t.label.toLowerCase().includes(q));
+    }
+    // Ensure currently selected type is present in options list so trigger can show its label
+    if (draftType && !result.some((t) => t.id === draftType)) {
+      const currentSelected = masterCardTypes.find((t) => t.id === draftType);
+      if (currentSelected) {
+        result = [currentSelected, ...result];
+      }
+    }
+    return result;
+  }, [apiCardTypes, masterCardTypes, debouncedTypeSearch, draftType]);
   const [draftDueDate, setDraftDueDate] = useState(
     isCreating ? "" : toDateInputValue(card?.dueDate)
   );
+  const cardTypesKey = masterCardTypes.map((c) => c.id).join(",");
   const [cardIdTracking, setCardIdTracking] = useState<string | null>(
-    isCreating ? "__new__" : card?.id ?? null
+    isCreating
+      ? `__new__:${cardTypesKey}`
+      : card
+        ? `${card.id}:${card.updatedAt || ""}:${card.description || ""}:${card.type || ""}:${cardTypesKey}`
+        : null
   );
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -236,11 +325,14 @@ export const CardDetail: FC<CardDetailProps> = ({
   // Add type modal state
   const [isAddTypeOpen, setIsAddTypeOpen] = useState(false);
   const [newTypeTitle, setNewTypeTitle] = useState("");
-  const [newTypeColor, setNewTypeColor] = useState("#6366F1");
   const [newTypeError, setNewTypeError] = useState<string | undefined>(undefined);
 
-  // Sync state when card or creation mode changes
-  const targetTracking = isCreating ? "__new__" : card?.id ?? null;
+  // Sync state when card or creation mode changes or card details are fetched
+  const targetTracking = isCreating
+    ? `__new__:${cardTypesKey}`
+    : card
+      ? `${card.id}:${card.updatedAt || ""}:${card.description || ""}:${card.type || ""}:${cardTypesKey}`
+      : null;
   if (targetTracking !== cardIdTracking) {
     setCardIdTracking(targetTracking);
     if (isCreating) {
@@ -249,7 +341,7 @@ export const CardDetail: FC<CardDetailProps> = ({
       setDraftAssigneeId(null);
       setDraftAssigneeIds([]);
       setDraftColumnId(targetColumnId || (columns && columns.length > 0 ? columns[0].id : ""));
-      setDraftType("");
+      setDraftType(cardTypes[0]?.id || "");
       setDraftDueDate("");
       setTitleError(undefined);
       setTypeError(undefined);
@@ -258,15 +350,9 @@ export const CardDetail: FC<CardDetailProps> = ({
       setDraftTitle(card.title);
       setDraftDescription(card.description ?? "");
       setDraftAssigneeId(card.assigneeId ?? null);
-      setDraftAssigneeIds(
-        card.assigneeIds && card.assigneeIds.length > 0
-          ? card.assigneeIds
-          : card.assigneeId
-            ? [card.assigneeId]
-            : []
-      );
+      setDraftAssigneeIds(card.assigneeId ? [card.assigneeId] : []);
       setDraftColumnId(card.columnId);
-      setDraftType(card.type || "task");
+      setDraftType(resolveTypeId(card.type) || card.type || "");
       setDraftDueDate(toDateInputValue(card.dueDate));
       setTitleError(undefined);
       setTypeError(undefined);
@@ -355,21 +441,9 @@ export const CardDetail: FC<CardDetailProps> = ({
     };
   });
 
-  const typeOptions: DropdownOption[] = cardTypes.map((t) => ({
+  const typeOptions: DropdownOption[] = displayedCardTypes.map((t) => ({
     label: t.label,
     value: t.id,
-    icon: (
-      <span
-        style={{
-          width: 10,
-          height: 10,
-          borderRadius: t.id === "bug" ? 999 : 2,
-          backgroundColor: t.color,
-          display: "inline-block",
-          flexShrink: 0,
-        }}
-      />
-    ),
   }));
 
   const currentStatusColumn = allColumns.find((c) => c.id === draftColumnId);
@@ -390,12 +464,8 @@ export const CardDetail: FC<CardDetailProps> = ({
       draftDescription !== (card!.description ?? "") ||
       draftAssigneeId !== (card!.assigneeId ?? null) ||
       draftColumnId !== card!.columnId ||
-      draftType !== (card!.type || "task") ||
-      draftDueDate !== toDateInputValue(card!.dueDate) ||
-      JSON.stringify(draftAssigneeIds) !==
-        JSON.stringify(
-          card!.assigneeIds || (card!.assigneeId ? [card!.assigneeId] : [])
-        ));
+      draftType !== (resolveTypeId(card!.type) || card!.type || "") ||
+      draftDueDate !== toDateInputValue(card!.dueDate));
 
   const handleCreateSubmit = async () => {
     if (!onCreateCard) return;
@@ -448,6 +518,8 @@ export const CardDetail: FC<CardDetailProps> = ({
 
     try {
       setIsSaving(true);
+      const matchedType = cardTypes.find((t) => t.id === draftType);
+      const parsedTypeId = !isNaN(Number(draftType)) ? Number(draftType) : card.typeId;
       await onSave({
         ...card,
         title: draftTitle.trim() || card.title,
@@ -456,6 +528,8 @@ export const CardDetail: FC<CardDetailProps> = ({
         assigneeIds: draftAssigneeIds,
         columnId: draftColumnId || card.columnId,
         type: draftType || card.type || "task",
+        typeId: parsedTypeId,
+        typeName: matchedType ? matchedType.label : card.typeName,
         dueDate: draftDueDate ? draftDueDate : undefined,
         updatedAt: new Date().toISOString(),
       });
@@ -486,24 +560,74 @@ export const CardDetail: FC<CardDetailProps> = ({
     setStatusFieldError(undefined);
   };
 
-  const handleAddType = () => {
-    const { cardType: newType, error } = createCardType({
-      label: newTypeTitle,
-      color: newTypeColor,
-    });
-
-    if (error || !newType) {
-      setNewTypeError(error || "Type name cannot be empty.");
+  const handleAddType = async () => {
+    const trimmedTitle = newTypeTitle.trim();
+    if (!trimmedTitle) {
+      setNewTypeError("Type name cannot be empty.");
       return;
     }
 
-    setCustomCardTypes((prev) => [...prev, newType]);
-    onAddType?.(newType);
-    setDraftType(newType.id);
-    setIsAddTypeOpen(false);
-    setNewTypeTitle("");
-    setNewTypeError(undefined);
-    setTypeError(undefined);
+    try {
+      setIsSaving(true);
+      let createdOption: CardTypeOption;
+
+      if (hasValidNumericProjectId && numericProjectId) {
+        // Direct backend API call to create task type in the project
+        const backendType = await taskService.createTaskType(numericProjectId, {
+          name: trimmedTitle,
+        });
+        createdOption = {
+          id: String(backendType.id),
+          label: backendType.name,
+        };
+      } else if (onAddType) {
+        const res = await onAddType({
+          id: "",
+          label: trimmedTitle,
+        });
+        if (res && res.id) {
+          createdOption = res;
+        } else {
+          createdOption = {
+            id: trimmedTitle.toLowerCase(),
+            label: trimmedTitle,
+          };
+        }
+      } else {
+        const { cardType: localType, error } = createCardType({
+          label: trimmedTitle,
+        });
+        if (error || !localType) {
+          setNewTypeError(error || "Failed to create card type.");
+          return;
+        }
+        createdOption = localType;
+      }
+
+      setCustomCardTypes((prev) => [...prev, createdOption]);
+      setApiCardTypes((prev) => [...prev, createdOption]);
+      setDraftType(createdOption.id);
+      setIsAddTypeOpen(false);
+      setNewTypeTitle("");
+      setNewTypeError(undefined);
+      setTypeError(undefined);
+
+      // Notify parent callback if onAddType was passed and we called taskService directly
+      if (onAddType && hasValidNumericProjectId) {
+        try {
+          await onAddType(createdOption);
+        } catch {
+          // Parent notification non-blocking
+        }
+      }
+    } catch (err: unknown) {
+      console.error("Failed to create task type:", err);
+      const msg =
+        err instanceof Error ? err.message : "Failed to create task type on backend.";
+      setNewTypeError(msg);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -788,16 +912,11 @@ export const CardDetail: FC<CardDetailProps> = ({
                   label="Assignee"
                   users={users}
                   selectedUserId={draftAssigneeId}
-                  selectedUserIds={draftAssigneeIds}
-                  multiple
+                  multiple={false}
                   disabled={!canChangeAssignee}
                   onSelect={(id) => {
                     setDraftAssigneeId(id);
                     setDraftAssigneeIds(id ? [id] : []);
-                  }}
-                  onSelectMultiple={(ids) => {
-                    setDraftAssigneeIds(ids);
-                    setDraftAssigneeId(ids[0] || null);
                   }}
                   helperText={
                     !isCreating && !canChangeAssignee
@@ -838,6 +957,9 @@ export const CardDetail: FC<CardDetailProps> = ({
                 disabled={!canEditTitle}
                 placeholder="Select type..."
                 searchable
+                searchPlaceholder="Search or add type..."
+                onSearchChange={setTypeSearch}
+                isLoading={isSearchingTypes}
                 style={{ marginBottom: 0 }}
                 action={{
                   label: "Add a new type",
@@ -995,50 +1117,6 @@ export const CardDetail: FC<CardDetailProps> = ({
             autoFocus
             containerStyle={{ marginBottom: 0 }}
           />
-
-          <div>
-            <Text variant="label" style={{ display: "block", marginBottom: 8 }}>
-              Badge Color
-            </Text>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {PRESET_TYPE_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setNewTypeColor(c)}
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: "var(--radius-pill)",
-                    backgroundColor: c,
-                    border:
-                      newTypeColor === c
-                        ? "2px solid var(--color-ink)"
-                        : "2px solid transparent",
-                    cursor: "pointer",
-                    padding: 0,
-                    outline: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                  aria-label={`Color ${c}`}
-                >
-                  {newTypeColor === c && (
-                    <span
-                      style={{
-                        color: "#fff",
-                        fontSize: 12,
-                        fontWeight: "bold",
-                      }}
-                    >
-                      ✓
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
         </form>
       </Modal>
 

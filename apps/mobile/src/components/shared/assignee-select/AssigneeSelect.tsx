@@ -274,7 +274,7 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
             pressed && !disabled && styles.avatarOnlyPressed,
           ]}
           accessibilityRole="button"
-          accessibilityLabel={`Assignees: ${
+          accessibilityLabel={`${multiple ? 'Assignees' : 'Assignee'}: ${
             selectedUsers.length > 0
               ? selectedUsers.map((u) => u.name).join(', ')
               : placeholder
@@ -324,7 +324,7 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
           pressed && !disabled && styles.triggerPressed,
         ]}
         accessibilityRole="button"
-        accessibilityLabel={`Assignees: ${
+        accessibilityLabel={`${multiple ? 'Assignees' : 'Assignee'}: ${
           selectedUsers.length > 0
             ? selectedUsers.map((u) => u.name).join(', ')
             : placeholder

@@ -3,7 +3,6 @@ import type { Card as CardType, CardRole, User } from '@jira-clone/shared';
 import { Text, Badge, IconButton } from '../../base';
 import { AssigneeSelect } from '../assignee-select';
 import { Avatar } from '../avatar';
-import { AvatarGroup } from '../avatar-group';
 
 export interface CardProps {
   /** The card entity */
@@ -164,30 +163,18 @@ export const Card: FC<CardProps> = ({
             <AssigneeSelect
               variant="avatarOnly"
               avatarSize="xs"
-              multiple
+              multiple={false}
               users={users}
               selectedUserId={card.assigneeId}
-              selectedUserIds={
-                card.assigneeIds || (card.assigneeId ? [card.assigneeId] : [])
-              }
               onSelect={(uid) => {
-                if (onAssigneesChange) {
+                if (onAssigneeChange) {
+                  onAssigneeChange(uid, card);
+                } else if (onAssigneesChange) {
                   onAssigneesChange(uid ? [uid] : [], card);
-                } else {
-                  onAssigneeChange?.(uid, card);
-                }
-              }}
-              onSelectMultiple={(uids) => {
-                if (onAssigneesChange) {
-                  onAssigneesChange(uids, card);
-                } else if (onAssigneeChange) {
-                  onAssigneeChange(uids[0] || null, card);
                 }
               }}
             />
-          ) : resolvedAssignees.length > 1 ? (
-            <AvatarGroup users={resolvedAssignees} size="xs" max={2} />
-          ) : resolvedAssignees.length === 1 ? (
+          ) : resolvedAssignees.length >= 1 ? (
             <Avatar
               name={resolvedAssignees[0].name}
               imageUrl={resolvedAssignees[0].avatarUrl}

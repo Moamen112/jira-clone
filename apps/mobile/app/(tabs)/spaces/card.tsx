@@ -1,19 +1,26 @@
-import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, StyleSheet, Pressable, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronBackIcon, SunnyIcon, MoonIcon } from '../../../assets/icon';
 import {
+  type BoardColumn,
+  type Card as CardType,
+  type CardTypeOption,
+  type Comment,
+  type ActivityLog,
+  type User,
   mockCards,
   mockColumns,
   mockUsers,
-  mockCurrentUser,
-  mockComments,
-  mockActivityLogs,
-  BoardColumn,
-  Card as CardType,
-  Comment,
-  updateCardInList,
-  deleteCardFromList,
+  taskService,
+  backendTaskToCard,
+  backendCommentToComment,
+  backendActivityToActivityLog,
+  columnIdToStatus,
+  createDefaultBoardColumns,
+  taskTypeToCardTypeOption,
+  useAuth,
+  useProjects,
 } from '@jira-clone/shared';
 import { CardDetail } from '../../../src/components/shared/card-detail';
 import { EmptyState } from '../../../src/components/shared/empty-state';
@@ -22,43 +29,152 @@ import { useTheme, spacing, radius } from '../../../src/tokens';
 
 /**
  * SpacesCardScreen — Full-screen issue inspector and editor.
- * Reads `cardId` via useLocalSearchParams(), manages comments and card updates,
- * and renders the full-screen CardDetail interface.
+ * Reads `cardId` via useLocalSearchParams(), loads task details, comments,
+ * and activity logs directly from backend API endpoints.
  */
 export default function SpacesCardScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
   const router = useRouter();
-  const { cardId, from } = useLocalSearchParams<{ cardId?: string; from?: string }>();
+  const { cardId, projectId, from } = useLocalSearchParams<{
+    cardId?: string;
+    projectId?: string;
+    from?: string;
+  }>();
+  const { user } = useAuth();
+  const { spaces } = useProjects();
 
-  const [cards, setCards] = useState<CardType[]>(mockCards);
-  const [columns, setColumns] = useState<BoardColumn[]>(mockColumns);
-  const [comments, setComments] = useState<Comment[]>(mockComments);
-
-  // Find active card from route parameter
-  const card = useMemo(() => {
+  const [card, setCard] = useState<CardType | null>(() => {
     if (!cardId) return null;
-    return cards.find((c) => c.id === cardId) || null;
-  }, [cards, cardId]);
+    return mockCards.find((c) => c.id === cardId) || null;
+  });
+  const [columns, setColumns] = useState<BoardColumn[]>(() => {
+    return createDefaultBoardColumns(projectId || 'default');
+  });
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [taskTypes, setTaskTypes] = useState<CardTypeOption[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch task types for project
+  useEffect(() => {
+    const projId = card?.projectId || projectId;
+    const numProjId = Number(projId);
+    if (!isNaN(numProjId) && numProjId > 0) {
+      taskService
+        .getTaskTypes(numProjId)
+        .then((types) => {
+          if (types && types.length > 0) {
+            setTaskTypes(types.map(taskTypeToCardTypeOption));
+          }
+        })
+        .catch((err) => console.warn('Failed to load task types:', err));
+    }
+  }, [card?.projectId, projectId]);
+
+  // Fetch task detail, comments, and activity from API
+  useEffect(() => {
+    if (!cardId) return;
+
+    let isMounted = true;
+    const numericCardId = Number(cardId);
+
+    // If cardId is numeric, fetch from live backend API
+    if (!isNaN(numericCardId)) {
+      setLoading(true);
+      taskService
+        .getTask(numericCardId)
+        .then((backendTask) => {
+          if (!isMounted) return;
+          const convertedCard = backendTaskToCard(backendTask);
+          setCard(convertedCard);
+          if (backendTask.project?.id) {
+            setColumns(createDefaultBoardColumns(backendTask.project.id));
+          }
+        })
+        .catch((err) => {
+          console.warn('Failed to load card from backend:', err);
+        })
+        .finally(() => {
+          if (isMounted) setLoading(false);
+        });
+
+      // Load comments
+      taskService
+        .getComments(numericCardId)
+        .then((backendComments) => {
+          if (!isMounted) return;
+          setComments(
+            backendComments.map((bc) => backendCommentToComment(bc, cardId))
+          );
+        })
+        .catch((err) => console.warn('Failed to load comments:', err));
+
+      // Load activity
+      taskService
+        .getActivity(numericCardId, { tab: 'all' })
+        .then((entries) => {
+          if (!isMounted) return;
+          setActivityLogs(
+            entries.map((entry) => backendActivityToActivityLog(entry, cardId))
+          );
+        })
+        .catch((err) => console.warn('Failed to load activity:', err));
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [cardId]);
+
+  // Derive users from project members or current user
+  const users = useMemo<User[]>(() => {
+    const currentProjectId = card?.projectId || projectId;
+    const space = spaces.find(
+      (s) => String(s.project.id) === String(currentProjectId)
+    );
+    if (space?.members && space.members.length > 0) {
+      return space.members.map((m) => ({
+        id: String(m.id),
+        name: m.name,
+        email: m.email || '',
+        initials: (m.name || 'U').slice(0, 2).toUpperCase(),
+        avatarUrl: m.avatarUrl,
+      }));
+    }
+    if (user) {
+      return [
+        {
+          id: String(user.id),
+          name: user.full_name || user.email,
+          email: user.email,
+          initials: (user.full_name || user.email).slice(0, 2).toUpperCase(),
+          avatarUrl: user.avatar || undefined,
+        },
+      ];
+    }
+    return mockUsers;
+  }, [card?.projectId, projectId, spaces, user]);
 
   // Back navigation handler
   const handleBack = () => {
+    const currentProjectId = card?.projectId || projectId;
     if (from === 'home') {
       router.replace('/(tabs)');
-    } else if (from === 'project' && card?.projectId) {
+    } else if (from === 'project' && currentProjectId) {
       if (router.canGoBack()) {
         router.back();
       } else {
         router.replace({
           pathname: '/(tabs)/spaces/project',
-          params: { projectId: card.projectId },
+          params: { projectId: currentProjectId },
         });
       }
     } else if (router.canGoBack()) {
       router.back();
-    } else if (card?.projectId) {
+    } else if (currentProjectId) {
       router.replace({
         pathname: '/(tabs)/spaces/project',
-        params: { projectId: card.projectId },
+        params: { projectId: currentProjectId },
       });
     } else {
       router.replace('/(tabs)/spaces');
@@ -66,35 +182,118 @@ export default function SpacesCardScreen() {
   };
 
   // Save changes callback
-  const handleSaveCard = (updatedCard: CardType) => {
-    setCards((prev) => updateCardInList(prev, updatedCard));
+  const handleSaveCard = async (updatedCard: CardType) => {
+    const numericCardId = Number(updatedCard.id);
+    if (!isNaN(numericCardId)) {
+      try {
+        const targetStatus = columnIdToStatus(updatedCard.columnId);
+        let resolvedTypeId: number | undefined = updatedCard.typeId;
+        if (!resolvedTypeId && updatedCard.type) {
+          const num = Number(updatedCard.type);
+          if (!isNaN(num) && num > 0) {
+            resolvedTypeId = num;
+          } else {
+            const found = taskTypes.find(
+              (t) =>
+                t.label.toLowerCase() === updatedCard.type?.toLowerCase() ||
+                t.id === updatedCard.type
+            );
+            if (found && !isNaN(Number(found.id))) {
+              resolvedTypeId = Number(found.id);
+            }
+          }
+        }
+
+        await taskService.updateTask(numericCardId, {
+          title: updatedCard.title,
+          description: updatedCard.description,
+          assignee: updatedCard.assigneeId ? Number(updatedCard.assigneeId) : null,
+          due_date: updatedCard.dueDate || null,
+          status: targetStatus,
+          type: resolvedTypeId,
+        });
+      } catch (err: unknown) {
+        Alert.alert(
+          'Save Failed',
+          err instanceof Error ? err.message : 'Could not update task on backend.'
+        );
+        return;
+      }
+    }
+    setCard(updatedCard);
     handleBack();
   };
 
   // Delete card callback
-  const handleDeleteCard = (deletedCardId: string) => {
-    setCards((prev) => deleteCardFromList(prev, deletedCardId));
+  const handleDeleteCard = async (deletedCardId: string) => {
+    const numericCardId = Number(deletedCardId);
+    if (!isNaN(numericCardId)) {
+      try {
+        await taskService.deleteTask(numericCardId);
+      } catch (err: unknown) {
+        Alert.alert(
+          'Delete Failed',
+          err instanceof Error ? err.message : 'Could not delete task on backend.'
+        );
+        return;
+      }
+    }
     handleBack();
   };
 
   // Add comment callback
-  const handleAddComment = (content: string, targetCardId?: string) => {
+  const handleAddComment = async (content: string, targetCardId?: string) => {
     const id = targetCardId || card?.id;
     if (!id) return;
-    const newComment: Comment = {
+    const numericCardId = Number(id);
+
+    if (!isNaN(numericCardId)) {
+      try {
+        const backendComment = await taskService.addComment(numericCardId, {
+          body: content.trim(),
+        });
+        const converted = backendCommentToComment(backendComment, id);
+        setComments((prev) => [...prev, converted]);
+        return;
+      } catch (err: unknown) {
+        Alert.alert(
+          'Comment Failed',
+          err instanceof Error ? err.message : 'Failed to post comment.'
+        );
+        return;
+      }
+    }
+
+    const fallbackComment: Comment = {
       id: `comment-${Date.now()}`,
       cardId: id,
-      authorId: mockCurrentUser.id,
+      authorId: user ? String(user.id) : 'user-1',
       content,
       createdAt: new Date().toISOString(),
     };
-    setComments((prev) => [newComment, ...prev]);
+    setComments((prev) => [...prev, fallbackComment]);
   };
 
   // Delete comment callback
-  const handleDeleteComment = (commentId: string) => {
+  const handleDeleteComment = async (commentId: string) => {
+    const numericCardId = Number(card?.id);
+    const numericCommentId = Number(commentId);
+
+    if (!isNaN(numericCardId) && !isNaN(numericCommentId)) {
+      try {
+        await taskService.deleteComment(numericCardId, numericCommentId);
+      } catch (err: unknown) {
+        Alert.alert(
+          'Delete Comment Failed',
+          err instanceof Error ? err.message : 'Failed to delete comment.'
+        );
+        return;
+      }
+    }
     setComments((prev) => prev.filter((c) => c.id !== commentId));
   };
+
+  const currentUserId = user ? String(user.id) : undefined;
 
   if (!card) {
     return (
@@ -144,17 +343,15 @@ export default function SpacesCardScreen() {
     );
   }
 
-  const cardComments = comments.filter((c) => c.cardId === card.id);
-  const cardActivityLogs = mockActivityLogs.filter((l) => l.cardId === card.id);
-
   return (
     <CardDetail
       card={card}
       columns={columns}
-      users={mockUsers}
-      currentUserId={mockCurrentUser.id}
-      comments={cardComments}
-      activityLogs={cardActivityLogs.length > 0 ? cardActivityLogs : mockActivityLogs}
+      users={users}
+      currentUserId={currentUserId}
+      comments={comments}
+      activityLogs={activityLogs}
+      cardTypes={taskTypes}
       onAddComment={handleAddComment}
       onDeleteComment={handleDeleteComment}
       onClose={handleBack}
@@ -162,6 +359,7 @@ export default function SpacesCardScreen() {
       onDelete={handleDeleteCard}
       onAddStatus={(newCol) => setColumns((prev) => [...prev, newCol])}
       fullScreen={true}
+      loading={loading}
     />
   );
 }
@@ -194,4 +392,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     gap: 2,
   },
-});
+});

@@ -413,7 +413,7 @@ export const Sidenav: FC<SidenavProps> = ({
       {/* ================================================================= */}
       {/* CURRENT PROJECT CONTEXT & SWITCHER */}
       {/* ================================================================= */}
-      {currentProject && (
+      {currentProject ? (
         <div
           ref={projectMenuRef}
           style={{
@@ -544,6 +544,36 @@ export const Sidenav: FC<SidenavProps> = ({
             </div>
           )}
         </div>
+      ) : (
+        <div
+          style={{
+            padding: collapsed ? '8px 10px' : '8px 12px',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => onNavigate?.('projects')}
+            title="Create a space"
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              gap: 8,
+              padding: collapsed ? '6px 0' : '6px 8px',
+              borderRadius: 'var(--radius-card)',
+              border: '1px dashed var(--color-line)',
+              backgroundColor: 'transparent',
+              color: 'var(--color-ink-muted)',
+              cursor: 'pointer',
+              fontSize: 12,
+              textAlign: 'left',
+            }}
+          >
+            <span style={{ color: 'var(--color-accent)', fontWeight: 'bold' }}>+</span>
+            {!collapsed && <span>Create a space</span>}
+          </button>
+        </div>
       )}
 
       {/* ================================================================= */}
@@ -610,9 +640,100 @@ export const Sidenav: FC<SidenavProps> = ({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {renderNavItem('home', 'My Work / Tasks', <HomeIcon size={17} />)}
-            {renderNavItem('projects', 'All Projects', <ProjectsIcon size={17} />)}
+            {renderNavItem('projects', 'All Spaces', <ProjectsIcon size={17} />)}
           </div>
         </div>
+
+        {/* Section 2.5: SPACES / PROJECTS LIST FROM API */}
+        {projects.length > 0 && (
+          <div>
+            {!collapsed && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '4px 8px',
+                  marginBottom: 4,
+                }}
+              >
+                <Text
+                  variant="sectionLabel"
+                  muted
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: '0.8px',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Spaces ({projects.length})
+                </Text>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {projects.slice(0, 8).map((proj) => {
+                const isSelected = currentProject?.id === proj.id && activePage === 'projects';
+                return (
+                  <button
+                    key={proj.id}
+                    type="button"
+                    onClick={() => onSelectProject?.(proj.id)}
+                    title={collapsed ? `${proj.name} (${proj.key})` : undefined}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: collapsed ? 'center' : 'flex-start',
+                      gap: 10,
+                      padding: collapsed ? '8px 0' : '6px 8px',
+                      borderRadius: 'var(--radius-card)',
+                      border: 'none',
+                      backgroundColor: isSelected
+                        ? 'var(--color-accent-soft, rgba(37, 99, 235, 0.1))'
+                        : 'transparent',
+                      color: isSelected ? 'var(--color-accent)' : 'var(--color-ink)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'background-color 150ms ease, color 150ms ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.backgroundColor = 'var(--color-paper)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }
+                    }}
+                  >
+                    <Badge
+                      label={proj.key.slice(0, 4)}
+                      variant={isSelected ? 'accent' : 'mono'}
+                      size="sm"
+                    />
+                    {!collapsed && (
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: isSelected ? 600 : 400,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          flex: 1,
+                        }}
+                      >
+                        {proj.name}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Section 3: ACTIVITY & NOTIFICATIONS (hidden for now) */}
         {/*

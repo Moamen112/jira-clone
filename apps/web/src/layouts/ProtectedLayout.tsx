@@ -3,14 +3,16 @@ import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Sidenav, type SidenavPage } from '../components/shared/sidenav';
 import { useTheme } from '../hooks';
 import { ROUTES } from '../routes/paths';
-import { mockProjects, mockCurrentUser } from '@jira-clone/shared';
+import { useProjects, useAuth, getInitials, type User } from '@jira-clone/shared';
 import styles from './ProtectedLayout.module.css';
 
 export function ProtectedLayout() {
   const [collapsed, setCollapsed] = useState(false);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(mockProjects[0].id);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
   const { isDark, toggleTheme } = useTheme();
+  const { user, signOut } = useAuth();
+  const { plainProjects: projects } = useProjects();
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -18,15 +20,26 @@ export function ProtectedLayout() {
   // Derive active project from space detail route when present, otherwise user selection
   const spaceMatch = location.pathname.match(/^\/spaces\/([^/]+)/);
   const matchedProject = spaceMatch?.[1]
-    ? mockProjects.find(
+    ? projects.find(
         (p) => p.id === spaceMatch[1] || p.key.toLowerCase() === spaceMatch[1].toLowerCase()
       )
     : undefined;
 
   const currentProject =
     matchedProject ??
-    mockProjects.find((p) => p.id === selectedProjectId) ??
-    mockProjects[0];
+    (selectedProjectId ? projects.find((p) => p.id === selectedProjectId) : undefined) ??
+    projects[0] ??
+    null;
+
+  const currentUser: User | null = user
+    ? {
+        id: String(user.id),
+        name: user.full_name || user.email,
+        email: user.email,
+        avatarUrl: user.avatar ?? undefined,
+        initials: getInitials(user.full_name || user.email),
+      }
+    : null;
 
   // Map route to SidenavPage
   const getActivePage = (): SidenavPage => {
@@ -60,6 +73,11 @@ export function ProtectedLayout() {
     }
   };
 
+  const handleLogout = async () => {
+    await signOut();
+    navigate(ROUTES.AUTH.SIGN_IN);
+  };
+
   return (
     <div className={styles.container}>
       {/* Sidenav rendered on PROTECTED route pages ONLY — fixed full page height */}
@@ -67,19 +85,19 @@ export function ProtectedLayout() {
         <Sidenav
           activePage={getActivePage()}
           onNavigate={handleNavigate}
-          projects={mockProjects}
+          projects={projects}
           currentProject={currentProject}
           onSelectProject={(id) => {
             setSelectedProjectId(id);
             navigate(`/spaces/${id}`);
           }}
-          currentUser={mockCurrentUser}
-          unreadNotificationsCount={2}
+          currentUser={currentUser}
+          unreadNotificationsCount={0}
           collapsed={collapsed}
           onToggleCollapse={(col) => setCollapsed(col)}
           isDark={isDark}
           onToggleTheme={toggleTheme}
-          onLogout={() => navigate(ROUTES.AUTH.SIGN_IN)}
+          onLogout={handleLogout}
           style={{ height: '100%' }}
         />
       </div>

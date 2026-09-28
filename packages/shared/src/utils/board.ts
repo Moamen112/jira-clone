@@ -170,10 +170,19 @@ export function filterCards(
       if (!matchesRegularUser && !matchesUnassigned) return false;
     }
 
-    // 7. Filter by Card Type (e.g. 'task', 'bug', 'story', 'epic')
+    // 7. Filter by Card Type (e.g. 'task', 'bug', 'story', 'epic', or type ID)
     if (criteria.type && criteria.type !== 'all') {
-      const cardType = (card.type || 'task').toLowerCase();
-      if (cardType !== criteria.type.toLowerCase()) return false;
+      const filterVal = criteria.type.toLowerCase();
+      const cardType = (card.type || '').toLowerCase();
+      const cardTypeName = (card.typeName || '').toLowerCase();
+      const cardTypeId = card.typeId ? String(card.typeId) : '';
+
+      const matches =
+        cardType === filterVal ||
+        cardTypeName === filterVal ||
+        cardTypeId === filterVal;
+
+      if (!matches) return false;
     }
 
     return true;

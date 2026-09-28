@@ -5,9 +5,19 @@ import { Button, Input, Dropdown } from '../../components/base';
 import { ProjectCard } from '../../components/shared/project-card';
 import { Pagination } from '../../components/shared/pagination';
 import styles from './SpacesPage.module.css';
+import {
+  useProjects,
+  userService,
+  mapSortToOrdering,
+  mockSpaceSortOptions,
+  useDebounce,
+  type User,
+} from '@jira-clone/shared';
+import { CreateSpaceModal } from './components/create-space-modal';
+import type { CreateSpaceInput } from './components/create-space-modal';
 
 // ============================================================================
-// ICONS
+// ICONS & ILLUSTRATIONS
 // ============================================================================
 
 const SearchIcon: FC<{ size?: number }> = ({ size = 15 }) => (
@@ -44,51 +54,156 @@ const PlusIcon: FC<{ size?: number }> = ({ size = 16 }) => (
   </svg>
 );
 
-import {
-  mockSpaces,
-  // mockSpaceTypeOptions,
-  // mockSpaceOwnerOptions,
-  mockSpaceSortOptions,
-  useDebounce,
-  filterSpaces,
-  sortSpaces,
-  createSpace,
-} from '@jira-clone/shared';
-import type { SpaceItem } from '@jira-clone/shared';
-import { CreateSpaceModal } from './components/create-space-modal';
-import type { CreateSpaceInput } from './components/create-space-modal';
+const BoardIcon: FC<{ size?: number }> = ({ size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M9 3v18M15 3v18" />
+  </svg>
+);
+
+const UsersIcon: FC<{ size?: number }> = ({ size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
+const TasksIcon: FC<{ size?: number }> = ({ size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <polyline points="9 11 12 14 22 4" />
+    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+  </svg>
+);
+
+/**
+ * Rich illustration for the empty spaces state.
+ */
+const KanbanEmptyIllustration: FC = () => (
+  <svg width="96" height="96" viewBox="0 0 96 96" fill="none" aria-hidden="true">
+    <circle cx="48" cy="48" r="44" fill="var(--color-accent-soft)" fillOpacity="0.45" />
+    <circle cx="48" cy="48" r="36" fill="var(--color-surface)" stroke="var(--color-line)" strokeWidth="1.5" />
+
+    {/* Column 1 */}
+    <rect x="25" y="27" width="13" height="36" rx="3" fill="var(--color-paper)" stroke="var(--color-line)" strokeWidth="1" />
+    <rect x="27.5" y="31" width="8" height="9" rx="2" fill="var(--color-surface)" stroke="var(--color-line)" strokeWidth="0.8" />
+    <rect x="27.5" y="43" width="8" height="13" rx="2" fill="var(--color-surface)" stroke="var(--color-line)" strokeWidth="0.8" />
+
+    {/* Column 2 - Active */}
+    <rect x="41.5" y="25" width="13" height="40" rx="3" fill="var(--color-paper)" stroke="var(--color-accent)" strokeWidth="1.5" />
+    <rect x="44" y="29" width="8" height="12" rx="2" fill="var(--color-accent-soft)" />
+    <rect x="44" y="44" width="8" height="8" rx="2" fill="var(--color-surface)" stroke="var(--color-line)" strokeWidth="0.8" />
+
+    {/* Column 3 */}
+    <rect x="58" y="27" width="13" height="36" rx="3" fill="var(--color-paper)" stroke="var(--color-line)" strokeWidth="1" />
+    <rect x="60.5" y="31" width="8" height="10" rx="2" fill="var(--color-surface)" stroke="var(--color-line)" strokeWidth="0.8" />
+
+    {/* Floating Plus Badge */}
+    <circle cx="68" cy="68" r="14" fill="var(--color-accent)" />
+    <path d="M68 62v12M62 68h12" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+/**
+ * Illustration for search results not found.
+ */
+const SearchEmptyIllustration: FC = () => (
+  <svg width="88" height="88" viewBox="0 0 88 88" fill="none" aria-hidden="true">
+    <circle cx="44" cy="44" r="40" fill="var(--color-accent-soft)" fillOpacity="0.35" />
+    <circle cx="44" cy="44" r="32" fill="var(--color-surface)" stroke="var(--color-line)" strokeWidth="1.5" />
+
+    <circle cx="40" cy="40" r="13" stroke="var(--color-accent)" strokeWidth="2.5" strokeLinecap="round" />
+    <line x1="49.5" y1="49.5" x2="60" y2="60" stroke="var(--color-accent)" strokeWidth="3" strokeLinecap="round" />
+    <line x1="34" y1="40" x2="46" y2="40" stroke="var(--color-ink-muted)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="2 2" />
+  </svg>
+);
 
 export function SpacesPage() {
   const navigate = useNavigate();
-  const [spaces, setSpaces] = useState<SpaceItem[]>(mockSpaces);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
-  // Filter dropdown states hidden until backend filter specifications are finalized
-  // const [selectedType, setSelectedType] = useState('all');
-  // const [selectedOwner, setSelectedOwner] = useState('all');
   const [selectedSort, setSelectedSort] = useState('updated');
   const [currentPage, setCurrentPage] = useState(1);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const pageSize = 36;
 
+  // Reset page to 1 when filters or ordering change
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearchQuery, selectedSort]);
 
-  const filteredSpaces = filterSpaces(spaces, debouncedSearchQuery);
-  const sortedSpaces = sortSpaces(filteredSpaces, selectedSort);
+  // Load available users for the member picker in Create Space modal
+  useEffect(() => {
+    userService
+      .getUsers()
+      .then((users) => setAvailableUsers(users))
+      .catch(() => {});
+  }, []);
 
-  const totalItems = sortedSpaces.length;
+  // Fetch projects from the backend API
+  const {
+    spaces,
+    totalCount,
+    isLoading,
+    error,
+    createProject,
+    refetch,
+  } = useProjects({
+    search: debouncedSearchQuery.trim() || undefined,
+    ordering: mapSortToOrdering(selectedSort),
+    page: currentPage,
+    pageSize,
+  });
+
+  const totalItems = totalCount;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const startIndex = (currentPage - 1) * pageSize;
-  const visibleSpaces = sortedSpaces.slice(startIndex, startIndex + pageSize);
 
-  const handleCreateSpace = (input: CreateSpaceInput) => {
-    const newSpace = createSpace(input);
-    setSpaces((prev) => [newSpace, ...prev]);
+  const handleCreateSpace = async (input: CreateSpaceInput) => {
+    const memberIds = input.members
+      ?.map((m) => Number(m.id))
+      .filter((id) => !Number.isNaN(id) && id > 0);
+
+    await createProject({
+      name: input.name,
+      key: input.key,
+      description: input.description,
+      members: memberIds && memberIds.length > 0 ? memberIds : undefined,
+    });
     setCurrentPage(1);
   };
 
+  const isSearchActive = Boolean(debouncedSearchQuery.trim());
 
   return (
     <div className={styles.container}>
@@ -123,27 +238,6 @@ export function SpacesPage() {
               inputWrapperStyle={{ minHeight: 38 }}
             />
           </div>
-
-          {/* Filter dropdowns (hidden until backend filters are finalized) */}
-          {/*
-          <div className={styles.filterDropdown}>
-            <Dropdown
-              value={selectedType}
-              options={mockSpaceTypeOptions}
-              onSelect={setSelectedType}
-              placeholder="Space type"
-            />
-          </div>
-
-          <div className={styles.filterDropdown}>
-            <Dropdown
-              value={selectedOwner}
-              options={mockSpaceOwnerOptions}
-              onSelect={setSelectedOwner}
-              placeholder="Owner"
-            />
-          </div>
-          */}
         </div>
 
         {/* Sort Dropdown */}
@@ -159,36 +253,145 @@ export function SpacesPage() {
         </div>
       </section>
 
-      {/* Spaces Grid */}
-      <main className={styles.spacesGrid} aria-label="Spaces list">
-        {visibleSpaces.map((item) => (
-          <ProjectCard
-            key={item.project.id}
-            project={item.project}
-            members={item.members}
-            issueCounts={item.issueCounts}
-            category={item.category}
-            onPress={() => navigate(`/spaces/${item.project.id}`)}
+      {/* Error Banner */}
+      {error && (
+        <div className={styles.errorBanner} role="alert">
+          <span>{error}</span>
+          <Button
+            label="Retry"
+            variant="secondary"
+            size="sm"
+            onPress={() => refetch()}
           />
-        ))}
-      </main>
+        </div>
+      )}
+
+      {/* Loading Skeleton */}
+      {isLoading && spaces.length === 0 ? (
+        <div className={styles.spacesGrid} aria-label="Loading spaces">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className={styles.skeletonCard} aria-hidden="true" />
+          ))}
+        </div>
+      ) : !isLoading && spaces.length === 0 ? (
+        /* Empty State */
+        isSearchActive ? (
+          /* Case 1: Search query returned 0 results */
+          <div className={styles.emptyCard} role="status">
+            <div className={styles.emptyGraphicWrapper}>
+              <div className={styles.emptyGraphicGlow} />
+              <SearchEmptyIllustration />
+            </div>
+            <h2 className={styles.emptyTitle}>No spaces found</h2>
+            <p className={styles.emptyDescription}>
+              We couldn&apos;t find any spaces matching &ldquo;<strong>{debouncedSearchQuery}</strong>&rdquo;.
+              Check for typos or try searching with a different name or project key.
+            </p>
+            <div className={styles.emptyActions}>
+              <Button
+                label="Clear search"
+                variant="secondary"
+                size="md"
+                onPress={() => setSearchQuery('')}
+              />
+              <Button
+                label="Create space"
+                variant="primary"
+                size="md"
+                leftIcon={<PlusIcon size={16} />}
+                onPress={() => setIsCreateModalOpen(true)}
+              />
+            </div>
+          </div>
+        ) : (
+          /* Case 2: Workspace has zero spaces */
+          <div className={styles.emptyCard} role="status">
+            <div className={styles.emptyGraphicWrapper}>
+              <div className={styles.emptyGraphicGlow} />
+              <KanbanEmptyIllustration />
+            </div>
+            <h2 className={styles.emptyTitle}>Create your first space</h2>
+            <p className={styles.emptyDescription}>
+              Spaces are collaborative workspaces where your team plans sprints, tracks tasks, and organizes Kanban boards.
+            </p>
+
+            {/* Feature Highlights Grid */}
+            <div className={styles.emptyFeatureList}>
+              <div className={styles.emptyFeatureItem}>
+                <div className={styles.emptyFeatureIcon}>
+                  <BoardIcon size={20} />
+                </div>
+                <div>
+                  <span className={styles.emptyFeatureTitle}>Kanban Boards</span>
+                  <span className={styles.emptyFeatureDesc}>Visualize tasks and workflows</span>
+                </div>
+              </div>
+              <div className={styles.emptyFeatureItem}>
+                <div className={styles.emptyFeatureIcon}>
+                  <UsersIcon size={20} />
+                </div>
+                <div>
+                  <span className={styles.emptyFeatureTitle}>Team Roles</span>
+                  <span className={styles.emptyFeatureDesc}>Collaborate across members</span>
+                </div>
+              </div>
+              <div className={styles.emptyFeatureItem}>
+                <div className={styles.emptyFeatureIcon}>
+                  <TasksIcon size={20} />
+                </div>
+                <div>
+                  <span className={styles.emptyFeatureTitle}>Task Tracking</span>
+                  <span className={styles.emptyFeatureDesc}>Keep projects on schedule</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.emptyActions}>
+              <Button
+                label="Create your first space"
+                variant="primary"
+                size="md"
+                leftIcon={<PlusIcon size={16} />}
+                onPress={() => setIsCreateModalOpen(true)}
+              />
+            </div>
+          </div>
+        )
+      ) : (
+        /* Spaces Grid */
+        <main className={styles.spacesGrid} aria-label="Spaces list">
+          {spaces.map((item) => (
+            <ProjectCard
+              key={item.project.id}
+              project={item.project}
+              members={item.members}
+              issueCounts={item.issueCounts}
+              category={item.category}
+              onPress={() => navigate(`/spaces/${item.project.id}`)}
+            />
+          ))}
+        </main>
+      )}
 
       {/* Pagination Footer */}
-      <footer className={styles.paginationSection}>
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-        />
-      </footer>
+      {totalPages > 1 && (
+        <footer className={styles.paginationSection}>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+          />
+        </footer>
+      )}
 
       {/* Create Space Modal */}
       <CreateSpaceModal
         visible={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreate={handleCreateSpace}
+        users={availableUsers.length > 0 ? availableUsers : undefined}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -10,6 +10,10 @@ import {
   mockActivityLogs,
   Card as CardType,
   BoardColumn,
+  useAuth,
+  useProjects,
+  taskService,
+  backendTaskToCard,
 } from '@jira-clone/shared';
 import { Text, Badge, Avatar } from '../../src/components/base';
 import { StatusBar } from '../../src/components/shared/status-bar';
@@ -49,6 +53,25 @@ function isAssignedToUser(card: CardType, userId: string): boolean {
 export default function HomeScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { user } = useAuth();
+  const { projects } = useProjects();
+  const [liveCards, setLiveCards] = useState<CardType[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    taskService
+      .getTasks({ mine: true })
+      .then((res) => {
+        if (!isMounted) return;
+        if (res && res.length > 0) {
+          setLiveCards(res.map(backendTaskToCard));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const todayLabel = new Date().toLocaleDateString(undefined, {
     weekday: 'long',
@@ -56,18 +79,24 @@ export default function HomeScreen() {
     day: 'numeric',
   });
 
-  const assignedCount = mockCards.filter((c) =>
-    isAssignedToUser(c, mockCurrentUser.id)
+  const currentUserId = user ? String(user.id) : mockCurrentUser.id;
+  const currentUserName = user?.full_name || mockCurrentUser.name;
+
+  const displayCards = liveCards.length > 0 ? liveCards : mockCards;
+  const displayProjects = projects.length > 0 ? projects : mockProjects;
+
+  const assignedCount = displayCards.filter((c) =>
+    isAssignedToUser(c, currentUserId)
   ).length;
-  const createdCount = mockCards.filter(
-    (c) => c.publisherId === mockCurrentUser.id
+  const createdCount = displayCards.filter(
+    (c) => c.publisherId === currentUserId
   ).length;
 
-  const myWork = mockCards
+  const myWork = displayCards
     .filter(
       (c) =>
-        isAssignedToUser(c, mockCurrentUser.id) ||
-        c.publisherId === mockCurrentUser.id
+        isAssignedToUser(c, currentUserId) ||
+        c.publisherId === currentUserId
     )
     .sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -83,7 +112,7 @@ export default function HomeScreen() {
   const openProject = (projectId: string) => {
     router.push({
       pathname: '/(tabs)/spaces/project',
-      params: { projectId, from: 'home' },
+      params: { projectId: String(projectId), from: 'home' },
     });
   };
 
@@ -97,7 +126,7 @@ export default function HomeScreen() {
         <View style={styles.headerRow}>
           <View style={styles.headerText}>
             <Text variant="heading" bold>
-              {getGreeting()}, {mockCurrentUser.name.split(' ')[0]} 👋
+              {getGreeting()}, {currentUserName.split(' ')[0]} 👋
             </Text>
             <Text variant="caption" muted style={styles.dateLabel}>
               {todayLabel}
@@ -114,8 +143,8 @@ export default function HomeScreen() {
             ]}
           >
             <Avatar
-              name={mockCurrentUser.name}
-              imageUrl={mockCurrentUser.avatarUrl}
+              name={currentUserName}
+              imageUrl={user?.avatar || mockCurrentUser.avatarUrl}
               size="md"
               bordered
               borderColor={colors.paper}
@@ -128,7 +157,7 @@ export default function HomeScreen() {
           {[
             { label: 'Assigned', count: assignedCount },
             { label: 'Created', count: createdCount },
-            { label: 'Projects', count: mockProjects.length },
+            { label: 'Projects', count: displayProjects.length },
           ].map((stat) => (
             <View
               key={stat.label}
@@ -191,14 +220,14 @@ export default function HomeScreen() {
         ))}
         {/* Projects */}
         <Text variant="sectionLabel" muted style={styles.sectionTitle}>
-          YOUR PROJECTS ({mockProjects.length})
+          YOUR PROJECTS ({displayProjects.length})
         </Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.projectsScroll}
         >
-          {mockProjects.map((project) => (
+          {displayProjects.map((project) => (
             <Pressable
               key={project.id}
               onPress={() => openProject(project.id)}

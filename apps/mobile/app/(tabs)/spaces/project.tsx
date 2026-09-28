@@ -1,16 +1,16 @@
-import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, StyleSheet, Pressable, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronBackIcon, SunnyIcon, MoonIcon, AddIcon } from '../../../assets/icon';
 import {
   mockProjects,
-  mockColumns,
-  mockCards,
-  mockUsers,
-  mockCurrentUser,
-  Card as CardType,
-  createCard,
-  moveCardToColumn,
+  type Card as CardType,
+  type User,
+  type BackendProject,
+  useProjects,
+  useTasks,
+  useAuth,
+  projectService,
 } from '@jira-clone/shared';
 import { Text, Modal, Button, Input, Dropdown } from '../../../src/components/base';
 import { Board } from '../../../src/components/shared/board';
@@ -21,59 +21,146 @@ import { useTheme, spacing, radius } from '../../../src/tokens';
 
 /**
  * SpacesProjectScreen — Project Detail / Kanban Board view.
- * Reads `projectId` from URL params, filters columns and cards,
+ * Reads `projectId` from URL params, loads live project data & tasks via useTasks,
  * and embeds the Kanban Board with quick card actions.
  */
 export default function SpacesProjectScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
   const router = useRouter();
   const { projectId, from } = useLocalSearchParams<{ projectId?: string; from?: string }>();
+  const { user } = useAuth();
+  const { spaces, projects } = useProjects();
 
-  // Resolve project entity (fall back to first project if unprovided)
+  const [directProject, setDirectProject] = useState<BackendProject | null>(null);
+
+  // Match project from spaces or projects
+  const matchedProject = useMemo(() => {
+    if (!projectId) return null;
+    const fromSpaces = spaces.find(
+      (s) =>
+        String(s.project.id) === String(projectId) ||
+        s.project.key.toLowerCase() === projectId.toLowerCase()
+    )?.project;
+    if (fromSpaces) return fromSpaces;
+
+    const fromProjects = projects.find(
+      (p) =>
+        String(p.id) === String(projectId) ||
+        p.key.toLowerCase() === projectId.toLowerCase()
+    );
+    if (fromProjects) {
+      return {
+        id: String(fromProjects.id),
+        name: fromProjects.name,
+        key: fromProjects.key,
+        description: fromProjects.description,
+        ownerId: String(fromProjects.owner?.id || ''),
+        createdAt: fromProjects.created_at,
+        updatedAt: fromProjects.updated_at,
+        taskCount: fromProjects.task_count,
+        openTaskCount: fromProjects.open_task_count,
+        status: fromProjects.status,
+      };
+    }
+    return null;
+  }, [spaces, projects, projectId]);
+
+  // If not found in store, fetch single project directly by ID
+  useEffect(() => {
+    if (!matchedProject && projectId) {
+      projectService
+        .getProject(projectId)
+        .then((p) => setDirectProject(p))
+        .catch(() => {});
+    }
+  }, [matchedProject, projectId]);
+
+  // Resolved project entity
   const project = useMemo(() => {
+    if (matchedProject) return matchedProject;
+    if (directProject) {
+      return {
+        id: String(directProject.id),
+        name: directProject.name,
+        key: directProject.key,
+        description: directProject.description,
+        ownerId: String(directProject.owner?.id || ''),
+        createdAt: directProject.created_at,
+        updatedAt: directProject.updated_at,
+        taskCount: directProject.task_count,
+        openTaskCount: directProject.open_task_count,
+        status: directProject.status,
+      };
+    }
     if (!projectId) return mockProjects[0];
     return mockProjects.find((p) => p.id === projectId) || null;
-  }, [projectId]);
+  }, [matchedProject, directProject, projectId]);
 
-  // Project cards state
-  const [cards, setCards] = useState<CardType[]>(mockCards);
+  const activeProjectId = project?.id;
+  const activeProjectKey = project?.key;
+
+  // Real backend tasks hook
+  const {
+    cards,
+    columns,
+    isLoading: isTasksLoading,
+    statusError,
+    createTask,
+    updateTask,
+    updateTaskStatus,
+  } = useTasks({
+    projectId: activeProjectId,
+    projectKey: activeProjectKey,
+    autoFetch: Boolean(activeProjectId),
+  });
+
+  // Show status error alert when permission is denied on status transition
+  useEffect(() => {
+    if (statusError) {
+      Alert.alert('Status Transition', statusError);
+    }
+  }, [statusError]);
 
   // Quick move menu state
   const [moveMenuCard, setMoveMenuCard] = useState<CardType | null>(null);
   const [moveMenuVisible, setMoveMenuVisible] = useState(false);
 
-  // Derive columns belonging to this project
-  const projectColumns = useMemo(() => {
-    if (!project) return [];
-    return mockColumns.filter((col) => col.projectId === project.id);
-  }, [project]);
-
-  // Derive cards belonging to this project
-  const projectCards = useMemo(() => {
-    if (!project) return [];
-    return cards.filter((card) => card.projectId === project.id);
-  }, [cards, project]);
-
   // Derive project team members
-  const members = useMemo(() => {
-    if (!project) return [];
-    const pCards = mockCards.filter((c) => c.projectId === project.id);
-    const memberIdSet = new Set<string>();
-
-    if (project.ownerId) memberIdSet.add(project.ownerId);
-
-    pCards.forEach((c) => {
-      if (c.publisherId) memberIdSet.add(c.publisherId);
-      if (c.assigneeId) memberIdSet.add(c.assigneeId);
-      c.assigneeIds?.forEach((id) => memberIdSet.add(id));
-    });
-
-    if (memberIdSet.size === 0) {
-      return mockUsers.slice(0, 2);
+  const members = useMemo<User[]>(() => {
+    if (directProject?.members && directProject.members.length > 0) {
+      return directProject.members.map((m) => ({
+        id: String(m.user.id),
+        name: m.user.full_name || m.user.email,
+        email: m.user.email,
+        initials: (m.user.full_name || m.user.email).slice(0, 2).toUpperCase(),
+        avatarUrl: m.user.avatar || undefined,
+      }));
     }
-
-    return mockUsers.filter((u) => memberIdSet.has(u.id));
-  }, [project]);
+    const matchedSpace = spaces.find(
+      (s) => String(s.project.id) === String(project?.id)
+    );
+    if (matchedSpace?.members && matchedSpace.members.length > 0) {
+      return matchedSpace.members.map((m) => ({
+        id: String(m.id),
+        name: m.name,
+        email: m.email || '',
+        initials: (m.name || 'U').slice(0, 2).toUpperCase(),
+        avatarUrl: m.avatarUrl,
+      }));
+    }
+    if (user) {
+      return [
+        {
+          id: String(user.id),
+          name: user.full_name || user.email,
+          email: user.email,
+          initials: (user.full_name || user.email).slice(0, 2).toUpperCase(),
+          avatarUrl: user.avatar || undefined,
+        },
+      ];
+    }
+    return [];
+  }, [directProject?.members, spaces, project?.id, user]);
 
   // Back navigation handler
   const handleBack = () => {
@@ -90,7 +177,7 @@ export default function SpacesProjectScreen() {
   const handleCardPress = (card: CardType) => {
     router.push({
       pathname: '/(tabs)/spaces/card',
-      params: { cardId: card.id, from: 'project' },
+      params: { cardId: card.id, projectId: project?.id, from: 'project' },
     });
   };
 
@@ -100,26 +187,48 @@ export default function SpacesProjectScreen() {
     setMoveMenuVisible(true);
   };
 
-  const handleMoveColumn = (
+  const handleMoveColumn = async (
     columnId: string,
     targetCard: CardType,
     _position?: CardPosition
   ) => {
-    setCards((prev) => moveCardToColumn(prev, targetCard.id, columnId));
+    try {
+      await updateTaskStatus(targetCard.id, columnId);
+    } catch (err: unknown) {
+      Alert.alert(
+        'Permission Denied',
+        err instanceof Error ? err.message : 'You cannot move this task to this status.'
+      );
+    }
+  };
+
+  const handleCardAssigneeChange = async (userId: string | null, targetCard: CardType) => {
+    try {
+      await updateTask(targetCard.id, {
+        assignee: userId ? Number(userId) : null,
+      });
+    } catch (err: unknown) {
+      Alert.alert(
+        'Reassignment Failed',
+        err instanceof Error ? err.message : 'Could not reassign this card.'
+      );
+    }
   };
 
   // Inline card creation callback
-  const handleCreateCard = (title: string, columnId: string) => {
+  const handleCreateCard = async (title: string, columnId: string) => {
     if (!project) return;
-    const newCard = createCard({
-      title,
-      projectId: project.id,
-      projectKey: project.key,
-      columnId,
-      cardIndex: cards.length + 1,
-      order: cards.filter((c) => c.columnId === columnId).length,
-    });
-    setCards((prev) => [...prev, newCard]);
+    try {
+      await createTask({
+        title,
+        columnId,
+      });
+    } catch (err: unknown) {
+      Alert.alert(
+        'Creation Failed',
+        err instanceof Error ? err.message : 'Failed to create card.'
+      );
+    }
   };
 
   // Quick Create Card Modal state & handlers
@@ -129,7 +238,7 @@ export default function SpacesProjectScreen() {
   const [cardTitleError, setCardTitleError] = useState<string | undefined>();
 
   const handleOpenCreateCard = (columnId?: string) => {
-    setTargetColumnId(columnId || projectColumns[0]?.id || '');
+    setTargetColumnId(columnId || columns[0]?.id || 'col-todo');
     setNewCardTitle('');
     setCardTitleError(undefined);
     setIsCreateCardOpen(true);
@@ -141,16 +250,18 @@ export default function SpacesProjectScreen() {
     setCardTitleError(undefined);
   };
 
-  const handleConfirmCreateCard = () => {
+  const handleConfirmCreateCard = async () => {
     const trimmed = newCardTitle.trim();
     if (!trimmed) {
       setCardTitleError('Card title cannot be empty.');
       return;
     }
-    const chosenColumnId = targetColumnId || projectColumns[0]?.id || '';
-    handleCreateCard(trimmed, chosenColumnId);
+    const chosenColumnId = targetColumnId || columns[0]?.id || 'col-todo';
+    await handleCreateCard(trimmed, chosenColumnId);
     handleCloseCreateModal();
   };
+
+  const currentUserId = user ? String(user.id) : undefined;
 
   if (!project) {
     return (
@@ -248,12 +359,13 @@ export default function SpacesProjectScreen() {
 
       {/* Kanban Board with Project Header */}
       <Board
-        columns={projectColumns}
-        cards={projectCards}
-        users={mockUsers}
-        currentUserId={mockCurrentUser.id}
+        columns={columns}
+        cards={cards}
+        users={members}
+        currentUserId={currentUserId}
         onCardPress={handleCardPress}
         onCardMove={handleCardMove}
+        onCardAssigneeChange={handleCardAssigneeChange}
         onAddCardPress={(colId) => handleOpenCreateCard(colId)}
         onCreateCard={handleCreateCard}
         renderHeader={() => (
@@ -292,7 +404,7 @@ export default function SpacesProjectScreen() {
         title="Create Card"
         subtitle={
           targetColumnId
-            ? `${project.key} · ${projectColumns.find((c) => c.id === targetColumnId)?.title || targetColumnId}`
+            ? `${project.key} · ${columns.find((c) => c.id === targetColumnId)?.title || targetColumnId}`
             : project.key
         }
         presentation="dialog"
@@ -327,11 +439,11 @@ export default function SpacesProjectScreen() {
             autoFocus
           />
 
-          {projectColumns.length > 1 && (
+          {columns.length > 1 && (
             <Dropdown
               label="Status"
               value={targetColumnId}
-              options={projectColumns.map((c) => ({
+              options={columns.map((c) => ({
                 label: c.title,
                 value: c.id,
               }))}
@@ -346,8 +458,8 @@ export default function SpacesProjectScreen() {
       <CardMoveMenu
         visible={moveMenuVisible}
         card={moveMenuCard}
-        columns={projectColumns}
-        currentUserId={mockCurrentUser.id}
+        columns={columns}
+        currentUserId={currentUserId}
         onClose={() => {
           setMoveMenuVisible(false);
           setMoveMenuCard(null);
