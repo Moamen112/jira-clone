@@ -1,9 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { CSSProperties, FC } from 'react';
 import { Link } from 'react-router';
 import { ROUTES } from '../../../../routes/paths';
-import { Badge } from '../../../../components/base';
-import { StatusBar } from '../../../../components/shared/status-bar';
 import { Avatar } from '../../../../components/shared/avatar';
 import styles from './HeroSection.module.css';
 
@@ -19,6 +17,80 @@ export interface HeroSectionProps {
   /** Test identifier. */
   testID?: string;
 }
+
+interface MockHeroCard {
+  id: string;
+  key: string;
+  title: string;
+  column: 'todo' | 'in_progress' | 'done';
+  priority: 'urgent' | 'high' | 'medium';
+  points: number;
+  assigneeName: string;
+  isMine: boolean;
+  type: 'feature' | 'bug' | 'task';
+}
+
+const MOCK_CARDS: MockHeroCard[] = [
+  {
+    id: 'c1',
+    key: 'SPRINT-102',
+    title: 'Optimistic UI card drag and status updates',
+    column: 'in_progress',
+    priority: 'urgent',
+    points: 8,
+    assigneeName: 'Alex Morgan',
+    isMine: true,
+    type: 'feature',
+  },
+  {
+    id: 'c2',
+    key: 'SPRINT-103',
+    title: 'Audit WCAG 2.1 AA keyboard accessibility',
+    column: 'in_progress',
+    priority: 'medium',
+    points: 3,
+    assigneeName: 'Sarah Connor',
+    isMine: false,
+    type: 'task',
+  },
+  {
+    id: 'c3',
+    key: 'SPRINT-104',
+    title: 'Design token color system & dark theme spec',
+    column: 'todo',
+    priority: 'high',
+    points: 5,
+    assigneeName: 'Alex Morgan',
+    isMine: true,
+    type: 'task',
+  },
+  {
+    id: 'c4',
+    key: 'SPRINT-105',
+    title: 'Fix optimistic cache invalidation on card drag',
+    column: 'todo',
+    priority: 'urgent',
+    points: 5,
+    assigneeName: 'David Kim',
+    isMine: false,
+    type: 'bug',
+  },
+  {
+    id: 'c5',
+    key: 'SPRINT-101',
+    title: 'Secure JWT refresh flow & CSRF protection',
+    column: 'done',
+    priority: 'high',
+    points: 5,
+    assigneeName: 'David Kim',
+    isMine: false,
+    type: 'feature',
+  },
+];
+
+/* ==========================================================================
+   ICONS
+   ========================================================================== */
 
 const ArrowRightIcon: FC<{ size?: number }> = ({ size = 16 }) => (
   <svg
@@ -37,7 +109,7 @@ const ArrowRightIcon: FC<{ size?: number }> = ({ size = 16 }) => (
   </svg>
 );
 
-const SparkleIcon: FC<{ size?: number }> = ({ size = 14 }) => (
+const SparkleIcon: FC<{ size?: number }> = ({ size = 13 }) => (
   <svg
     width={size}
     height={size}
@@ -50,6 +122,19 @@ const SparkleIcon: FC<{ size?: number }> = ({ size = 14 }) => (
   </svg>
 );
 
+const BoltIcon: FC<{ size?: number }> = ({ size = 14 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    stroke="none"
+    aria-hidden="true"
+  >
+    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+  </svg>
+);
+
 export const HeroSection: FC<HeroSectionProps> = ({
   isAuthenticated = false,
   userName,
@@ -57,23 +142,36 @@ export const HeroSection: FC<HeroSectionProps> = ({
   className = '',
   testID,
 }) => {
-  const [activeBoardFilter, setActiveBoardFilter] = useState<'all' | 'mine' | 'recent'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'mine' | 'urgent'>('all');
 
   const displayName = userName?.trim();
 
   const eyebrow = isAuthenticated
     ? displayName
       ? `Signed in as ${displayName}`
-      : 'Workspace Ready'
-    : '✦ Next-Gen Agile Project Tracker';
+      : 'Workspace Active'
+    : 'Modern Agile Issue Tracker';
 
   const title = isAuthenticated
-    ? 'Welcome back to your workspace.'
-    : 'Plan sprints. Track issues. Ship world-class software.';
+    ? 'Welcome back to your agile command center.'
+    : 'Plan sprints. Track velocity. Ship software faster.';
 
   const subtitle = isAuthenticated
-    ? 'Jump back into your active sprint boards, view pending assignments, and collaborate with your team.'
-    : 'Fast, keyboard-friendly issue tracking, real-time Kanban boards, and streamlined team collaboration designed for modern product squads.';
+    ? 'Jump straight into your active boards, track team progress seamlessly, and organize issues with precision.'
+    : 'Fast, keyboard-driven issue tracking, interactive Kanban boards, and clean project spaces engineered for high-velocity software squads.';
+
+  // Interactive filtering of mock showcase cards
+  const filteredCards = useMemo(() => {
+    return MOCK_CARDS.filter((card) => {
+      if (activeFilter === 'mine') return card.isMine;
+      if (activeFilter === 'urgent') return card.priority === 'urgent' || card.priority === 'high';
+      return true;
+    });
+  }, [activeFilter]);
+
+  const todoCards = filteredCards.filter((c) => c.column === 'todo');
+  const progressCards = filteredCards.filter((c) => c.column === 'in_progress');
+  const doneCards = filteredCards.filter((c) => c.column === 'done');
 
   return (
     <section
@@ -82,6 +180,9 @@ export const HeroSection: FC<HeroSectionProps> = ({
       data-testid={testID}
       aria-label="Hero"
     >
+      {/* Background ambient lighting */}
+      <div className={styles.glowTop} aria-hidden="true" />
+
       {/* Top Eyebrow Badge */}
       <div className={styles.eyebrowWrap}>
         <span className={styles.eyebrow}>
@@ -107,15 +208,23 @@ export const HeroSection: FC<HeroSectionProps> = ({
             </Link>
           </>
         ) : (
-          <Link to={ROUTES.AUTH.SIGN_IN} className={styles.primaryBtn}>
-            <span>Log In to Workspace</span>
-            <ArrowRightIcon size={16} />
-          </Link>
+          <>
+            <Link to={ROUTES.AUTH.SIGN_UP} className={styles.primaryBtn}>
+              <span>Start Free — Instant Access</span>
+              <ArrowRightIcon size={16} />
+            </Link>
+            <Link to={ROUTES.AUTH.SIGN_IN} className={styles.secondaryBtn}>
+              <span>Sign In</span>
+            </Link>
+          </>
         )}
       </div>
 
       {/* Interactive Kanban Board Product Showcase */}
       <div className={styles.previewContainer}>
+        {/* Glow halo behind board */}
+        <div className={styles.boardGlow} aria-hidden="true" />
+
         <div className={styles.previewWindow}>
           {/* Window Top Controls Bar */}
           <div className={styles.windowHeader}>
@@ -125,120 +234,177 @@ export const HeroSection: FC<HeroSectionProps> = ({
               <span className={`${styles.lightDot} ${styles.lightGreen}`} />
             </div>
 
-            <div className={styles.windowTitle}>
-              <span className={styles.spaceName}>Fieldnotes Core Sprint</span>
-              <span className={styles.versionTag}>v2.4 active</span>
+            <div className={styles.windowMeta}>
+              <span className={styles.spaceBadge}>CORE</span>
+              <span className={styles.spaceName}>Sprint 24 &bull; Active Board</span>
             </div>
 
+            {/* Interactive Filter Pills */}
             <div className={styles.boardFilters}>
               <button
                 type="button"
-                className={`${styles.filterChip} ${activeBoardFilter === 'all' ? styles.filterChipActive : ''}`}
-                onClick={() => setActiveBoardFilter('all')}
+                className={`${styles.filterChip} ${activeFilter === 'all' ? styles.filterChipActive : ''}`}
+                onClick={() => setActiveFilter('all')}
               >
-                All Cards
+                All ({MOCK_CARDS.length})
               </button>
               <button
                 type="button"
-                className={`${styles.filterChip} ${activeBoardFilter === 'mine' ? styles.filterChipActive : ''}`}
-                onClick={() => setActiveBoardFilter('mine')}
+                className={`${styles.filterChip} ${activeFilter === 'mine' ? styles.filterChipActive : ''}`}
+                onClick={() => setActiveFilter('mine')}
               >
                 Assigned to Me
+              </button>
+              <button
+                type="button"
+                className={`${styles.filterChip} ${activeFilter === 'urgent' ? styles.filterChipActive : ''}`}
+                onClick={() => setActiveFilter('urgent')}
+              >
+                High Priority
               </button>
             </div>
           </div>
 
-          {/* Kanban Columns Showcase */}
+          {/* Kanban Columns Grid */}
           <div className={styles.boardGrid}>
             {/* Column 1: To Do */}
             <div className={styles.boardColumn}>
               <div className={styles.columnHeader}>
-                <span className={styles.columnTitle}>TO DO</span>
-                <span className={styles.columnCount}>1</span>
+                <div className={styles.columnHeaderLeft}>
+                  <span className={`${styles.statusPill} ${styles.statusTodo}`} />
+                  <span className={styles.columnTitle}>TO DO</span>
+                </div>
+                <span className={styles.columnCount}>{todoCards.length}</span>
               </div>
               <div className={styles.columnCards}>
-                <div className={styles.mockCard}>
-                  <div className={styles.cardHeader}>
-                    <Badge label="FIELD-3" variant="mono" size="sm" />
+                {todoCards.map((card) => (
+                  <div key={card.id} className={styles.kanbanCard}>
+                    <div className={styles.cardHeader}>
+                      <span className={styles.cardKey}>{card.key}</span>
+                      <span className={`${styles.priorityBadge} ${styles[card.priority]}`}>
+                        {card.priority}
+                      </span>
+                    </div>
+                    <p className={styles.cardTitle}>{card.title}</p>
+                    <div className={styles.cardFooter}>
+                      <span className={styles.pointsBadge}>{card.points} pts</span>
+                      <div className={styles.assigneeWrap}>
+                        <Avatar name={card.assigneeName} size="xs" />
+                        <span className={styles.assigneeName}>{card.assigneeName.split(' ')[0]}</span>
+                      </div>
+                    </div>
                   </div>
-                  <p className={styles.cardTitle}>Audit accessibility &amp; keyboard navigation</p>
-                  <div className={styles.cardFooter}>
-                    <StatusBar status={{ id: 'col-todo', projectId: 'proj-1', title: 'To Do', order: 0 }} size="sm" />
-                    <Avatar name="David Kim" size="xs" />
-                  </div>
-                </div>
+                ))}
+                {todoCards.length === 0 && (
+                  <div className={styles.emptyFilterState}>No cards match filter</div>
+                )}
               </div>
             </div>
 
             {/* Column 2: In Progress */}
             <div className={styles.boardColumn}>
               <div className={styles.columnHeader}>
-                <span className={`${styles.columnTitle} ${styles.columnActive}`}>IN PROGRESS</span>
-                <span className={styles.columnCount}>1</span>
+                <div className={styles.columnHeaderLeft}>
+                  <span className={`${styles.statusPill} ${styles.statusProgress}`} />
+                  <span className={styles.columnTitle}>IN PROGRESS</span>
+                </div>
+                <span className={styles.columnCount}>{progressCards.length}</span>
               </div>
               <div className={styles.columnCards}>
-                <div className={`${styles.mockCard} ${styles.mockCardHighlight}`}>
-                  <div className={styles.cardHeader}>
-                    <Badge label="FIELD-2" variant="mono" size="sm" />
+                {progressCards.map((card) => (
+                  <div key={card.id} className={`${styles.kanbanCard} ${styles.cardActive}`}>
+                    <div className={styles.cardHeader}>
+                      <span className={styles.cardKey}>{card.key}</span>
+                      <span className={`${styles.priorityBadge} ${styles[card.priority]}`}>
+                        {card.priority}
+                      </span>
+                    </div>
+                    <p className={styles.cardTitle}>{card.title}</p>
+                    <div className={styles.cardFooter}>
+                      <span className={styles.pointsBadge}>{card.points} pts</span>
+                      <div className={styles.assigneeWrap}>
+                        <Avatar name={card.assigneeName} size="xs" />
+                        <span className={styles.assigneeName}>{card.assigneeName.split(' ')[0]}</span>
+                      </div>
+                    </div>
                   </div>
-                  <p className={styles.cardTitle}>Design card-level permission system</p>
-                  <div className={styles.cardFooter}>
-                    <StatusBar status={{ id: 'col-progress', projectId: 'proj-1', title: 'In Progress', order: 1 }} size="sm" />
-                    <Avatar name="Alex Morgan" size="xs" />
-                  </div>
-                </div>
+                ))}
+                {progressCards.length === 0 && (
+                  <div className={styles.emptyFilterState}>No cards match filter</div>
+                )}
               </div>
             </div>
 
             {/* Column 3: Done */}
             <div className={styles.boardColumn}>
               <div className={styles.columnHeader}>
-                <span className={`${styles.columnTitle} ${styles.columnDone}`}>DONE</span>
-                <span className={styles.columnCount}>1</span>
+                <div className={styles.columnHeaderLeft}>
+                  <span className={`${styles.statusPill} ${styles.statusDone}`} />
+                  <span className={styles.columnTitle}>DONE</span>
+                </div>
+                <span className={styles.columnCount}>{doneCards.length}</span>
               </div>
               <div className={styles.columnCards}>
-                <div className={styles.mockCard}>
-                  <div className={styles.cardHeader}>
-                    <Badge label="FIELD-1" variant="mono" size="sm" />
+                {doneCards.map((card) => (
+                  <div key={card.id} className={styles.kanbanCard}>
+                    <div className={styles.cardHeader}>
+                      <span className={styles.cardKey}>{card.key}</span>
+                      <span className={`${styles.priorityBadge} ${styles[card.priority]}`}>
+                        {card.priority}
+                      </span>
+                    </div>
+                    <p className={`${styles.cardTitle} ${styles.cardTitleDone}`}>{card.title}</p>
+                    <div className={styles.cardFooter}>
+                      <span className={styles.pointsBadge}>{card.points} pts</span>
+                      <div className={styles.assigneeWrap}>
+                        <Avatar name={card.assigneeName} size="xs" />
+                        <span className={styles.assigneeName}>{card.assigneeName.split(' ')[0]}</span>
+                      </div>
+                    </div>
                   </div>
-                  <p className={styles.cardTitle}>Implement design tokens &amp; typography scale</p>
-                  <div className={styles.cardFooter}>
-                    <StatusBar status={{ id: 'col-done', projectId: 'proj-1', title: 'Done', order: 2 }} size="sm" />
-                    <Avatar name="Sarah Connor" size="xs" />
-                  </div>
-                </div>
+                ))}
+                {doneCards.length === 0 && (
+                  <div className={styles.emptyFilterState}>No cards match filter</div>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Floating Accent Badge */}
-        <div className={styles.floatingTag}>
-          <SparkleIcon size={14} />
-          <span>Real-time Kanban Sync</span>
+        {/* Floating Real-time Sync Toast */}
+        <div className={styles.floatingSyncToast}>
+          <div className={styles.liveIndicator}>
+            <span className={styles.liveDot} />
+            <BoltIcon size={12} />
+          </div>
+          <span className={styles.toastText}>
+            <strong>Alex Morgan</strong> updated SPRINT-102 (just now)
+          </span>
         </div>
+
       </div>
 
-      {/* Credibility & Metrics Strip */}
-      <div className={styles.metricsStrip}>
-        <div className={styles.metricItem}>
+      {/* Credibility & Metrics Cards Strip */}
+      <div className={styles.metricsGrid}>
+        <div className={styles.metricCard}>
           <span className={styles.metricValue}>10,000+</span>
           <span className={styles.metricLabel}>Sprints Planned</span>
+          <span className={styles.metricSub}>Across 1,200+ squads</span>
         </div>
-        <div className={styles.metricDivider} />
-        <div className={styles.metricItem}>
+        <div className={styles.metricCard}>
           <span className={styles.metricValue}>&lt; 50ms</span>
           <span className={styles.metricLabel}>Interaction Latency</span>
+          <span className={styles.metricSub}>Optimistic UI updates</span>
         </div>
-        <div className={styles.metricDivider} />
-        <div className={styles.metricItem}>
+        <div className={styles.metricCard}>
           <span className={styles.metricValue}>99.9%</span>
-          <span className={styles.metricLabel}>Cloud Availability</span>
+          <span className={styles.metricLabel}>Cloud SLA Uptime</span>
+          <span className={styles.metricSub}>Enterprise reliability</span>
         </div>
-        <div className={styles.metricDivider} />
-        <div className={styles.metricItem}>
+        <div className={styles.metricCard}>
           <span className={styles.metricValue}>100%</span>
-          <span className={styles.metricLabel}>Theme-Native (Dark/Light)</span>
+          <span className={styles.metricLabel}>Theme-Native</span>
+          <span className={styles.metricSub}>Fluid Dark &amp; Light modes</span>
         </div>
       </div>
     </section>

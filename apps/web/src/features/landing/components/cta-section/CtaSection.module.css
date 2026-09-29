@@ -1,18 +1,18 @@
 /* ==========================================================================
-   CtaSection — landing page call-to-action band.
+   CtaSection — Premium landing page call-to-action card.
    Styled with Fieldnotes design tokens only (globals.css) — theme-aware.
    ========================================================================== */
 
 .section {
   width: 100%;
-  max-width: 1000px;
+  max-width: 1140px;
   margin: 0 auto;
   padding: 48px 24px 64px;
 }
 
 .card {
   width: 100%;
-  padding: 60px 32px;
+  padding: 64px 36px;
   background-color: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-sheet);
@@ -20,49 +20,122 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 18px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.04);
+  gap: 20px;
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.08);
   position: relative;
   overflow: hidden;
+  transition: border-color var(--motion-screen-transition-ms) ease,
+              background-color var(--motion-screen-transition-ms) ease;
 }
 
+/* Subtle ambient radial spotlight in the background */
+.glowSpotlight {
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 500px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-accent) 0%, transparent 70%);
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+/* Social Proof Mini Avatars */
+.socialProof {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 14px 4px 6px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-paper);
+  border: 1px solid var(--color-line);
+}
+
+.avatarStack {
+  display: flex;
+  align-items: center;
+}
+
+.miniAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  border: 2px solid var(--color-surface);
+  margin-left: -6px;
+}
+
+.miniAvatar:first-child {
+  margin-left: 0;
+}
+
+.avatar1 { background-color: #1E6F5C; }
+.avatar2 { background-color: #2D6A4F; }
+.avatar3 { background-color: #40916C; }
+.avatar4 { background-color: #52B788; }
+
+.socialProofText {
+  font-size: 12.5px;
+  color: var(--color-ink-muted);
+}
+
+.socialProofText strong {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+/* Eyebrow badge */
 .eyebrow {
-  display: inline-block;
-  padding: 4px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
   border-radius: var(--radius-pill);
   background-color: var(--color-accent-soft);
   color: var(--color-accent);
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   border: 1px solid var(--color-line);
 }
 
+/* Headings */
 .title {
-  font-size: 32px;
+  font-size: 34px;
   font-weight: 800;
   line-height: 1.25;
   margin: 0;
   color: var(--color-ink);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.6px;
   max-width: 680px;
+  z-index: 1;
 }
 
 .subtitle {
   font-size: 16px;
   line-height: 1.6;
   color: var(--color-ink-muted);
-  max-width: 600px;
+  max-width: 620px;
   margin: 0;
+  z-index: 1;
 }
 
+/* Actions */
 .actions {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 14px;
   flex-wrap: wrap;
-  margin-top: 6px;
+  margin-top: 8px;
+  z-index: 1;
 }
 
 .primaryBtn {
@@ -70,23 +143,27 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 13px 26px;
+  padding: 13px 28px;
   border-radius: var(--radius-input);
   background-color: var(--color-accent);
   color: #ffffff;
   text-decoration: none;
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 600;
   border: none;
   cursor: pointer;
-  transition: all 150ms ease;
-  box-shadow: 0 2px 8px rgba(30, 111, 92, 0.25);
+  box-shadow: 0 4px 14px rgba(30, 111, 92, 0.28);
+  transition: opacity 150ms ease, transform 120ms ease, box-shadow 150ms ease;
 }
 
 .primaryBtn:hover {
-  opacity: 0.95;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(30, 111, 92, 0.35);
+  opacity: 0.94;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(30, 111, 92, 0.36);
+}
+
+.primaryBtn:active {
+  transform: translateY(0);
 }
 
 .secondaryBtn {
@@ -94,40 +171,47 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 13px 26px;
+  padding: 13px 24px;
   border-radius: var(--radius-input);
   background-color: var(--color-paper);
   color: var(--color-ink);
   text-decoration: none;
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 600;
   border: 1px solid var(--color-line);
   cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  transition: background-color 150ms ease, border-color 150ms ease, transform 120ms ease;
 }
 
 .secondaryBtn:hover {
   background-color: var(--color-line);
+  transform: translateY(-1px);
 }
 
+.secondaryBtn:active {
+  transform: translateY(0);
+}
+
+/* Trust Badges Strip */
 .trustBadges {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: 16px;
   flex-wrap: wrap;
-  margin-top: 12px;
-  padding-top: 16px;
+  margin-top: 8px;
+  padding-top: 20px;
   border-top: 1px solid var(--color-line);
   width: 100%;
-  max-width: 520px;
+  max-width: 580px;
+  z-index: 1;
 }
 
 .trustItem {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-ink-muted);
   font-weight: 500;
 }
@@ -138,21 +222,49 @@
   align-items: center;
 }
 
-@media (max-width: 640px) {
+.bulletSeparator {
+  color: var(--color-line);
+  font-size: 14px;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Design
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
   .section {
-    padding: 32px 16px;
+    padding: 36px 16px 48px;
   }
 
   .card {
-    padding: 36px 18px;
+    padding: 44px 20px;
+    gap: 16px;
   }
 
   .title {
-    font-size: 24px;
+    font-size: 26px;
+  }
+
+  .subtitle {
+    font-size: 14.5px;
+  }
+
+  .actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .primaryBtn,
+  .secondaryBtn {
+    width: 100%;
   }
 
   .trustBadges {
     flex-direction: column;
     gap: 8px;
+  }
+
+  .bulletSeparator {
+    display: none;
   }
 }

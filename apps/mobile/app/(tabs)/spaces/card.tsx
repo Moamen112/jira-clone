@@ -305,8 +305,6 @@ export default function SpacesCardScreen() {
     setComments((prev) => prev.filter((c) => c.id !== commentId));
   };
 
-  const currentUserId = user ? String(user.id) : undefined;
-
   if (!card) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.paper }]}>

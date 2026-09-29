@@ -45,6 +45,19 @@ const CheckIcon: FC<{ size?: number }> = ({ size = 14 }) => (
   </svg>
 );
 
+const SparkleIcon: FC<{ size?: number }> = ({ size = 13 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    stroke="none"
+    aria-hidden="true"
+  >
+    <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+  </svg>
+);
+
 export const CtaSection: FC<CtaSectionProps> = ({
   isAuthenticated = false,
   userName,
@@ -54,24 +67,44 @@ export const CtaSection: FC<CtaSectionProps> = ({
 
   const heading = isAuthenticated
     ? displayName
-      ? `Welcome back, ${displayName}!`
+      ? `Ready to jump back in, ${displayName}?`
       : 'Ready to continue shipping?'
-    : 'Ready to modernize your team workflow?';
+    : 'Supercharge your team sprint velocity today.';
 
   const subtitle = isAuthenticated
-    ? 'Your sprint boards, assigned cards, and team updates are waiting. Jump in and keep the momentum going.'
-    : 'Join agile engineering squads shipping faster with high-performance Kanban boards, card inspection, and live audit trails.';
+    ? 'Your sprint boards, assigned cards, and live team activity logs are up to date. Pick up right where you left off.'
+    : 'Experience lightning-fast Kanban boards, fluid backlog planning, and zero-friction collaboration designed for high-performance squads.';
 
   return (
     <section className={styles.section} style={style} aria-label="Call to action">
       <div className={styles.card}>
-        <span className={styles.eyebrow}>
-          {isAuthenticated ? 'Workspace Connected' : 'Get Started in Seconds'}
-        </span>
+        {/* Ambient decorative glow backdrop */}
+        <div className={styles.glowSpotlight} aria-hidden="true" />
 
+        {/* Social proof team badges */}
+        <div className={styles.socialProof}>
+          <div className={styles.avatarStack} aria-hidden="true">
+            <span className={`${styles.miniAvatar} ${styles.avatar1}`}>AK</span>
+            <span className={`${styles.miniAvatar} ${styles.avatar2}`}>MR</span>
+            <span className={`${styles.miniAvatar} ${styles.avatar3}`}>SL</span>
+            <span className={`${styles.miniAvatar} ${styles.avatar4}`}>JD</span>
+          </div>
+          <span className={styles.socialProofText}>
+            Loved by <strong>1,200+</strong> engineering squads
+          </span>
+        </div>
+
+        {/* Eyebrow Pill */}
+        <div className={styles.eyebrow}>
+          <SparkleIcon size={12} />
+          <span>{isAuthenticated ? 'Active Workspace' : 'Zero Setup Required'}</span>
+        </div>
+
+        {/* Main Headings */}
         <h2 className={styles.title}>{heading}</h2>
         <p className={styles.subtitle}>{subtitle}</p>
 
+        {/* Primary & Secondary Actions */}
         <div className={styles.actions}>
           {isAuthenticated ? (
             <>
@@ -80,35 +113,43 @@ export const CtaSection: FC<CtaSectionProps> = ({
                 <ArrowRightIcon size={16} />
               </Link>
               <Link to={ROUTES.PROTECTED.SPACES} className={styles.secondaryBtn}>
-                Browse Spaces
+                Browse Project Spaces
               </Link>
             </>
           ) : (
-            <Link to={ROUTES.AUTH.SIGN_IN} className={styles.primaryBtn}>
-              <span>Log In to Get Started</span>
-              <ArrowRightIcon size={16} />
-            </Link>
+            <>
+              <Link to={ROUTES.AUTH.SIGN_UP} className={styles.primaryBtn}>
+                <span>Start Free — Instant Access</span>
+                <ArrowRightIcon size={16} />
+              </Link>
+              <Link to={ROUTES.AUTH.SIGN_IN} className={styles.secondaryBtn}>
+                Sign In to Existing Workspace
+              </Link>
+            </>
           )}
         </div>
 
+        {/* Trust Badges Strip */}
         <div className={styles.trustBadges}>
           <div className={styles.trustItem}>
             <span className={styles.checkIcon}>
-              <CheckIcon size={12} />
+              <CheckIcon size={13} />
             </span>
-            <span>Free 30-day trial</span>
+            <span>Free forever tier</span>
           </div>
+          <span className={styles.bulletSeparator} aria-hidden="true">&bull;</span>
           <div className={styles.trustItem}>
             <span className={styles.checkIcon}>
-              <CheckIcon size={12} />
+              <CheckIcon size={13} />
             </span>
             <span>No credit card required</span>
           </div>
+          <span className={styles.bulletSeparator} aria-hidden="true">&bull;</span>
           <div className={styles.trustItem}>
             <span className={styles.checkIcon}>
-              <CheckIcon size={12} />
+              <CheckIcon size={13} />
             </span>
-            <span>Cancel anytime</span>
+            <span>Theme-native (Dark/Light)</span>
           </div>
         </div>
       </div>

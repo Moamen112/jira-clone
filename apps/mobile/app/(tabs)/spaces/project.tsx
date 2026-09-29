@@ -309,8 +309,6 @@ export default function SpacesProjectScreen() {
     handleCloseCreateModal();
   };
 
-  const currentUserId = user ? String(user.id) : undefined;
-
   if (!project) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.paper }]}>
