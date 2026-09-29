@@ -11,6 +11,12 @@ import type {
   UserProfile,
 } from '../types/auth';
 
+function authResponseError(): Error {
+  return new Error(
+    'The authentication API returned an unexpected response. Check the API address and restart the development server.'
+  );
+}
+
 /**
  * Service handling all backend authentication requests and token persistence.
  */
@@ -19,8 +25,12 @@ export const authService = {
    * Step 1 (Sign Up): Register a new user account.
    */
   async register(payload: RegisterPayload): Promise<RegisterResponse> {
-    const response = await apiClient.post<RegisterResponse>(API_ENDPOINTS.AUTH.REGISTER, payload);
-    return response.data;
+    const response = await apiClient.post<unknown>(API_ENDPOINTS.AUTH.REGISTER, payload);
+    const data = response.data as RegisterResponse | null;
+    if (!data || typeof data.id !== 'number' || typeof data.email !== 'string') {
+      throw authResponseError();
+    }
+    return data;
   },
 
   /**
@@ -30,8 +40,16 @@ export const authService = {
    * - otp_required (prompts for 6-digit code)
    */
   async login(payload: LoginPayload): Promise<LoginResponse> {
-    const response = await apiClient.post<LoginResponse>(API_ENDPOINTS.AUTH.LOGIN, payload);
-    return response.data;
+    const response = await apiClient.post<unknown>(API_ENDPOINTS.AUTH.LOGIN, payload);
+    const data = response.data as LoginResponse | null;
+    if (!data || typeof data.pending_token !== 'string' || !data.pending_token ||
+        (data.status !== 'totp_setup_required' && data.status !== 'otp_required')) {
+      throw authResponseError();
+    }
+    if (data.status === 'totp_setup_required' && (!data.secret || !data.otpauth_uri)) {
+      throw authResponseError();
+    }
+    return data;
   },
 
   /**
@@ -41,14 +59,19 @@ export const authService = {
   async verifyTOTP(
     payload: VerifyTotpPayload
   ): Promise<{ tokens: AuthTokens; user: UserProfile }> {
-    const response = await apiClient.post<VerifyTotpResponse>(
+    const response = await apiClient.post<unknown>(
       API_ENDPOINTS.AUTH.LOGIN_VERIFY,
       payload
     );
 
+    const data = response.data as VerifyTotpResponse | null;
+    if (!data || typeof data.access !== 'string' || typeof data.refresh !== 'string') {
+      throw authResponseError();
+    }
+
     const tokens: AuthTokens = {
-      accessToken: response.data.access,
-      refreshToken: response.data.refresh,
+      accessToken: data.access,
+      refreshToken: data.refresh,
     };
 
     setAuthTokens(tokens);

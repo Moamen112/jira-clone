@@ -5,16 +5,19 @@ import {
   projectReducer,
   initialAuthState,
   initialProjectState,
-  setMobileAuthAdapter,
   setMobileTokenAdapter,
+  getAuthTokens,
+  setAuthSuccess,
   toggleTheme,
   setThemeMode,
   selectThemeMode,
   type ThemeMode,
   getStorageItem,
   setStorageItem,
+  removeStorageItem,
   STORAGE_KEYS,
   type AsyncStorageAdapter,
+  type UserProfile,
 } from '@jira-clone/shared';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 
@@ -45,10 +48,14 @@ let mobileStorageAdapter: AsyncStorageAdapter | undefined;
  * Configure an optional AsyncStorage adapter for native mobile persistence.
  * When set, it immediately reads any persisted theme mode and keeps it synchronized.
  */
-export function setMobileStorageAdapter(adapter: AsyncStorageAdapter) {
+export async function setMobileStorageAdapter(adapter: AsyncStorageAdapter) {
   mobileStorageAdapter = adapter;
-  setMobileAuthAdapter(adapter);
-  setMobileTokenAdapter(adapter);
+  await setMobileTokenAdapter(adapter);
+
+  const storedUser = await getStorageItem<UserProfile>(STORAGE_KEYS.CURRENT_USER, 'mobile', null, adapter);
+  if (storedUser && getAuthTokens()) {
+    store.dispatch(setAuthSuccess(storedUser));
+  }
 
   getStorageItem<ThemeMode>(STORAGE_KEYS.THEME_MODE, 'mobile', null, adapter).then((stored) => {
     if (stored === 'light' || stored === 'dark' || stored === 'system') {
@@ -58,6 +65,7 @@ export function setMobileStorageAdapter(adapter: AsyncStorageAdapter) {
 }
 
 let previousMode = store.getState().theme.mode;
+let previousUser = store.getState().auth.user;
 
 store.subscribe(() => {
   const currentMode = store.getState().theme.mode;
@@ -70,6 +78,18 @@ store.subscribe(() => {
     // Persist to mobile adapter if configured
     if (mobileStorageAdapter) {
       setStorageItem(STORAGE_KEYS.THEME_MODE, currentMode, 'mobile', mobileStorageAdapter);
+    }
+  }
+
+  const currentUser = store.getState().auth.user;
+  if (currentUser !== previousUser) {
+    previousUser = currentUser;
+    if (mobileStorageAdapter) {
+      if (currentUser) {
+        void setStorageItem(STORAGE_KEYS.CURRENT_USER, currentUser, 'mobile', mobileStorageAdapter);
+      } else {
+        void removeStorageItem(STORAGE_KEYS.CURRENT_USER, 'mobile', mobileStorageAdapter);
+      }
     }
   }
 });

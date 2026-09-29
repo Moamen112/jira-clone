@@ -5,6 +5,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import { store } from '../src/store';
 import { useTheme } from '../src/tokens';
+import { configureMobileApi } from '../src/services/apiConfig';
+
+configureMobileApi();
 
 function AppNavigator() {
   const { isDark } = useTheme();

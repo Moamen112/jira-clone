@@ -1,241 +1,167 @@
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
-import {
-  getAuthState,
-  subscribeAuthState,
-  setInternalAuthState,
-  initialAuthState,
-} from '../store/authSlice';
+import { useCallback, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { getAuthTokens } from '../lib/authTokens';
 import { authService } from '../services/authService';
-import type {
-  RegisterPayload,
-  RegisterResponse,
-  LoginPayload,
-  LoginResponse,
-  UserProfile,
-} from '../types/auth';
+import {
+  clearAuthError,
+  logoutAction,
+  selectAuth,
+  setAuthError,
+  setAuthLoading,
+  setAuthSuccess,
+  setCurrentUser,
+  setPending2FA,
+} from '../store/authSlice';
+import type { LoginPayload, RegisterPayload } from '../types/auth';
 
-/**
- * Formats API errors from Django REST framework into user-friendly strings.
- */
-function parseErrorMessage(err: unknown): string {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const data = (err as { response?: { data?: unknown } }).response?.data;
+function errorMessage(error: unknown): string {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = error.response as { data?: Record<string, unknown> | string } | undefined;
+    const data = response?.data;
+    if (typeof data === 'string') return data;
     if (data) {
-      if (typeof data === 'string') return data;
-      if (typeof data === 'object') {
-        const obj = data as Record<string, unknown>;
-        if (typeof obj.detail === 'string') return obj.detail;
-
-        // Collect field validation errors
-        const messages: string[] = [];
-        for (const [key, value] of Object.entries(obj)) {
-          if (Array.isArray(value)) {
-            messages.push(`${key}: ${value.join(' ')}`);
-          } else if (typeof value === 'string') {
-            messages.push(`${key}: ${value}`);
-          }
-        }
-        if (messages.length > 0) {
-          return messages.join('; ');
-        }
-      }
+      if (typeof data.detail === 'string') return data.detail;
+      const messages = Object.entries(data).flatMap(([field, value]) =>
+        Array.isArray(value) ? [`${field}: ${value.join(' ')}`] :
+        typeof value === 'string' ? [`${field}: ${value}`] : []
+      );
+      if (messages.length) return messages.join('; ');
     }
   }
-  return err instanceof Error ? err.message : 'An error occurred during authentication';
+  return error instanceof Error ? error.message : 'An error occurred during authentication';
 }
 
-/**
- * Universal Authentication Hook.
- * Works seamlessly in both Web and Mobile apps with full 2FA lifecycle management.
- */
+let sessionCheckStarted = false;
+
 export function useAuth() {
-  const state = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState);
+  const dispatch = useDispatch();
+  const { user, isAuthenticated, isLoading, error, pending2FA } = useSelector(selectAuth);
 
-  const is2FARequired = Boolean(state.pending2FA);
-  const is2FASetupRequired = state.pending2FA?.status === 'totp_setup_required';
-  const totpSetupData =
-    state.pending2FA?.status === 'totp_setup_required'
-      ? {
-          secret: state.pending2FA.secret ?? '',
-          otpauthUri: state.pending2FA.otpauthUri ?? '',
-        }
-      : null;
-
-  /**
-   * Clear any existing auth error message.
-   */
-  const clearError = useCallback(() => {
-    setInternalAuthState({ error: null });
-  }, []);
-
-  /**
-   * Step 1: Sign up. Automatically triggers login to begin 2FA setup if autoSignIn is true.
-   */
-  const signUp = useCallback(
-    async (payload: RegisterPayload, autoSignIn = true): Promise<RegisterResponse> => {
-      setInternalAuthState({ isLoading: true, error: null });
-      try {
-        const response = await authService.register(payload);
-        if (autoSignIn) {
-          // Immediately initiate sign-in to start mandatory first-time 2FA setup
-          await signIn({ email: payload.email, password: payload.password });
-        } else {
-          setInternalAuthState({ isLoading: false });
-        }
-        return response;
-      } catch (err) {
-        const message = parseErrorMessage(err);
-        setInternalAuthState({ error: message, isLoading: false });
-        throw err;
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
-
-  /**
-   * Step 2: Sign in with email and password.
-   * On success, transitions state to 2FA challenge (setup or code entry).
-   */
-  const signIn = useCallback(async (payload: LoginPayload): Promise<LoginResponse> => {
-    setInternalAuthState({ isLoading: true, error: null });
+  const signIn = useCallback(async (payload: LoginPayload) => {
+    dispatch(setAuthLoading(true));
+    dispatch(clearAuthError());
     try {
       const response = await authService.login(payload);
-
       if (response.status === 'totp_setup_required') {
-        setInternalAuthState({
-          isLoading: false,
-          error: null,
-          pending2FA: {
+        dispatch(setPending2FA({
             pendingToken: response.pending_token,
-            status: 'totp_setup_required',
+            status: response.status,
             secret: response.secret,
             otpauthUri: response.otpauth_uri,
-          },
-        });
+        }));
       } else {
-        setInternalAuthState({
-          isLoading: false,
-          error: null,
-          pending2FA: {
-            pendingToken: response.pending_token,
-            status: 'otp_required',
-          },
-        });
+        dispatch(setPending2FA({ pendingToken: response.pending_token, status: response.status }));
       }
-
       return response;
     } catch (err) {
-      const message = parseErrorMessage(err);
-      setInternalAuthState({ error: message, isLoading: false });
+      dispatch(setAuthError(errorMessage(err)));
       throw err;
     }
-  }, []);
+  }, [dispatch]);
 
-  /**
-   * Step 3: Verify 6-digit TOTP code.
-   * Exchanges pending_token and code for JWT tokens and fetches user profile.
-   */
-  const verify2FA = useCallback(
-    async (code: string): Promise<UserProfile> => {
-      if (!state.pending2FA?.pendingToken) {
-        const msg = 'No pending authentication session found. Please sign in again.';
-        setInternalAuthState({ error: msg });
-        throw new Error(msg);
+  const signUp = useCallback(async (payload: RegisterPayload, autoSignIn = true) => {
+    dispatch(setAuthLoading(true));
+    dispatch(clearAuthError());
+    try {
+      const response = await authService.register(payload);
+      if (autoSignIn) {
+        const loginResponse = await signIn({ email: payload.email, password: payload.password });
+        if (loginResponse.status !== 'totp_setup_required') {
+          dispatch(setPending2FA(null));
+          throw new Error(
+            'Account created, but the API reports an authenticator is already linked. ' +
+            'It did not provide a setup key, so two-factor setup cannot continue for this account.'
+          );
+        }
+      } else {
+        dispatch(setAuthLoading(false));
       }
+      return response;
+    } catch (err) {
+      dispatch(setAuthError(errorMessage(err)));
+      throw err;
+    }
+  }, [dispatch, signIn]);
 
-      setInternalAuthState({ isLoading: true, error: null });
-      try {
-        const { user } = await authService.verifyTOTP({
-          pending_token: state.pending2FA.pendingToken,
-          code: code.trim(),
-        });
+  const verify2FA = useCallback(async (code: string) => {
+    if (!pending2FA?.pendingToken) {
+      const message = 'No pending authentication session found. Please sign in again.';
+      dispatch(setAuthError(message));
+      throw new Error(message);
+    }
 
-        setInternalAuthState({
-          user,
-          isAuthenticated: true,
-          pending2FA: null,
-          isLoading: false,
-          error: null,
-        });
+    dispatch(setAuthLoading(true));
+    dispatch(clearAuthError());
+    try {
+      const { user: verifiedUser } = await authService.verifyTOTP({
+        pending_token: pending2FA.pendingToken,
+        code: code.trim(),
+      });
+      dispatch(setAuthSuccess(verifiedUser));
+      return verifiedUser;
+    } catch (err) {
+      dispatch(setAuthError(errorMessage(err)));
+      throw err;
+    }
+  }, [dispatch, pending2FA]);
 
-        return user;
-      } catch (err) {
-        const message = parseErrorMessage(err);
-        setInternalAuthState({ error: message, isLoading: false });
-        throw err;
-      }
-    },
-    [state.pending2FA]
-  );
-
-  /**
-   * Step 4: Sign out. Revokes refresh token and clears credentials.
-   */
-  const signOut = useCallback(async (): Promise<void> => {
-    setInternalAuthState({ isLoading: true });
+  const signOut = useCallback(async () => {
+    dispatch(setAuthLoading(true));
     try {
       await authService.logout();
     } catch {
-      // Ignore logout backend errors to guarantee local state gets cleared
+      // Local sign-out must still succeed if the server is unavailable.
     } finally {
-      setInternalAuthState({ ...initialAuthState });
+      dispatch(logoutAction());
     }
-  }, []);
+  }, [dispatch]);
 
-  /**
-   * Cancel an in-progress 2FA flow and return to clean sign-in state.
-   */
   const cancel2FA = useCallback(() => {
-    setInternalAuthState({ pending2FA: null, error: null, isLoading: false });
-  }, []);
+    dispatch(setPending2FA(null));
+  }, [dispatch]);
 
-  /**
-   * Refresh current user profile.
-   */
-  const refreshCurrentUser = useCallback(async (): Promise<UserProfile | null> => {
+  const clearError = useCallback(() => {
+    dispatch(clearAuthError());
+  }, [dispatch]);
+
+  const refreshCurrentUser = useCallback(async () => {
+    dispatch(setAuthLoading(true));
     try {
-      setInternalAuthState({ isLoading: true });
-      const user = await authService.getCurrentUser();
-      setInternalAuthState({ user, isAuthenticated: true, isLoading: false });
-      return user;
+      const latestUser = await authService.getCurrentUser();
+      dispatch(setAuthSuccess(latestUser));
+      return latestUser;
     } catch {
-      setInternalAuthState({ isLoading: false });
+      if (!getAuthTokens()) dispatch(logoutAction());
+      else dispatch(setAuthLoading(false));
       return null;
     }
-  }, []);
+  }, [dispatch]);
 
-  // Quietly validate/refresh user session on mount if authenticated
   useEffect(() => {
-    if (state.isAuthenticated) {
-      void authService
-        .getCurrentUser()
-        .then((latestUser) => {
-          setInternalAuthState({ user: latestUser });
-        })
-        .catch(() => {
-          // If session expired and token refresh failed
-          if (!getAuthTokens()?.accessToken) {
-            setInternalAuthState({ ...initialAuthState });
-          }
-        });
-    }
-  }, []);
+    if (!isAuthenticated || sessionCheckStarted) return;
+    sessionCheckStarted = true;
+    void authService.getCurrentUser().then((latestUser) => {
+      if (getAuthTokens()) dispatch(setCurrentUser(latestUser));
+    }).catch(() => {
+      if (!getAuthTokens()) dispatch(logoutAction());
+    }).finally(() => {
+      sessionCheckStarted = false;
+    });
+  }, [dispatch, isAuthenticated]);
+
+  const is2FASetupRequired = pending2FA?.status === 'totp_setup_required';
 
   return {
-    // State
-    user: state.user,
-    isAuthenticated: state.isAuthenticated,
-    isLoading: state.isLoading,
-    error: state.error,
-
-    // 2FA State
-    is2FARequired,
+    user,
+    isAuthenticated,
+    isLoading,
+    error,
+    is2FARequired: Boolean(pending2FA),
     is2FASetupRequired,
-    totpSetupData,
-    pending2FA: state.pending2FA,
-
-    // Actions
+    totpSetupData: is2FASetupRequired
+      ? { secret: pending2FA.secret ?? '', otpauthUri: pending2FA.otpauthUri ?? '' }
+      : null,
+    pending2FA,
     signUp,
     signIn,
     verify2FA,

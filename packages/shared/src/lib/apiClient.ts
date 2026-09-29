@@ -54,7 +54,8 @@ export function createApiClient(baseURL: string = API_BASE_URL): AxiosInstance {
           {
             refresh: currentTokens.refreshToken,
             refreshToken: currentTokens.refreshToken,
-          }
+          },
+          { baseURL: apiClient.defaults.baseURL }
         );
 
         const data = response.data;
@@ -88,3 +89,8 @@ export function createApiClient(baseURL: string = API_BASE_URL): AxiosInstance {
  * Default shared API client pointing to API_BASE_URL.
  */
 export const apiClient = createApiClient();
+
+/** Use the same API server for regular requests and token refresh. */
+export function setApiBaseUrl(baseURL: string): void {
+  apiClient.defaults.baseURL = baseURL.replace(/\/$/, '');
+}

@@ -20,15 +20,10 @@ let mobileTokenAdapter: AsyncStorageAdapter | undefined;
 /**
  * Configure an AsyncStorage adapter for native mobile token persistence.
  */
-export function setMobileTokenAdapter(adapter: AsyncStorageAdapter): void {
+export async function setMobileTokenAdapter(adapter: AsyncStorageAdapter): Promise<void> {
   mobileTokenAdapter = adapter;
-  getStorageItem<AuthTokens>(STORAGE_KEYS.AUTH_TOKENS, 'mobile', null, adapter).then(
-    (stored) => {
-      if (stored?.accessToken && stored?.refreshToken) {
-        tokens = stored;
-      }
-    }
-  );
+  const stored = await getStorageItem<AuthTokens>(STORAGE_KEYS.AUTH_TOKENS, 'mobile', null, adapter);
+  if (!tokens && stored?.accessToken && stored?.refreshToken) tokens = stored;
 }
 
 /**

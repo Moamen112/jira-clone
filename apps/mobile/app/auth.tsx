@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,9 +6,10 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
-  Image,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import QRCode from 'react-native-qrcode-svg';
 import { useAuth } from '@jira-clone/shared';
 import { Text, Button, Input } from '../src/components/base';
 import { useTheme, spacing, radius } from '../src/tokens';
@@ -48,6 +49,13 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [setupError, setSetupError] = useState('');
+  const [setupReady, setSetupReady] = useState(false);
+
+  useEffect(() => {
+    setSetupError('');
+    setSetupReady(false);
+  }, [totpSetupData?.otpauthUri]);
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -123,11 +131,15 @@ export default function AuthScreen() {
 
   const isRegister = mode === 'register';
 
-  const qrImageUrl = totpSetupData?.otpauthUri
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
-        totpSetupData.otpauthUri
-      )}`
-    : null;
+  const openAuthenticator = async () => {
+    if (!totpSetupData?.otpauthUri) return;
+    setSetupError('');
+    try {
+      await Linking.openURL(totpSetupData.otpauthUri);
+    } catch {
+      setSetupError('No authenticator app opened. Add the account manually using the key below.');
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -165,16 +177,33 @@ export default function AuthScreen() {
               </Text>
               <Text variant="caption" muted align="center">
                 {is2FASetupRequired
-                  ? 'Scan the QR code with Google Authenticator or Authy to complete setup.'
+                  ? 'Add this account to an authenticator, then enter its 6-digit code to enable two-factor authentication.'
                   : 'Enter the 6-digit code from your authenticator app.'}
               </Text>
 
-              {is2FASetupRequired && qrImageUrl && (
+              {is2FASetupRequired && totpSetupData?.otpauthUri && (
+                <Button
+                  label="Open authenticator app"
+                  variant="secondary"
+                  size="md"
+                  fullWidth
+                  onPress={openAuthenticator}
+                />
+              )}
+
+              {is2FASetupRequired && setupError ? (
+                <Text variant="caption" color={colors.warn} align="center">
+                  {setupError}
+                </Text>
+              ) : null}
+
+              {is2FASetupRequired && totpSetupData?.otpauthUri && (
                 <View style={styles.qrContainer}>
-                  <Image
-                    source={{ uri: qrImageUrl }}
-                    style={styles.qrImage}
-                    resizeMode="contain"
+                  <QRCode
+                    value={totpSetupData.otpauthUri}
+                    size={160}
+                    backgroundColor="#FFFFFF"
+                    color="#000000"
                   />
                 </View>
               )}
@@ -182,7 +211,7 @@ export default function AuthScreen() {
               {is2FASetupRequired && totpSetupData?.secret && (
                 <View style={styles.secretBox}>
                   <Text variant="caption" muted align="center">
-                    Or enter key manually:
+                    Or add the account manually with this key (hold to select):
                   </Text>
                   <Text
                     variant="caption"
@@ -190,24 +219,37 @@ export default function AuthScreen() {
                     align="center"
                     color={colors.accent}
                     style={styles.secretText}
+                    selectable
                   >
                     {totpSetupData.secret}
                   </Text>
                 </View>
               )}
 
-              <Input
-                label="6-Digit Verification Code"
-                placeholder="123456"
-                value={totpCode}
-                onChangeText={(text) => {
-                  setTotpCode(text);
-                  setErrors({});
-                }}
-                keyboardType="number-pad"
-                maxLength={6}
-                error={errors.code}
-              />
+              {is2FASetupRequired && !setupReady && (
+                <Button
+                  label="I added it to my authenticator"
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  onPress={() => setSetupReady(true)}
+                />
+              )}
+
+              {(!is2FASetupRequired || setupReady) && (
+                <Input
+                  label="6-Digit Verification Code"
+                  placeholder="123456"
+                  value={totpCode}
+                  onChangeText={(text) => {
+                    setTotpCode(text);
+                    setErrors({});
+                  }}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  error={errors.code}
+                />
+              )}
 
               {error && (
                 <View style={styles.errorBox}>
@@ -217,16 +259,16 @@ export default function AuthScreen() {
                 </View>
               )}
 
-              <Button
-                label={
-                  is2FASetupRequired ? 'Verify & Link Device' : 'Verify Code'
-                }
-                variant="primary"
-                size="lg"
-                fullWidth
-                loading={isLoading}
-                onPress={handleVerify2FA}
-              />
+              {(!is2FASetupRequired || setupReady) && (
+                <Button
+                  label={is2FASetupRequired ? 'Verify & Enable 2FA' : 'Verify Code'}
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  loading={isLoading}
+                  onPress={handleVerify2FA}
+                />
+              )}
 
               <Button
                 label="Cancel / Back"
@@ -388,10 +430,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
-  },
-  qrImage: {
-    width: 160,
-    height: 160,
   },
   secretBox: {
     padding: spacing[2],
