@@ -183,6 +183,13 @@ export const Board: FC<BoardProps> = ({
         currentUserId,
       });
 
+  const handleCardDrop = (cardId: string, toColumnId: string) => {
+    const targetCard = cards.find((c) => c.id === cardId);
+    if (targetCard && targetCard.columnId !== toColumnId) {
+      onCardMove?.(targetCard, toColumnId);
+    }
+  };
+
   return (
     <div
       data-testid={testID}
@@ -267,6 +274,7 @@ export const Board: FC<BoardProps> = ({
               onCardMove={(card) => {
                 setMovingCard(card);
               }}
+              onCardDrop={handleCardDrop}
               onCardAssigneeChange={onCardAssigneeChange}
               onCardAssigneesChange={onCardAssigneesChange}
               onAddCardPress={onAddCardPress}

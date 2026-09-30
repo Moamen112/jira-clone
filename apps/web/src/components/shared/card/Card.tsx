@@ -80,6 +80,15 @@ export const Card: FC<CardProps> = ({
   return (
     <div
       data-testid={testID}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/plain', card.id);
+        e.dataTransfer.effectAllowed = 'move';
+        (e.currentTarget as HTMLElement).style.opacity = '0.5';
+      }}
+      onDragEnd={(e) => {
+        (e.currentTarget as HTMLElement).style.opacity = '1';
+      }}
       onClick={() => onPress?.(card)}
       style={{
         backgroundColor: 'var(--color-paper)',
@@ -89,9 +98,9 @@ export const Card: FC<CardProps> = ({
         display: 'flex',
         flexDirection: 'column',
         gap: '8px',
-        cursor: onPress ? 'pointer' : 'default',
+        cursor: 'grab',
         boxSizing: 'border-box',
-        transition: 'box-shadow 150ms ease, border-color 150ms ease',
+        transition: 'box-shadow 150ms ease, border-color 150ms ease, opacity 150ms ease',
         ...style,
       }}
       onMouseEnter={(e) => {

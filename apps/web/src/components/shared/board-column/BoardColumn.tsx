@@ -34,6 +34,8 @@ export interface BoardColumnProps {
   canCreateCard?: boolean;
   /** Custom column width (default: 300px) */
   columnWidth?: number | string;
+  /** Callback fired when a dragged card is dropped into this column */
+  onCardDrop?: (cardId: string, columnId: string) => void;
   /** Custom container style */
   style?: CSSProperties;
   /** Test identifier */
@@ -66,6 +68,7 @@ export const BoardColumn: FC<BoardColumnProps> = ({
   onCardAssigneesChange,
   onAddCardPress,
   onCreateCard,
+  onCardDrop,
   renderCard,
   canCreateCard = true,
   columnWidth = DEFAULT_COLUMN_WIDTH,
@@ -73,6 +76,7 @@ export const BoardColumn: FC<BoardColumnProps> = ({
   testID,
 }) => {
   const [showInlineCreate, setShowInlineCreate] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Column accent color matching Fieldnotes status semantics
   const columnColor =
@@ -89,11 +93,29 @@ export const BoardColumn: FC<BoardColumnProps> = ({
   return (
     <div
       data-testid={testID}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (!isDragOver) setIsDragOver(true);
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setIsDragOver(false);
+        }
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        const cardId = e.dataTransfer.getData('text/plain');
+        if (cardId && onCardDrop) {
+          onCardDrop(cardId, column.id);
+        }
+      }}
       style={{
         width: columnWidth,
         minWidth: columnWidth,
-        backgroundColor: 'var(--color-surface)',
-        border: '1px solid var(--color-line)',
+        backgroundColor: isDragOver ? 'var(--color-surface-hover, var(--color-surface))' : 'var(--color-surface)',
+        border: `1px ${isDragOver ? 'dashed' : 'solid'} ${isDragOver ? 'var(--color-accent)' : 'var(--color-line)'}`,
         borderRadius: 'var(--radius-card)',
         padding: '12px',
         display: 'flex',
@@ -101,6 +123,8 @@ export const BoardColumn: FC<BoardColumnProps> = ({
         gap: '12px',
         boxSizing: 'border-box',
         alignSelf: 'flex-start',
+        boxShadow: isDragOver ? '0 0 0 1px var(--color-accent)' : undefined,
+        transition: 'border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease',
         ...style,
       }}
     >
