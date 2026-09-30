@@ -51,6 +51,8 @@ export interface AssigneeSelectProps {
   disabled?: boolean;
   /** Optional helper text below trigger */
   helperText?: string;
+  /** Picker presentation mode: 'modal' (bottom sheet) or 'inline' (expandable dropdown) */
+  pickerPresentation?: 'modal' | 'inline';
   /** Custom style override */
   style?: ViewStyle;
 }
@@ -68,11 +70,13 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
   placeholder = 'Unassigned',
   disabled = false,
   helperText,
+  pickerPresentation = 'modal',
   style,
 }) => {
   const { colors } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const isMemberLabel = label.toLowerCase().includes('member');
 
   // Resolve active selections from props
   const propSelectedIds: string[] = multiple
@@ -260,6 +264,145 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
     </Modal>
   );
 
+  const renderInlinePicker = () => {
+    if (pickerPresentation !== 'inline' || !isOpen) return null;
+
+    return (
+      <View
+        style={[
+          styles.inlineContainer,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.line,
+          },
+        ]}
+      >
+        {/* Search Input */}
+        <Input
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search by name or email..."
+          leftIcon={
+            <SearchIcon
+              size={16}
+              color={colors.inkMuted}
+            />
+          }
+          containerStyle={styles.inlineSearchInput}
+        />
+
+        {/* Members List */}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+          style={styles.inlineList}
+        >
+          {/* 1. Unassign Option */}
+          <Pressable
+            onPress={handleClearAll}
+            style={({ pressed }) => [
+              styles.memberRow,
+              localSelectedIds.length === 0 && { backgroundColor: colors.accentSoft },
+              pressed && styles.memberRowPressed,
+            ]}
+          >
+            <View style={[styles.unassignedIconSmall, { backgroundColor: colors.paper, borderColor: colors.line }]}>
+              <CloseCircleOutlineIcon
+                size={18}
+                color={colors.inkMuted}
+              />
+            </View>
+            <View style={styles.memberInfo}>
+              <Text variant="bodySmall" bold>
+                Unassigned
+              </Text>
+              <Text variant="caption" muted>
+                {multiple
+                  ? isMemberLabel
+                    ? 'Clear all members'
+                    : 'Clear all assignees'
+                  : isMemberLabel
+                  ? 'Remove current member'
+                  : 'Remove current assignee'}
+              </Text>
+            </View>
+            {localSelectedIds.length === 0 && (
+              <CheckmarkIcon
+                size={18}
+                color={colors.accent}
+              />
+            )}
+          </Pressable>
+
+          {/* 2. Workspace Members */}
+          {filteredUsers.map((user) => {
+            const isSelected = localSelectedIds.includes(user.id);
+
+            return (
+              <Pressable
+                key={user.id}
+                onPress={() => handleToggleUser(user.id)}
+                style={({ pressed }) => [
+                  styles.memberRow,
+                  isSelected && { backgroundColor: colors.accentSoft },
+                  pressed && styles.memberRowPressed,
+                ]}
+              >
+                <Avatar
+                  name={user.name}
+                  imageUrl={user.avatarUrl}
+                  size="sm"
+                />
+                <View style={styles.memberInfo}>
+                  <Text variant="bodySmall" bold>
+                    {user.name}
+                  </Text>
+                  <Text variant="caption" muted>
+                    {user.email}
+                  </Text>
+                </View>
+                {isSelected && (
+                  <CheckmarkIcon
+                    size={18}
+                    color={colors.accent}
+                  />
+                )}
+              </Pressable>
+            );
+          })}
+
+          {filteredUsers.length === 0 && (
+            <View style={styles.emptyState}>
+              <Text variant="bodySmall" muted>
+                No members found matching &quot;{search}&quot;
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Footer for multiple */}
+        {multiple && (
+          <View style={[styles.inlineFooter, { borderTopColor: colors.line }]}>
+            <Button
+              label="Clear All"
+              variant="ghost"
+              size="sm"
+              disabled={localSelectedIds.length === 0}
+              onPress={handleClearAll}
+            />
+            <Button
+              label={`Done (${localSelectedIds.length})`}
+              variant="primary"
+              size="sm"
+              onPress={() => setIsOpen(false)}
+            />
+          </View>
+        )}
+      </View>
+    );
+  };
+
   // Avatar-only variant (engineered for Card footers)
   if (variant === 'avatarOnly') {
     const defaultAvatarSize = avatarSize || 'xs';
@@ -274,7 +417,7 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
             pressed && !disabled && styles.avatarOnlyPressed,
           ]}
           accessibilityRole="button"
-          accessibilityLabel={`${multiple ? 'Assignees' : 'Assignee'}: ${
+          accessibilityLabel={`${multiple ? (isMemberLabel ? 'Members' : 'Assignees') : isMemberLabel ? 'Member' : 'Assignee'}: ${
             selectedUsers.length > 0
               ? selectedUsers.map((u) => u.name).join(', ')
               : placeholder
@@ -315,7 +458,14 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
 
       {/* Main Trigger Card */}
       <Pressable
-        onPress={() => !disabled && setIsOpen(true)}
+        onPress={() => {
+          if (disabled) return;
+          if (pickerPresentation === 'inline') {
+            setIsOpen((prev) => !prev);
+          } else {
+            setIsOpen(true);
+          }
+        }}
         disabled={disabled}
         style={({ pressed }) => [
           styles.trigger,
@@ -324,7 +474,7 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
           pressed && !disabled && styles.triggerPressed,
         ]}
         accessibilityRole="button"
-        accessibilityLabel={`${multiple ? 'Assignees' : 'Assignee'}: ${
+        accessibilityLabel={`${multiple ? (isMemberLabel ? 'Members' : 'Assignees') : isMemberLabel ? 'Member' : 'Assignee'}: ${
           selectedUsers.length > 0
             ? selectedUsers.map((u) => u.name).join(', ')
             : placeholder
@@ -358,7 +508,7 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
               numberOfLines={1}
             >
               {selectedUsers.length > 1
-                ? `${selectedUsers.length} Assignees`
+                ? `${selectedUsers.length} ${isMemberLabel ? 'Members' : 'Assignees'}`
                 : selectedUsers.length === 1
                 ? selectedUsers[0].name
                 : placeholder}
@@ -370,7 +520,11 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
                 : selectedUsers.length === 1
                 ? selectedUsers[0].email
                 : multiple
-                ? 'Assign one or more members'
+                ? isMemberLabel
+                  ? 'Select one or more members'
+                  : 'Assign one or more members'
+                : isMemberLabel
+                ? 'Select a member'
                 : 'Assign a member'}
             </Text>
           </View>
@@ -380,7 +534,10 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
           <ChevronDownIcon
             size={18}
             color={colors.inkMuted}
-            style={styles.chevron}
+            style={[
+              styles.chevron,
+              pickerPresentation === 'inline' && isOpen && { transform: [{ rotate: '180deg' }] },
+            ]}
           />
         )}
       </Pressable>
@@ -392,7 +549,8 @@ export const AssigneeSelect: React.FC<AssigneeSelectProps> = ({
         </Text>
       )}
 
-      {renderModal()}
+      {renderInlinePicker()}
+      {pickerPresentation !== 'inline' && renderModal()}
     </View>
   );
 };
@@ -505,6 +663,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingTop: spacing[2],
+  },
+  inlineContainer: {
+    borderWidth: 1,
+    borderRadius: radius.input,
+    marginTop: spacing[2],
+    padding: spacing[3],
+    gap: spacing[2],
+  },
+  inlineSearchInput: {
+    marginBottom: spacing[1],
+  },
+  inlineList: {
+    maxHeight: 220,
+  },
+  inlineFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: spacing[2],
+    borderTopWidth: 1,
   },
 });
 

@@ -293,6 +293,7 @@ export const Board: React.FC<BoardProps> = ({
           <ScrollView
             ref={tabsScrollRef}
             horizontal
+            nestedScrollEnabled={true}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tabsContent}
           >
@@ -367,6 +368,7 @@ export const Board: React.FC<BoardProps> = ({
         <ScrollView
           ref={boardScrollRef}
           horizontal
+          nestedScrollEnabled={true}
           snapToInterval={columnWidth + columnGap}
           decelerationRate="fast"
           snapToAlignment="start"

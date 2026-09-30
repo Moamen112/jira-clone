@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Pressable, Alert } from 'react-native';
+import { View, StyleSheet, Pressable, Alert, ScrollView, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronBackIcon, SunnyIcon, MoonIcon, AddIcon } from '../../../assets/icon';
+import { ChevronBackIcon, SunnyIcon, MoonIcon } from '../../../assets/icon';
 import {
   type Card as CardType,
   useSpaceDetail,
   isStatusAllowedForUser,
   getStatusPermissionHint,
 } from '@jira-clone/shared';
-import { Text, Modal, Button, Input, Dropdown } from '../../../src/components/base';
+import { Text, Button, Dropdown } from '../../../src/components/base';
 import { Board } from '../../../src/components/shared/board';
 import { ProjectHeader } from '../../../src/components/shared/project-header';
 import { CardMoveMenu, CardPosition } from '../../../src/components/shared/card-move-menu';
 import { EmptyState } from '../../../src/components/shared/empty-state';
+import { CreateCardModal, type CreateCardInput } from '../../../src/components/shared/create-card-modal';
 import { useTheme, spacing, radius } from '../../../src/tokens';
 
 /**
@@ -45,6 +46,8 @@ export default function SpacesProjectScreen() {
     toggleUserIdFilter,
     cards,
     columns,
+    cardTypeOptions,
+    createTaskType,
     isLoading: isTasksLoading,
     error: tasksError,
     fetchTasks,
@@ -131,38 +134,30 @@ export default function SpacesProjectScreen() {
     await createTask({ title, columnId });
   };
 
-  // Quick Create Card Modal state & handlers
+  // Create Card Modal state & handlers
   const [isCreateCardOpen, setIsCreateCardOpen] = useState(false);
   const [targetColumnId, setTargetColumnId] = useState<string>('');
-  const [newCardTitle, setNewCardTitle] = useState('');
-  const [cardTitleError, setCardTitleError] = useState<string | undefined>();
 
   const handleOpenCreateCard = (columnId?: string) => {
     setTargetColumnId(columnId || columns[0]?.id || 'col-todo');
-    setNewCardTitle('');
-    setCardTitleError(undefined);
     setIsCreateCardOpen(true);
   };
 
   const handleCloseCreateModal = () => {
     setIsCreateCardOpen(false);
-    setNewCardTitle('');
-    setCardTitleError(undefined);
   };
 
-  const handleConfirmCreateCard = async () => {
-    const trimmed = newCardTitle.trim();
-    if (!trimmed) {
-      setCardTitleError('Card title cannot be empty.');
-      return;
-    }
-    const chosenColumnId = targetColumnId || columns[0]?.id || 'col-todo';
-    try {
-      await handleCreateCard(trimmed, chosenColumnId);
-      handleCloseCreateModal();
-    } catch (err: unknown) {
-      setCardTitleError(err instanceof Error ? err.message : 'Failed to create card.');
-    }
+  const handleCreateCardSubmit = async (input: CreateCardInput) => {
+    if (!project) throw new Error('Project is not loaded.');
+    await createTask({
+      title: input.title,
+      type: input.type,
+      typeId: input.typeId,
+      description: input.description,
+      assigneeId: input.assigneeId ? Number(input.assigneeId) : null,
+      dueDate: input.dueDate || null,
+      columnId: input.columnId,
+    });
   };
 
   if (!project) {
@@ -231,13 +226,6 @@ export default function SpacesProjectScreen() {
         </Pressable>
 
         <View style={styles.topBarRight}>
-          <Button
-            label="+ Card"
-            variant="primary"
-            size="sm"
-            onPress={() => handleOpenCreateCard()}
-          />
-
           <Pressable
             onPress={toggleTheme}
             accessibilityRole="button"
@@ -259,140 +247,96 @@ export default function SpacesProjectScreen() {
         </View>
       </View>
 
-      {projectError && (
-        <View style={{ paddingHorizontal: spacing[4], paddingTop: spacing[2] }}>
-          <Text variant="caption" color={colors.warn}>{projectError}</Text>
-          <Button label="Retry project" variant="secondary" size="sm" onPress={retryProject} />
-        </View>
-      )}
-
-      {tasksError && !isTasksLoading && (
-        <EmptyState
-          title="Could not load cards"
-          description={tasksError}
-          actionLabel="Retry"
-          onAction={() => { void fetchTasks().catch(() => {}); }}
-        />
-      )}
-
-      <View style={{ paddingHorizontal: spacing[4], paddingTop: spacing[2] }}>
-        <Dropdown
-          label="Type"
-          value={selectedTypeFilter}
-          options={[{ label: 'All types', value: 'all' }, ...filterableTypeOptions.map((type) => ({ label: type.label, value: type.id }))]}
-          onSelect={setSelectedTypeFilter}
-        />
-      </View>
-
-      {/* Kanban Board with Project Header */}
-      <Board
-        columns={columns}
-        cards={cards}
-        refreshing={isTasksLoading}
-        onRefresh={() => { void fetchTasks().catch(() => {}); }}
-        users={boardUsers}
-        currentUserId={currentUserId}
-        searchQuery={boardSearch}
-        onSearchChange={setBoardSearch}
-        assignedToMe={assignedToMeFilter}
-        onToggleAssignedToMe={() => setAssignedToMeFilter((v) => !v)}
-        createdByMe={createdByMeFilter}
-        onToggleCreatedByMe={() => setCreatedByMeFilter((v) => !v)}
-        selectedUserIds={selectedUserIdsFilter}
-        onToggleUserId={toggleUserIdFilter}
-        onClearFilters={clearBoardFilters}
-        isServerFiltered={true}
-        totalCardsCount={project?.taskCount}
-        onCardPress={handleCardPress}
-        onCardMove={handleCardMove}
-        onCardAssigneeChange={handleCardAssigneeChange}
-        onAddCardPress={(colId) => handleOpenCreateCard(colId)}
-        onCreateCard={handleCreateCard}
-        renderHeader={() => (
-          <View style={styles.headerWrapper}>
-            <ProjectHeader
-              project={project}
-              members={boardUsers}
-              onCreateCard={() => handleOpenCreateCard()}
-            />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+        nestedScrollEnabled={true}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={isTasksLoading}
+            onRefresh={() => { void fetchTasks().catch(() => {}); }}
+            tintColor={colors.accent}
+          />
+        }
+      >
+        {projectError && (
+          <View style={{ paddingHorizontal: spacing[4], paddingTop: spacing[2] }}>
+            <Text variant="caption" color={colors.warn}>{projectError}</Text>
+            <Button label="Retry project" variant="secondary" size="sm" onPress={retryProject} />
           </View>
         )}
-        style={styles.board}
-      />
 
-      {/* Floating Action Button for Card Creation */}
-      <Pressable
-        onPress={() => handleOpenCreateCard()}
-        accessibilityRole="button"
-        accessibilityLabel="Create card"
-        style={({ pressed }) => [
-          styles.fab,
-          {
-            backgroundColor: colors.accent,
-            opacity: pressed ? 0.88 : 1,
-            shadowColor: '#000',
-          },
-        ]}
-      >
-        <AddIcon size={24} color="#FFFFFF" />
-      </Pressable>
+        {tasksError && !isTasksLoading && (
+          <EmptyState
+            title="Could not load cards"
+            description={tasksError}
+            actionLabel="Retry"
+            onAction={() => { void fetchTasks().catch(() => {}); }}
+          />
+        )}
 
-      {/* Quick Create Card Dialog Modal */}
-      <Modal
+        <View style={{ paddingHorizontal: spacing[4], paddingTop: spacing[2] }}>
+          <Dropdown
+            label="Type"
+            value={selectedTypeFilter}
+            options={[{ label: 'All types', value: 'all' }, ...filterableTypeOptions.map((type) => ({ label: type.label, value: type.id }))]}
+            onSelect={setSelectedTypeFilter}
+          />
+        </View>
+
+        {/* Kanban Board with Project Header */}
+        <Board
+          columns={columns}
+          cards={cards}
+          refreshing={isTasksLoading}
+          users={boardUsers}
+          currentUserId={currentUserId}
+          searchQuery={boardSearch}
+          onSearchChange={setBoardSearch}
+          assignedToMe={assignedToMeFilter}
+          onToggleAssignedToMe={() => setAssignedToMeFilter((v) => !v)}
+          createdByMe={createdByMeFilter}
+          onToggleCreatedByMe={() => setCreatedByMeFilter((v) => !v)}
+          selectedUserIds={selectedUserIdsFilter}
+          onToggleUserId={toggleUserIdFilter}
+          onClearFilters={clearBoardFilters}
+          isServerFiltered={true}
+          totalCardsCount={project?.taskCount}
+          onCardPress={handleCardPress}
+          onCardMove={handleCardMove}
+          onCardAssigneeChange={handleCardAssigneeChange}
+          onAddCardPress={(colId) => handleOpenCreateCard(colId)}
+          onCreateCard={handleCreateCard}
+          renderHeader={() => (
+            <View style={styles.headerWrapper}>
+              <ProjectHeader
+                project={project}
+                members={boardUsers}
+                onCreateCard={() => handleOpenCreateCard()}
+              />
+            </View>
+          )}
+          style={styles.board}
+        />
+      </ScrollView>
+
+      {/* Create Card Modal */}
+      <CreateCardModal
         visible={isCreateCardOpen}
         onClose={handleCloseCreateModal}
-        title="Create Card"
-        subtitle={
-          targetColumnId
-            ? `${project.key} · ${columns.find((c) => c.id === targetColumnId)?.title || targetColumnId}`
-            : project.key
-        }
-        presentation="dialog"
-        footer={
-          <View style={styles.modalFooter}>
-            <Button
-              label="Cancel"
-              variant="ghost"
-              size="sm"
-              onPress={handleCloseCreateModal}
-            />
-            <Button
-              label="Create Card"
-              variant="primary"
-              size="sm"
-              disabled={!newCardTitle.trim()}
-              onPress={handleConfirmCreateCard}
-            />
-          </View>
-        }
-      >
-        <View style={{ gap: spacing[3] }}>
-          <Input
-            label="Card name"
-            placeholder="e.g. Implement user authentication"
-            value={newCardTitle}
-            onChangeText={(text) => {
-              setNewCardTitle(text);
-              if (cardTitleError) setCardTitleError(undefined);
-            }}
-            error={cardTitleError}
-            autoFocus
-          />
-
-          {columns.length > 1 && (
-            <Dropdown
-              label="Status"
-              value={targetColumnId}
-              options={columns.map((c) => ({
-                label: c.title,
-                value: c.id,
-              }))}
-              onSelect={(val) => setTargetColumnId(val)}
-              placeholder="Select column..."
-            />
-          )}
-        </View>
-      </Modal>
+        onCreate={handleCreateCardSubmit}
+        targetColumnId={targetColumnId}
+        projectKey={project.key}
+        columns={columns}
+        users={boardUsers}
+        cardTypes={cardTypeOptions}
+        onAddType={async (name: string) => {
+          const created = await createTaskType(name);
+          return { id: String(created.id), label: created.name };
+        }}
+      />
 
       {/* Card Quick Move Menu */}
       <CardMoveMenu
@@ -448,27 +392,14 @@ const styles = StyleSheet.create({
     paddingTop: spacing[3],
     paddingBottom: spacing[1],
   },
-  board: {
+  scroll: {
     flex: 1,
   },
-  modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing[2],
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: spacing[8],
   },
-  fab: {
-    position: 'absolute',
-    bottom: spacing[6],
-    right: spacing[4],
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
-    zIndex: 99,
+  board: {
+    flex: 1,
   },
 });

@@ -6,7 +6,7 @@ import {
   ViewStyle,
   Dimensions,
 } from 'react-native';
-import { AddIcon, LayersIcon } from '../../../../assets/icon';
+import { LayersIcon } from '../../../../assets/icon';
 import {
   BoardColumn as BoardColumnType,
   Card as CardType,
@@ -15,9 +15,6 @@ import {
 } from '@jira-clone/shared';
 import { Text } from '../../base/typography/Text';
 import { Badge } from '../../base/badge/Badge';
-import { Button } from '../../base/button/Button';
-import { IconButton } from '../../base/icon-button/IconButton';
-import { Input } from '../../base/input/Input';
 import { Card } from '../card/Card';
 import { CreateCardInline } from '../create-card-inline';
 import { radius } from '../../../tokens/radius';
@@ -134,22 +131,6 @@ export const BoardColumn: React.FC<BoardColumnProps> = ({
             rounded
           />
         </View>
-
-        {canCreateCard && (onAddCardPress || onCreateCard) && (
-          <IconButton
-            variant="ghost"
-            size="sm"
-            icon={<AddIcon size={18} color={colors.ink} />}
-            accessibilityLabel={`Add card to ${column.title}`}
-            onPress={() => {
-              if (onAddCardPress) {
-                onAddCardPress(column.id);
-              } else {
-                setIsCreating(true);
-              }
-            }}
-          />
-        )}
       </View>
 
       {/* Cards List Body */}

@@ -93,14 +93,6 @@ export interface CardDetailProps {
   style?: any;
 }
 
-const PRIORITIES: { label: string; value: CardPriority }[] = [
-  { label: 'Lowest', value: 'lowest' },
-  { label: 'Low', value: 'low' },
-  { label: 'Medium', value: 'medium' },
-  { label: 'High', value: 'high' },
-  { label: 'Highest', value: 'highest' },
-];
-
 export const CardDetail: React.FC<CardDetailProps> = ({
   visible = true,
   card,
@@ -490,12 +482,6 @@ export const CardDetail: React.FC<CardDetailProps> = ({
     setHasChanges(true);
   };
 
-  const handlePrioritySelect = (p: CardPriority) => {
-    if (!canEditTitle) return; // Priority change tied to publisher rights
-    setPriority(p);
-    setHasChanges(true);
-  };
-
   const handleAssigneeSelect = (userId: string | null) => {
     if (!canChangeAssignee) return;
     setAssigneeId(userId);
@@ -676,41 +662,6 @@ export const CardDetail: React.FC<CardDetailProps> = ({
           )}
         </View>
       </Accordion>
-
-      {/* Priority Selector */}
-      <View style={styles.fieldSection}>
-        <Text variant="label" style={[styles.fieldLabel, { color: colors.ink }]}>
-          Priority
-        </Text>
-        <View style={styles.pillRow}>
-          {PRIORITIES.map((p) => {
-            const isSelected = p.value === priority;
-            return (
-              <Pressable
-                key={p.value}
-                disabled={!canEditTitle}
-                onPress={() => handlePrioritySelect(p.value)}
-                style={[
-                  styles.priorityPill,
-                  { backgroundColor: colors.surface, borderColor: colors.line },
-                  isSelected && { backgroundColor: colors.ink, borderColor: colors.ink },
-                  !canEditTitle && styles.disabledField,
-                ]}
-              >
-                <Text
-                  variant="caption"
-                  bold={isSelected}
-                  style={{
-                    color: isSelected ? colors.paper : colors.ink,
-                  }}
-                >
-                  {p.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
 
       {/* Accordion: People & Audit */}
       <Accordion
@@ -1207,13 +1158,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statusPillSelected: {},
-  priorityPill: {
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[1] + 2,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-  },
-  priorityPillSelected: {},
   disabledField: {
     opacity: 0.5,
   },

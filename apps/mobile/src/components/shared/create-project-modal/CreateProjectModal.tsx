@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Modal, Button, Input, Textarea, Text } from '../../base';
+import { AssigneeSelect } from '../assignee-select/AssigneeSelect';
 import { useTheme } from '../../../tokens';
 import { spacing } from '../../../tokens/spacing';
+import type { User } from '@jira-clone/shared';
 
 export interface CreateProjectInput {
   /** Project display name */
@@ -11,6 +13,8 @@ export interface CreateProjectInput {
   key: string;
   /** Optional project description */
   description?: string;
+  /** Space / project team members */
+  members?: User[];
 }
 
 export interface CreateProjectModalProps {
@@ -26,6 +30,12 @@ export interface CreateProjectModalProps {
   title?: string;
   /** Modal subtitle (small mono tag above the title) */
   subtitle?: string;
+  /** Modal confirm button label */
+  confirmLabel?: string;
+  /** Available workspace members to pick from */
+  users?: User[];
+  /** Pre-selected members on modal open */
+  initialMembers?: User[];
 }
 
 const DEFAULT_TITLE = 'Create Project';
@@ -52,11 +62,17 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   loading = false,
   title = DEFAULT_TITLE,
   subtitle = DEFAULT_SUBTITLE,
+  confirmLabel,
+  users = [],
+  initialMembers,
 }) => {
   const { colors } = useTheme();
+  const isSpaceVariant = title.toLowerCase().includes('space');
+  const resolvedConfirmLabel = confirmLabel || title || DEFAULT_TITLE;
   const [name, setName] = useState('');
   const [key, setKey] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [keyManuallyEdited, setKeyManuallyEdited] = useState(false);
   const [nameError, setNameError] = useState<string | undefined>(undefined);
   const [keyError, setKeyError] = useState<string | undefined>(undefined);
@@ -76,8 +92,12 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       setKeyError(undefined);
       setFormError(undefined);
       setSubmitting(false);
+      const defaultIds = initialMembers
+        ? initialMembers.map((m) => m.id)
+        : users.slice(0, 1).map((u) => u.id);
+      setSelectedUserIds(defaultIds);
     }
-  }, [visible]);
+  }, [visible, initialMembers, users]);
 
   const handleNameChange = (text: string) => {
     setName(text);
@@ -125,10 +145,15 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
     setFormError(undefined);
 
+    const selectedMembers = selectedUserIds
+      .map((id) => users.find((u) => u.id === id))
+      .filter((u): u is User => Boolean(u));
+
     const result = onCreate({
       name: name.trim(),
       key: key.trim().toUpperCase(),
       description: description.trim() || undefined,
+      members: selectedMembers.length > 0 ? selectedMembers : undefined,
     });
 
     // Async handler: wait for resolution before dismissing the dialog.
@@ -172,7 +197,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             onPress={handleCancel}
           />
           <Button
-            label="Create Project"
+            label={resolvedConfirmLabel}
             variant="primary"
             size="sm"
             loading={busy}
@@ -184,10 +209,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     >
       <View style={styles.form}>
         <Input
-          label="Project name"
+          label={isSpaceVariant ? 'Space name' : 'Project name'}
           value={name}
           onChangeText={handleNameChange}
-          placeholder="e.g. Jira Clone"
+          placeholder={isSpaceVariant ? 'e.g. Mobile Engineering' : 'e.g. Jira Clone'}
           error={nameError}
           maxLength={NAME_MAX_LENGTH}
           returnKeyType="next"
@@ -196,7 +221,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
         />
 
         <Input
-          label="Project key"
+          label={isSpaceVariant ? 'Space key' : 'Project key'}
           value={key}
           onChangeText={handleKeyChange}
           placeholder="e.g. PROJ"
@@ -211,10 +236,26 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
           label="Description (optional)"
           value={description}
           onChangeText={setDescription}
-          placeholder="What will this project track?"
+          placeholder={isSpaceVariant ? 'What will this space track?' : 'What will this project track?'}
           showCount
           maxLength={DESCRIPTION_MAX_LENGTH}
           containerStyle={{ marginBottom: 0 }}
+        />
+
+        <AssigneeSelect
+          label={isSpaceVariant ? 'Space members' : 'Project members'}
+          placeholder="Select members..."
+          users={users}
+          multiple
+          selectedUserIds={selectedUserIds}
+          onSelect={(id) => setSelectedUserIds(id ? [id] : [])}
+          onSelectMultiple={(ids) => setSelectedUserIds(ids)}
+          helperText={
+            isSpaceVariant
+              ? 'Select team members who will have access to this space.'
+              : 'Select team members who will have access to this project.'
+          }
+          pickerPresentation="inline"
         />
 
         {formError && (

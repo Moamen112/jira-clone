@@ -1,17 +1,22 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
-import { TimeIcon, GridIcon, SearchIcon, SunnyIcon, MoonIcon } from '../../../assets/icon';
+import { TimeIcon, GridIcon, SearchIcon, SunnyIcon, MoonIcon, AddIcon } from '../../../assets/icon';
 import {
   useProjects,
   useDebounce,
   filterSpaces,
   sortSpaces,
+  userService,
+  useAuth,
+  mockUsers,
+  type User,
 } from '@jira-clone/shared';
 
 import { Text, Badge, Input, Button } from '../../../src/components/base';
 import { ProjectCard } from '../../../src/components/shared/project-card';
 import { EmptyState } from '../../../src/components/shared/empty-state';
+import { CreateProjectModal, type CreateProjectInput } from '../../../src/components/shared/create-project-modal';
 import { useTheme, spacing, radius } from '../../../src/tokens';
 
 /**
@@ -23,13 +28,46 @@ import { useTheme, spacing, radius } from '../../../src/tokens';
 export default function SpacesIndexScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
   const router = useRouter();
+  const { user: currentUser } = useAuth();
 
+  const currentMember: User | undefined = useMemo(() => {
+    if (!currentUser) return undefined;
+    const name = currentUser.full_name || currentUser.email;
+    const initials = name
+      .split(' ')
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || 'U';
+    return {
+      id: String(currentUser.id),
+      name,
+      email: currentUser.email,
+      avatarUrl: currentUser.avatar || undefined,
+      initials,
+    };
+  }, [currentUser]);
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState<User[]>(mockUsers);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
+  // Fetch users for space creation member picker
+  useEffect(() => {
+    userService
+      .getUsers()
+      .then((users) => {
+        if (users && users.length > 0) {
+          setAvailableUsers(users);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Fetch projects from the API
-  const { spaces, isLoading, error, refetch } = useProjects({
+  const { spaces, isLoading, error, refetch, createProject } = useProjects({
     search: debouncedSearchQuery.trim() || undefined,
     status: selectedStatus !== 'all' ? (selectedStatus as 'active' | 'done' | 'archived') : undefined,
   });
@@ -48,6 +86,23 @@ export default function SpacesIndexScreen() {
       pathname: '/(tabs)/spaces/project',
       params: { projectId },
     });
+  };
+
+  // Create space handler
+  const handleCreateSpace = async (input: CreateProjectInput) => {
+    const memberIds = input.members
+      ?.map((m) => Number(m.id))
+      .filter((id) => !Number.isNaN(id) && id > 0);
+
+    const created = await createProject({
+      name: input.name,
+      key: input.key,
+      description: input.description,
+      members: memberIds && memberIds.length > 0 ? memberIds : undefined,
+    });
+    if (created?.id) {
+      handleOpenSpace(String(created.id));
+    }
   };
 
   // Resolve recently viewed projects in order
@@ -88,24 +143,33 @@ export default function SpacesIndexScreen() {
             <Text variant="display" bold style={{ color: colors.ink }}>
               Spaces
             </Text>
-            <Pressable
-              onPress={toggleTheme}
-              accessibilityRole="button"
-              accessibilityLabel={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-              style={({ pressed }) => [
-                styles.themeToggleBtn,
-                {
-                  backgroundColor: pressed ? colors.paper : colors.surface,
-                  borderColor: colors.line,
-                },
-              ]}
-            >
-              {isDark ? (
-                <SunnyIcon size={20} color={colors.accent} />
-              ) : (
-                <MoonIcon size={20} color={colors.ink} />
-              )}
-            </Pressable>
+            <View style={styles.headerActions}>
+              <Button
+                label="Create Space"
+                variant="primary"
+                size="sm"
+                leftIcon={<AddIcon size={16} color="#FFFFFF" />}
+                onPress={() => setIsCreateModalOpen(true)}
+              />
+              <Pressable
+                onPress={toggleTheme}
+                accessibilityRole="button"
+                accessibilityLabel={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+                style={({ pressed }) => [
+                  styles.themeToggleBtn,
+                  {
+                    backgroundColor: pressed ? colors.paper : colors.surface,
+                    borderColor: colors.line,
+                  },
+                ]}
+              >
+                {isDark ? (
+                  <SunnyIcon size={20} color={colors.accent} />
+                ) : (
+                  <MoonIcon size={20} color={colors.ink} />
+                )}
+              </Pressable>
+            </View>
           </View>
           <Text variant="bodySmall" muted style={styles.headerSubtitle}>
             Browse your team workspaces and project Kanban boards.
@@ -270,7 +334,7 @@ export default function SpacesIndexScreen() {
                   ? 'No spaces match your active search or status filters.'
                   : 'Spaces help you track and organize your team Kanban projects.'
               }
-              actionLabel={error ? 'Retry' : isFilterActive ? 'Clear Filters' : 'Refresh Spaces'}
+              actionLabel={error ? 'Retry' : isFilterActive ? 'Clear Filters' : 'Create Space'}
               onAction={() => {
                 if (error) {
                   retry();
@@ -278,7 +342,7 @@ export default function SpacesIndexScreen() {
                   setSearchQuery('');
                   setSelectedStatus('all');
                 } else {
-                  retry();
+                  setIsCreateModalOpen(true);
                 }
               }}
               icon={<GridIcon size={30} color={colors.accent} />}
@@ -286,6 +350,35 @@ export default function SpacesIndexScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Floating Action Button for Space Creation */}
+      <Pressable
+        onPress={() => setIsCreateModalOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Create space"
+        style={({ pressed }) => [
+          styles.fab,
+          {
+            backgroundColor: colors.accent,
+            opacity: pressed ? 0.88 : 1,
+            shadowColor: '#000',
+          },
+        ]}
+      >
+        <AddIcon size={24} color="#FFFFFF" />
+      </Pressable>
+
+      {/* Create Space Dialog Modal */}
+      <CreateProjectModal
+        visible={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreate={handleCreateSpace}
+        title="Create Space"
+        subtitle="SPACE"
+        confirmLabel="Create Space"
+        users={availableUsers}
+        initialMembers={currentMember ? [currentMember] : undefined}
+      />
     </View>
   );
 }
@@ -296,7 +389,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing[4],
-    paddingBottom: spacing[6],
+    paddingBottom: spacing[8],
     gap: spacing[4],
   },
   header: {
@@ -306,6 +399,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
   },
   themeToggleBtn: {
     width: 38,
@@ -367,5 +465,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: 'dashed',
     borderRadius: radius.card,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: spacing[6],
+    right: spacing[4],
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
 });
