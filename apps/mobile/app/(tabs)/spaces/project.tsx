@@ -1,19 +1,12 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Pressable, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronBackIcon, SunnyIcon, MoonIcon, AddIcon } from '../../../assets/icon';
 import {
-  mockProjects,
   type Card as CardType,
-  type User,
-  type BackendProject,
-  useProjects,
-  useTasks,
-  useAuth,
-  useDebounce,
+  useSpaceDetail,
   isStatusAllowedForUser,
   getStatusPermissionHint,
-  projectService,
 } from '@jira-clone/shared';
 import { Text, Modal, Button, Input, Dropdown } from '../../../src/components/base';
 import { Board } from '../../../src/components/shared/board';
@@ -24,136 +17,42 @@ import { useTheme, spacing, radius } from '../../../src/tokens';
 
 /**
  * SpacesProjectScreen — Project Detail / Kanban Board view.
- * Reads `projectId` from URL params, loads live project data & tasks via useTasks,
+ * Reads `projectId` from URL params and loads project data and tasks via useSpaceDetail,
  * and embeds the Kanban Board with quick card actions.
  */
 export default function SpacesProjectScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
   const router = useRouter();
   const { projectId, from } = useLocalSearchParams<{ projectId?: string; from?: string }>();
-  const { user } = useAuth();
-  const currentUserId = user?.id ? String(user.id) : undefined;
-  const { spaces, projects } = useProjects();
-
-  const [directProject, setDirectProject] = useState<BackendProject | null>(null);
-
-  // Match project from spaces or projects
-  const matchedProject = useMemo(() => {
-    if (!projectId) return null;
-    const fromSpaces = spaces.find(
-      (s) =>
-        String(s.project.id) === String(projectId) ||
-        s.project.key.toLowerCase() === projectId.toLowerCase()
-    )?.project;
-    if (fromSpaces) return fromSpaces;
-
-    const fromProjects = projects.find(
-      (p) =>
-        String(p.id) === String(projectId) ||
-        p.key.toLowerCase() === projectId.toLowerCase()
-    );
-    if (fromProjects) {
-      return {
-        id: String(fromProjects.id),
-        name: fromProjects.name,
-        key: fromProjects.key,
-        description: fromProjects.description,
-        ownerId: String(fromProjects.owner?.id || ''),
-        createdAt: fromProjects.created_at,
-        updatedAt: fromProjects.updated_at,
-        taskCount: fromProjects.task_count,
-        openTaskCount: fromProjects.open_task_count,
-        status: fromProjects.status,
-      };
-    }
-    return null;
-  }, [spaces, projects, projectId]);
-
-  // If not found in store, fetch single project directly by ID
-  useEffect(() => {
-    if (!matchedProject && projectId) {
-      projectService
-        .getProject(projectId)
-        .then((p) => setDirectProject(p))
-        .catch(() => {});
-    }
-  }, [matchedProject, projectId]);
-
-  // Resolved project entity
-  const project = useMemo(() => {
-    if (matchedProject) return matchedProject;
-    if (directProject) {
-      return {
-        id: String(directProject.id),
-        name: directProject.name,
-        key: directProject.key,
-        description: directProject.description,
-        ownerId: String(directProject.owner?.id || ''),
-        createdAt: directProject.created_at,
-        updatedAt: directProject.updated_at,
-        taskCount: directProject.task_count,
-        openTaskCount: directProject.open_task_count,
-        status: directProject.status,
-      };
-    }
-    if (!projectId) return mockProjects[0];
-    return mockProjects.find((p) => p.id === projectId) || null;
-  }, [matchedProject, directProject, projectId]);
-
-  const activeProjectId = project?.id;
-  const activeProjectKey = project?.key;
-
-  // Board filter states (connected to backend API)
-  const [boardSearch, setBoardSearch] = useState('');
-  const debouncedBoardSearch = useDebounce(boardSearch, 300);
-  const [assignedToMeFilter, setAssignedToMeFilter] = useState(false);
-  const [createdByMeFilter, setCreatedByMeFilter] = useState(false);
-  const [selectedUserIdsFilter, setSelectedUserIdsFilter] = useState<string[]>([]);
-
-  // Derive server query params
-  const serverAssignee = useMemo(() => {
-    if (selectedUserIdsFilter.length === 1 && selectedUserIdsFilter[0] !== 'unassigned') {
-      const parsed = Number(selectedUserIdsFilter[0]);
-      return !isNaN(parsed) && parsed > 0 ? parsed : undefined;
-    }
-    return undefined;
-  }, [selectedUserIdsFilter]);
-
-  const serverUnassigned = useMemo(() => {
-    return selectedUserIdsFilter.includes('unassigned') ? true : undefined;
-  }, [selectedUserIdsFilter]);
-
-  // Real backend tasks hook with query filters
   const {
+    project,
+    boardUsers,
+    currentUserId,
+    projectLoading,
+    projectError,
+    retryProject,
+    boardSearch,
+    setBoardSearch,
+    assignedToMeFilter,
+    setAssignedToMeFilter,
+    createdByMeFilter,
+    setCreatedByMeFilter,
+    selectedTypeFilter,
+    setSelectedTypeFilter,
+    filterableTypeOptions,
+    selectedUserIdsFilter,
+    clearBoardFilters,
+    toggleUserIdFilter,
     cards,
     columns,
     isLoading: isTasksLoading,
+    error: tasksError,
+    fetchTasks,
     statusError,
     createTask,
     updateTask,
     updateTaskStatus,
-  } = useTasks({
-    projectId: activeProjectId,
-    projectKey: activeProjectKey,
-    autoFetch: Boolean(activeProjectId),
-    search: debouncedBoardSearch.trim() || undefined,
-    mine: assignedToMeFilter ? true : undefined,
-    assignee: serverAssignee,
-    unassigned: serverUnassigned,
-  });
-
-  const handleClearBoardFilters = () => {
-    setBoardSearch('');
-    setAssignedToMeFilter(false);
-    setCreatedByMeFilter(false);
-    setSelectedUserIdsFilter([]);
-  };
-
-  const handleToggleUserIdFilter = (userId: string) => {
-    setSelectedUserIdsFilter((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    );
-  };
+  } = useSpaceDetail(projectId);
 
   // Show status error alert when permission is denied on status transition
   useEffect(() => {
@@ -165,43 +64,6 @@ export default function SpacesProjectScreen() {
   // Quick move menu state
   const [moveMenuCard, setMoveMenuCard] = useState<CardType | null>(null);
   const [moveMenuVisible, setMoveMenuVisible] = useState(false);
-
-  // Derive project team members
-  const members = useMemo<User[]>(() => {
-    if (directProject?.members && directProject.members.length > 0) {
-      return directProject.members.map((m) => ({
-        id: String(m.user.id),
-        name: m.user.full_name || m.user.email,
-        email: m.user.email,
-        initials: (m.user.full_name || m.user.email).slice(0, 2).toUpperCase(),
-        avatarUrl: m.user.avatar || undefined,
-      }));
-    }
-    const matchedSpace = spaces.find(
-      (s) => String(s.project.id) === String(project?.id)
-    );
-    if (matchedSpace?.members && matchedSpace.members.length > 0) {
-      return matchedSpace.members.map((m) => ({
-        id: String(m.id),
-        name: m.name,
-        email: m.email || '',
-        initials: (m.name || 'U').slice(0, 2).toUpperCase(),
-        avatarUrl: m.avatarUrl,
-      }));
-    }
-    if (user) {
-      return [
-        {
-          id: String(user.id),
-          name: user.full_name || user.email,
-          email: user.email,
-          initials: (user.full_name || user.email).slice(0, 2).toUpperCase(),
-          avatarUrl: user.avatar || undefined,
-        },
-      ];
-    }
-    return [];
-  }, [directProject?.members, spaces, project?.id, user]);
 
   // Back navigation handler
   const handleBack = () => {
@@ -265,18 +127,8 @@ export default function SpacesProjectScreen() {
 
   // Inline card creation callback
   const handleCreateCard = async (title: string, columnId: string) => {
-    if (!project) return;
-    try {
-      await createTask({
-        title,
-        columnId,
-      });
-    } catch (err: unknown) {
-      Alert.alert(
-        'Creation Failed',
-        err instanceof Error ? err.message : 'Failed to create card.'
-      );
-    }
+    if (!project) throw new Error('Project is not loaded.');
+    await createTask({ title, columnId });
   };
 
   // Quick Create Card Modal state & handlers
@@ -305,8 +157,12 @@ export default function SpacesProjectScreen() {
       return;
     }
     const chosenColumnId = targetColumnId || columns[0]?.id || 'col-todo';
-    await handleCreateCard(trimmed, chosenColumnId);
-    handleCloseCreateModal();
+    try {
+      await handleCreateCard(trimmed, chosenColumnId);
+      handleCloseCreateModal();
+    } catch (err: unknown) {
+      setCardTitleError(err instanceof Error ? err.message : 'Failed to create card.');
+    }
   };
 
   if (!project) {
@@ -346,10 +202,10 @@ export default function SpacesProjectScreen() {
           </Pressable>
         </View>
         <EmptyState
-          title="Project Not Found"
-          description={`Could not locate a workspace project with ID "${projectId}".`}
-          actionLabel="Back to Spaces"
-          onAction={() => router.replace('/(tabs)/spaces')}
+          title={projectLoading ? 'Loading project...' : projectError ? 'Could not load project' : 'Project Not Found'}
+          description={projectError || (projectId ? `Could not locate a workspace project with ID "${projectId}".` : 'Choose a space to open its board.')}
+          actionLabel={projectError ? 'Retry' : projectLoading ? undefined : 'Back to Spaces'}
+          onAction={projectError ? retryProject : () => router.replace('/(tabs)/spaces')}
         />
       </View>
     );
@@ -403,11 +259,38 @@ export default function SpacesProjectScreen() {
         </View>
       </View>
 
+      {projectError && (
+        <View style={{ paddingHorizontal: spacing[4], paddingTop: spacing[2] }}>
+          <Text variant="caption" color={colors.warn}>{projectError}</Text>
+          <Button label="Retry project" variant="secondary" size="sm" onPress={retryProject} />
+        </View>
+      )}
+
+      {tasksError && !isTasksLoading && (
+        <EmptyState
+          title="Could not load cards"
+          description={tasksError}
+          actionLabel="Retry"
+          onAction={() => { void fetchTasks().catch(() => {}); }}
+        />
+      )}
+
+      <View style={{ paddingHorizontal: spacing[4], paddingTop: spacing[2] }}>
+        <Dropdown
+          label="Type"
+          value={selectedTypeFilter}
+          options={[{ label: 'All types', value: 'all' }, ...filterableTypeOptions.map((type) => ({ label: type.label, value: type.id }))]}
+          onSelect={setSelectedTypeFilter}
+        />
+      </View>
+
       {/* Kanban Board with Project Header */}
       <Board
         columns={columns}
         cards={cards}
-        users={members}
+        refreshing={isTasksLoading}
+        onRefresh={() => { void fetchTasks().catch(() => {}); }}
+        users={boardUsers}
         currentUserId={currentUserId}
         searchQuery={boardSearch}
         onSearchChange={setBoardSearch}
@@ -416,8 +299,8 @@ export default function SpacesProjectScreen() {
         createdByMe={createdByMeFilter}
         onToggleCreatedByMe={() => setCreatedByMeFilter((v) => !v)}
         selectedUserIds={selectedUserIdsFilter}
-        onToggleUserId={handleToggleUserIdFilter}
-        onClearFilters={handleClearBoardFilters}
+        onToggleUserId={toggleUserIdFilter}
+        onClearFilters={clearBoardFilters}
         isServerFiltered={true}
         totalCardsCount={project?.taskCount}
         onCardPress={handleCardPress}
@@ -429,7 +312,7 @@ export default function SpacesProjectScreen() {
           <View style={styles.headerWrapper}>
             <ProjectHeader
               project={project}
-              members={members}
+              members={boardUsers}
               onCreateCard={() => handleOpenCreateCard()}
             />
           </View>

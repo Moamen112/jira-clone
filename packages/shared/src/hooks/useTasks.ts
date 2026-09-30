@@ -285,7 +285,7 @@ export function useTasks(options: UseTasksOptions = {}) {
   // Auto-fetch tasks when project or filters change
   useEffect(() => {
     if (autoFetch && (projectId || projectKey)) {
-      fetchTasks();
+      void fetchTasks().catch(() => {});
     }
   }, [autoFetch, projectId, projectKey, fetchTasks]);
 

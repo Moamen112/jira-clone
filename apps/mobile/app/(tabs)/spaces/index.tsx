@@ -3,99 +3,16 @@ import { View, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-n
 import { useRouter } from 'expo-router';
 import { TimeIcon, GridIcon, SearchIcon, SunnyIcon, MoonIcon } from '../../../assets/icon';
 import {
-  mockProjects,
-  mockCards,
-  mockColumns,
-  mockUsers,
-  type Project,
   useProjects,
   useDebounce,
-  filterProjects,
-  sortProjects,
-  getInitials,
+  filterSpaces,
+  sortSpaces,
 } from '@jira-clone/shared';
 
-import { Text, Badge, Input } from '../../../src/components/base';
-import { ProjectCard, ProjectIssueCounts } from '../../../src/components/shared/project-card';
+import { Text, Badge, Input, Button } from '../../../src/components/base';
+import { ProjectCard } from '../../../src/components/shared/project-card';
 import { EmptyState } from '../../../src/components/shared/empty-state';
 import { useTheme, spacing, radius } from '../../../src/tokens';
-
-/**
- * Derives project members from the backend owner or legacy card assignments.
- */
-function getProjectMembers(project: Project) {
-  if (project.owner) {
-    return [
-      {
-        id: String(project.owner.id),
-        name: project.owner.full_name || project.owner.email,
-        avatarUrl: project.owner.avatar ?? undefined,
-        initials: getInitials(project.owner.full_name || project.owner.email),
-      },
-    ];
-  }
-
-  const projectCards = mockCards.filter((c) => c.projectId === project.id);
-  const memberIdSet = new Set<string>();
-
-  if (project?.ownerId) memberIdSet.add(project.ownerId);
-
-  projectCards.forEach((c) => {
-    if (c.publisherId) memberIdSet.add(c.publisherId);
-    if (c.assigneeId) memberIdSet.add(c.assigneeId);
-    c.assigneeIds?.forEach((id) => memberIdSet.add(id));
-  });
-
-  if (memberIdSet.size === 0) {
-    return mockUsers.slice(0, 2);
-  }
-
-  return mockUsers.filter((u) => memberIdSet.has(u.id));
-}
-
-/**
- * Computes issue counts (To Do, Active, Done) for a project from backend fields or column cards.
- */
-function getProjectIssueCounts(project: Project): ProjectIssueCounts {
-  if (project.taskCount !== undefined || project.openTaskCount !== undefined) {
-    const total = project.taskCount ?? 0;
-    const open = project.openTaskCount ?? 0;
-    return {
-      todo: open,
-      inProgress: 0,
-      done: Math.max(0, total - open),
-    };
-  }
-
-  const projectCards = mockCards.filter((c) => c.projectId === project.id);
-  const projectColumns = mockColumns.filter((col) => col.projectId === project.id);
-
-  const todoColIds = new Set(
-    projectColumns
-      .filter((col) => col.title.toLowerCase().includes('to do'))
-      .map((c) => c.id)
-  );
-  const inProgressColIds = new Set(
-    projectColumns
-      .filter(
-        (col) =>
-          col.title.toLowerCase().includes('progress') ||
-          col.title.toLowerCase().includes('review')
-      )
-      .map((c) => c.id)
-  );
-  const doneColIds = new Set(
-    projectColumns
-      .filter((col) => col.title.toLowerCase().includes('done'))
-      .map((c) => c.id)
-  );
-
-  return {
-    todo: projectCards.filter((c) => todoColIds.has(c.columnId)).length,
-    inProgress: projectCards.filter((c) => inProgressColIds.has(c.columnId)).length,
-    done: projectCards.filter((c) => doneColIds.has(c.columnId)).length,
-  };
-}
 
 /**
  * SpacesIndexScreen — First page of the Spaces Stack navigator.
@@ -112,23 +29,14 @@ export default function SpacesIndexScreen() {
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   // Fetch projects from the API
-  const {
-    plainProjects: apiProjects,
-    isLoading,
-    refetch,
-  } = useProjects({
+  const { spaces, isLoading, error, refetch } = useProjects({
     search: debouncedSearchQuery.trim() || undefined,
     status: selectedStatus !== 'all' ? (selectedStatus as 'active' | 'done' | 'archived') : undefined,
   });
+  const retry = () => { void refetch().catch(() => {}); };
 
-  // Use API projects if available; fallback to mockProjects when offline or empty during dev
-  const projects = apiProjects.length > 0 ? apiProjects : mockProjects;
-
-  // Recently viewed space IDs (seeded with popular active spaces)
-  const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([
-    'proj-1',
-    'proj-2',
-  ]);
+  // Recently viewed space IDs from this session.
+  const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
 
   // Open project board and bump to front of recently viewed
   const handleOpenSpace = (projectId: string) => {
@@ -143,22 +51,23 @@ export default function SpacesIndexScreen() {
   };
 
   // Resolve recently viewed projects in order
-  const recentlyViewedProjects = useMemo(() => {
-    return recentlyViewedIds
-      .map((id) => projects.find((p) => p.id === id))
-      .filter((p): p is Project => Boolean(p));
-  }, [recentlyViewedIds, projects]);
+  const recentlyViewedSpaces = useMemo(() => {
+    return recentlyViewedIds.flatMap((id) => {
+      const space = spaces.find((item) => item.project.id === id);
+      return space ? [space] : [];
+    });
+  }, [recentlyViewedIds, spaces]);
 
   const isFilterActive = Boolean(debouncedSearchQuery.trim()) || selectedStatus !== 'all';
 
   // Filtered list for "All Spaces" container (default sorted by updated / latest)
-  const filteredProjects = useMemo(() => {
-    let filtered = filterProjects(projects, debouncedSearchQuery);
+  const filteredSpaces = useMemo(() => {
+    let filtered = filterSpaces(spaces, debouncedSearchQuery);
     if (selectedStatus !== 'all') {
-      filtered = filtered.filter((p) => p.status === selectedStatus);
+      filtered = filtered.filter((space) => space.project.status === selectedStatus);
     }
-    return sortProjects(filtered, 'updated');
-  }, [projects, debouncedSearchQuery, selectedStatus]);
+    return sortSpaces(filtered, 'updated');
+  }, [spaces, debouncedSearchQuery, selectedStatus]);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.paper }]}>
@@ -168,7 +77,7 @@ export default function SpacesIndexScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
-            onRefresh={refetch}
+            onRefresh={retry}
             tintColor={colors.accent}
           />
         }
@@ -218,25 +127,25 @@ export default function SpacesIndexScreen() {
               </Text>
             </View>
             <Badge
-              label={String(recentlyViewedProjects.length)}
+              label={String(recentlyViewedSpaces.length)}
               variant="neutral"
               size="sm"
             />
           </View>
 
-          {recentlyViewedProjects.length > 0 ? (
+          {recentlyViewedSpaces.length > 0 ? (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalScrollList}
             >
-              {recentlyViewedProjects.map((project) => (
-                <View key={project.id} style={styles.horizontalCardWrapper}>
+              {recentlyViewedSpaces.map((space) => (
+                <View key={space.project.id} style={styles.horizontalCardWrapper}>
                   <ProjectCard
-                    project={project}
-                    members={getProjectMembers(project)}
-                    issueCounts={getProjectIssueCounts(project)}
-                    onPress={() => handleOpenSpace(project.id)}
+                    project={space.project}
+                    members={space.members}
+                    issueCounts={space.issueCounts}
+                    onPress={() => handleOpenSpace(space.project.id)}
                     style={{ backgroundColor: colors.paper }}
                   />
                 </View>
@@ -271,7 +180,7 @@ export default function SpacesIndexScreen() {
               </Text>
             </View>
             <Badge
-              label={String(filteredProjects.length)}
+              label={String(filteredSpaces.length)}
               variant="neutral"
               size="sm"
             />
@@ -329,34 +238,47 @@ export default function SpacesIndexScreen() {
             })}
           </ScrollView>
 
-          {filteredProjects.length > 0 ? (
+          {error && filteredSpaces.length > 0 && (
+            <View style={{ gap: spacing[2] }}>
+              <Text variant="caption" color={colors.warn}>{error}</Text>
+              <Button label="Retry" variant="secondary" size="sm" onPress={retry} />
+            </View>
+          )}
+
+          {isLoading && filteredSpaces.length === 0 ? (
+            <Text variant="caption" muted>Loading spaces...</Text>
+          ) : filteredSpaces.length > 0 ? (
             <View style={styles.verticalCardList}>
-              {filteredProjects.map((project) => (
+              {filteredSpaces.map((space) => (
                 <ProjectCard
-                  key={project.id}
-                  project={project}
-                  members={getProjectMembers(project)}
-                  issueCounts={getProjectIssueCounts(project)}
-                  onPress={() => handleOpenSpace(project.id)}
+                  key={space.project.id}
+                  project={space.project}
+                  members={space.members}
+                  issueCounts={space.issueCounts}
+                  onPress={() => handleOpenSpace(space.project.id)}
                   style={{ backgroundColor: colors.paper }}
                 />
               ))}
             </View>
           ) : (
             <EmptyState
-              title={isFilterActive ? 'No spaces found' : 'No spaces yet'}
+              title={error ? 'Could not load spaces' : isFilterActive ? 'No spaces found' : 'No spaces yet'}
               description={
-                isFilterActive
+                error
+                  ? 'Try again when the connection is available.'
+                  : isFilterActive
                   ? 'No spaces match your active search or status filters.'
                   : 'Spaces help you track and organize your team Kanban projects.'
               }
-              actionLabel={isFilterActive ? 'Clear Filters' : 'Refresh Spaces'}
+              actionLabel={error ? 'Retry' : isFilterActive ? 'Clear Filters' : 'Refresh Spaces'}
               onAction={() => {
-                if (isFilterActive) {
+                if (error) {
+                  retry();
+                } else if (isFilterActive) {
                   setSearchQuery('');
                   setSelectedStatus('all');
                 } else {
-                  refetch();
+                  retry();
                 }
               }}
               icon={<GridIcon size={30} color={colors.accent} />}

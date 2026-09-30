@@ -6,7 +6,6 @@ import {
   mockProjects,
   mockUsers,
   mockCurrentUser,
-  mockSpaces,
   type Card,
   type Project,
   type User,
@@ -237,15 +236,12 @@ export function HomePage() {
     if (dashboardStats?.active_projects !== undefined) {
       return dashboardStats.active_projects;
     }
-    return spaces.length > 0 ? spaces.length : mockProjects.length;
+    return spaces.length;
   }, [dashboardStats, spaces.length]);
 
-  // Derive recommended spaces dynamically from useProjects() spaces or fallback
+  // Recommend only projects returned by the API.
   const recommendedSpaces: SpaceItem[] = useMemo(() => {
-    if (spaces && spaces.length > 0) {
-      return spaces.slice(0, 4);
-    }
-    return mockSpaces.slice(0, 4);
+    return spaces.slice(0, 4);
   }, [spaces]);
 
   // Complete list of projects (from store + any project referenced in tasks)

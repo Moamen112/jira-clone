@@ -20,7 +20,8 @@ export interface BackendProjectMember {
   joined_at: string;
 }
 
-export type { BackendTaskType, BackendTask } from './task';
+import type { BackendTaskType, BackendTask } from './task';
+export type { BackendTaskType, BackendTask };
 
 export interface BackendProject {
   id: number;

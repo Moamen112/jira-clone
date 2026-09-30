@@ -74,7 +74,7 @@ export const taskService = {
    */
   async getTaskTypes(
     projectId: string | number,
-    params: { limit?: string | number } = { limit: 'all' }
+    params: { limit?: string | number; search?: string } = { limit: 'all' }
   ): Promise<BackendTaskType[]> {
     const response = await apiClient.get<BackendTaskType[]>(
       API_ENDPOINTS.PROJECT_TASK_TYPES.LIST(projectId),

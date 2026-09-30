@@ -569,6 +569,8 @@ export const CardDetail: React.FC<CardDetailProps> = ({
         },
       }[role];
 
+  if (!card) return null;
+
   const cardBody = (
     <View style={styles.content}>
       {/* Role & Permissions Banner */}
@@ -963,8 +965,6 @@ export const CardDetail: React.FC<CardDetailProps> = ({
       </View>
     </Modal>
   );
-
-  if (!card) return null;
 
   // 1. Full Screen Layout (Default)
   if (fullScreen) {

@@ -3,6 +3,7 @@ import type { Project } from './project';
 export interface SpaceMember {
   id?: string;
   name: string;
+  email?: string;
   avatarUrl?: string;
 }
 

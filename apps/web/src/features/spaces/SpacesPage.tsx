@@ -260,7 +260,7 @@ export function SpacesPage() {
           {isFilterActive && (
             <Button
               label="Clear filters"
-              variant="tertiary"
+              variant="ghost"
               size="sm"
               onPress={() => {
                 setSearchQuery('');

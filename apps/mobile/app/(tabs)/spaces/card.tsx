@@ -9,9 +9,6 @@ import {
   type Comment,
   type ActivityLog,
   type User,
-  mockCards,
-  mockColumns,
-  mockUsers,
   taskService,
   backendTaskToCard,
   backendCommentToComment,
@@ -46,17 +43,16 @@ export default function SpacesCardScreen() {
   const currentUserId = user?.id ? String(user.id) : undefined;
   const { spaces } = useProjects();
 
-  const [card, setCard] = useState<CardType | null>(() => {
-    if (!cardId) return null;
-    return mockCards.find((c) => c.id === cardId) || null;
-  });
+  const [card, setCard] = useState<CardType | null>(null);
   const [columns, setColumns] = useState<BoardColumn[]>(() => {
     return createDefaultBoardColumns(projectId || 'default');
   });
   const [comments, setComments] = useState<Comment[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [taskTypes, setTaskTypes] = useState<CardTypeOption[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(Boolean(cardId));
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
 
   // Fetch task types for project
   useEffect(() => {
@@ -80,9 +76,13 @@ export default function SpacesCardScreen() {
 
     let isMounted = true;
     const numericCardId = Number(cardId);
+    setCard(null);
+    setComments([]);
+    setActivityLogs([]);
+    setLoadError(null);
 
-    // If cardId is numeric, fetch from live backend API
-    if (!isNaN(numericCardId)) {
+    // Task IDs returned by the API are numeric. Demo IDs are not real tasks.
+    if (Number.isInteger(numericCardId) && numericCardId > 0) {
       setLoading(true);
       taskService
         .getTask(numericCardId)
@@ -95,7 +95,7 @@ export default function SpacesCardScreen() {
           }
         })
         .catch((err) => {
-          console.warn('Failed to load card from backend:', err);
+          if (isMounted) setLoadError(err instanceof Error ? err.message : 'Could not load card.');
         })
         .finally(() => {
           if (isMounted) setLoading(false);
@@ -122,12 +122,14 @@ export default function SpacesCardScreen() {
           );
         })
         .catch((err) => console.warn('Failed to load activity:', err));
+    } else {
+      setLoading(false);
     }
 
     return () => {
       isMounted = false;
     };
-  }, [cardId]);
+  }, [cardId, retry]);
 
   // Derive users from project members or current user
   const users = useMemo<User[]>(() => {
@@ -155,7 +157,7 @@ export default function SpacesCardScreen() {
         },
       ];
     }
-    return mockUsers;
+    return [];
   }, [card?.projectId, projectId, spaces, user]);
 
   // Back navigation handler
@@ -196,7 +198,7 @@ export default function SpacesCardScreen() {
     }
 
     const numericCardId = Number(updatedCard.id);
-    if (!isNaN(numericCardId)) {
+    if (Number.isInteger(numericCardId) && numericCardId > 0) {
       try {
         const targetStatus = columnIdToStatus(updatedCard.columnId);
         let resolvedTypeId: number | undefined = updatedCard.typeId;
@@ -231,6 +233,9 @@ export default function SpacesCardScreen() {
         );
         return;
       }
+    } else {
+      Alert.alert('Save Failed', 'This card does not have a valid task ID.');
+      return;
     }
     setCard(updatedCard);
     handleBack();
@@ -239,7 +244,7 @@ export default function SpacesCardScreen() {
   // Delete card callback
   const handleDeleteCard = async (deletedCardId: string) => {
     const numericCardId = Number(deletedCardId);
-    if (!isNaN(numericCardId)) {
+    if (Number.isInteger(numericCardId) && numericCardId > 0) {
       try {
         await taskService.deleteTask(numericCardId);
       } catch (err: unknown) {
@@ -249,6 +254,9 @@ export default function SpacesCardScreen() {
         );
         return;
       }
+    } else {
+      Alert.alert('Delete Failed', 'This card does not have a valid task ID.');
+      return;
     }
     handleBack();
   };
@@ -259,7 +267,7 @@ export default function SpacesCardScreen() {
     if (!id) return;
     const numericCardId = Number(id);
 
-    if (!isNaN(numericCardId)) {
+    if (Number.isInteger(numericCardId) && numericCardId > 0) {
       try {
         const backendComment = await taskService.addComment(numericCardId, {
           body: content.trim(),
@@ -275,15 +283,7 @@ export default function SpacesCardScreen() {
         return;
       }
     }
-
-    const fallbackComment: Comment = {
-      id: `comment-${Date.now()}`,
-      cardId: id,
-      authorId: user ? String(user.id) : 'user-1',
-      content,
-      createdAt: new Date().toISOString(),
-    };
-    setComments((prev) => [...prev, fallbackComment]);
+    Alert.alert('Comment Failed', 'This card does not have a valid task ID.');
   };
 
   // Delete comment callback
@@ -291,7 +291,7 @@ export default function SpacesCardScreen() {
     const numericCardId = Number(card?.id);
     const numericCommentId = Number(commentId);
 
-    if (!isNaN(numericCardId) && !isNaN(numericCommentId)) {
+    if (Number.isInteger(numericCardId) && numericCardId > 0 && Number.isInteger(numericCommentId) && numericCommentId > 0) {
       try {
         await taskService.deleteComment(numericCardId, numericCommentId);
       } catch (err: unknown) {
@@ -301,6 +301,9 @@ export default function SpacesCardScreen() {
         );
         return;
       }
+    } else {
+      Alert.alert('Delete Comment Failed', 'This comment does not have a valid ID.');
+      return;
     }
     setComments((prev) => prev.filter((c) => c.id !== commentId));
   };
@@ -344,10 +347,10 @@ export default function SpacesCardScreen() {
           </Pressable>
         </View>
         <EmptyState
-          title="Card Not Found"
-          description={`Could not find an issue with ID "${cardId}".`}
-          actionLabel="Back to Spaces"
-          onAction={() => router.replace('/(tabs)/spaces')}
+          title={loading ? 'Loading card...' : loadError ? 'Could not load card' : 'Card Not Found'}
+          description={loadError || (loading ? undefined : `Could not find an issue with ID "${cardId}".`)}
+          actionLabel={loadError ? 'Retry' : loading ? undefined : 'Back to Spaces'}
+          onAction={loadError ? () => setRetry((count) => count + 1) : () => router.replace('/(tabs)/spaces')}
         />
       </View>
     );

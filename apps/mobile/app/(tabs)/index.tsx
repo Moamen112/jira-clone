@@ -2,15 +2,9 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
-  mockCards,
-  mockProjects,
-  mockUsers,
-  mockCurrentUser,
-  mockActivityLogs,
   Card as CardType,
   BoardColumn,
   User,
-  Project,
   DashboardStats,
   ActivityLog as ActivityLogType,
   useAuth,
@@ -70,13 +64,15 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
-  const { plainProjects, fetchProjects } = useProjects();
+  const { plainProjects, fetchProjects, isLoading: projectsLoading, error: projectsError } = useProjects({ autoFetch: false });
 
   const [liveCards, setLiveCards] = useState<CardType[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [liveActivityLogs, setLiveActivityLogs] = useState<ActivityLogType[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [tasksError, setTasksError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -91,10 +87,13 @@ export default function HomeScreen() {
         .catch(() => {});
 
       // 2. Fetch all user accessible tasks, newest first
-      const tasks = await taskService.getTasks({ ordering: '-updated_at' }).catch(() => []);
-      if (tasks && tasks.length > 0) {
+      setTasksLoading(true);
+      setTasksError(null);
+      try {
+        const tasks = await taskService.getTasks({ ordering: '-updated_at' });
         const converted = tasks.map(backendTaskToCard);
         setLiveCards(converted);
+        setLiveActivityLogs([]);
 
         // Fetch activity for top 5 tasks
         const topTasks = converted.slice(0, 5);
@@ -112,24 +111,28 @@ export default function HomeScreen() {
             (a, b) =>
               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
-          if (merged.length > 0) {
-            setLiveActivityLogs(merged);
-          }
+          setLiveActivityLogs(merged);
         });
+      } catch (err: unknown) {
+        setLiveCards([]);
+        setLiveActivityLogs([]);
+        setTasksError(err instanceof Error ? err.message : 'Could not load tasks.');
+      } finally {
+        setTasksLoading(false);
       }
 
       // 3. Fetch user directory
       userService
         .getUsers()
         .then((u) => {
-          if (u && u.length > 0) setUsers(u);
+          setUsers(u);
         })
         .catch(() => {});
 
       // 4. Refresh projects list
-      fetchProjects().catch(() => {});
-    } catch {
-      // Handled gracefully with fallback data
+      await fetchProjects().catch(() => {});
+    } catch (err) {
+      console.warn('Could not load dashboard:', err);
     }
   }, [fetchProjects]);
 
@@ -149,11 +152,11 @@ export default function HomeScreen() {
     day: 'numeric',
   });
 
-  const currentUserId = user ? String(user.id) : mockCurrentUser.id;
-  const currentUserName = user?.full_name || mockCurrentUser.name;
+  const currentUserId = user ? String(user.id) : '';
+  const currentUserName = user?.full_name || user?.email || 'there';
 
-  const displayCards = liveCards.length > 0 ? liveCards : mockCards;
-  const displayProjects: Project[] = plainProjects.length > 0 ? plainProjects : mockProjects;
+  const displayCards = liveCards;
+  const displayProjects = plainProjects;
 
   const assignedCount =
     dashboardStats?.assigned_tasks !== undefined
@@ -232,7 +235,7 @@ export default function HomeScreen() {
           >
             <Avatar
               name={currentUserName}
-              imageUrl={user?.avatar || mockCurrentUser.avatarUrl}
+              imageUrl={user?.avatar || undefined}
               size="md"
               bordered
               borderColor={colors.paper}
@@ -268,7 +271,17 @@ export default function HomeScreen() {
         <Text variant="sectionLabel" muted style={styles.sectionTitle}>
           MY WORK ({myWork.length})
         </Text>
-        {myWork.length > 0 ? (
+        {tasksError ? (
+          <EmptyState
+            title="Could not load tasks"
+            description={tasksError}
+            actionLabel="Retry"
+            onAction={() => { void loadData(); }}
+            style={{ paddingVertical: spacing[3] }}
+          />
+        ) : tasksLoading ? (
+          <Text variant="bodySmall" muted>Loading tasks...</Text>
+        ) : myWork.length > 0 ? (
           myWork.map((card) => (
             <Pressable
               key={card.id}
@@ -321,12 +334,23 @@ export default function HomeScreen() {
         <Text variant="sectionLabel" muted style={styles.sectionTitle}>
           YOUR PROJECTS ({displayProjects.length})
         </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.projectsScroll}
-        >
-          {displayProjects.map((project) => (
+        {projectsError && displayProjects.length === 0 ? (
+          <EmptyState
+            title="Could not load projects"
+            description={projectsError}
+            actionLabel="Retry"
+            onAction={() => { void fetchProjects().catch(() => {}); }}
+            style={{ paddingVertical: spacing[3] }}
+          />
+        ) : projectsLoading && displayProjects.length === 0 ? (
+          <Text variant="bodySmall" muted>Loading projects...</Text>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.projectsScroll}
+          >
+            {displayProjects.map((project) => (
             <Pressable
               key={project.id}
               onPress={() => openProject(project.id)}
@@ -350,13 +374,14 @@ export default function HomeScreen() {
                 {project.name}
               </Text>
             </Pressable>
-          ))}
-        </ScrollView>
+            ))}
+          </ScrollView>
+        )}
 
         {/* Recent activity */}
         <ActivityLog
-          logs={liveActivityLogs.length > 0 ? liveActivityLogs : mockActivityLogs}
-          users={users.length > 0 ? users : mockUsers}
+          logs={liveActivityLogs}
+          users={users}
           title="RECENT ACTIVITY"
           maxItems={6}
         />

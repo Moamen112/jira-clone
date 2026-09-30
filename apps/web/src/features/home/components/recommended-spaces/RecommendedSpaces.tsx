@@ -39,6 +39,7 @@ export const RecommendedSpaces: FC<RecommendedSpacesProps> = ({
       </div>
 
       <div className={styles.cardsGrid}>
+        {visibleSpaces.length === 0 && <p>No spaces yet. View all spaces to get started.</p>}
         {visibleSpaces.map((item) => (
           <SpaceCard
             key={item.project.id}

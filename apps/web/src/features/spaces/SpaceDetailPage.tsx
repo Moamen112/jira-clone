@@ -1,27 +1,19 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import type { FC } from "react";
 import { useParams, useNavigate } from "react-router";
 import { ProjectHeader } from "../../components/shared/project-header";
 import { Board } from "../../components/shared/board";
 import { CardDetail, type CreateCardData } from "../../components/shared/card-detail";
 import {
-  mockSpaces,
   type Card,
-  type BoardColumn,
   type CardTypeOption,
   type Comment,
   type ActivityLog,
-  type User,
-  type BackendProject,
-  useProjects,
-  useTasks,
-  useAuth,
-  useDebounce,
+  useSpaceDetail,
   backendTaskToCard,
   columnIdToStatus,
   isStatusAllowedForUser,
   getStatusPermissionHint,
-  projectService,
   taskService,
   taskTypeToCardTypeOption,
 } from "@jira-clone/shared";
@@ -48,10 +40,6 @@ const ArrowLeftIcon: FC<{ size?: number }> = ({ size = 15 }) => (
 export function SpaceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { spaces } = useProjects();
-
-  const [directProject, setDirectProject] = useState<BackendProject | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [isCreateCardOpen, setIsCreateCardOpen] = useState(false);
   const [targetColumnId, setTargetColumnId] = useState<string | null>(null);
@@ -60,119 +48,39 @@ export function SpaceDetailPage() {
   const [selectedCardComments, setSelectedCardComments] = useState<Comment[]>([]);
   const [selectedCardActivity, setSelectedCardActivity] = useState<ActivityLog[]>([]);
 
-  // Find space from loaded spaces
-  const matchedSpace = useMemo(() => {
-    return (
-      spaces.find(
-        (s) =>
-          String(s.project.id) === String(id) ||
-          s.project.key.toLowerCase() === id?.toLowerCase()
-      ) ?? null
-    );
-  }, [spaces, id]);
-
-  // If not found in store, fetch single project directly by ID
   useEffect(() => {
-    if (!matchedSpace && id) {
-      projectService
-        .getProject(id)
-        .then((p) => setDirectProject(p))
-        .catch(() => {});
-    }
-  }, [matchedSpace, id]);
+    setSelectedCard(null);
+    setIsCreateCardOpen(false);
+    setTargetColumnId(null);
+    setSelectedCardComments([]);
+    setSelectedCardActivity([]);
+  }, [id]);
 
-  // Resolved space / project entity
-  const space = useMemo(() => {
-    if (matchedSpace) return matchedSpace;
-    if (directProject) {
-      return {
-        project: {
-          id: String(directProject.id),
-          name: directProject.name,
-          key: directProject.key,
-          description: directProject.description,
-          ownerId: String(directProject.owner?.id || ''),
-          createdAt: directProject.created_at,
-          updatedAt: directProject.updated_at,
-          taskCount: directProject.task_count,
-          openTaskCount: directProject.open_task_count,
-          status: directProject.status,
-          owner: directProject.owner,
-        },
-        members: (directProject.members || []).map((m) => ({
-          id: String(m.user?.id || ''),
-          name: m.user?.full_name || m.user?.email || 'Member',
-          email: m.user?.email,
-          avatarUrl: m.user?.avatar || undefined,
-        })),
-        category: 'software' as const,
-      };
-    }
-    const matchedMock = mockSpaces.find(
-      (s) =>
-        s.project.id === id ||
-        s.project.key.toLowerCase() === id?.toLowerCase()
-    );
-    if (matchedMock) return matchedMock;
-
-    return {
-      project: {
-        id: id || '1',
-        name: 'Project',
-        key: id && isNaN(Number(id)) ? id.toUpperCase() : 'PROJ',
-        description: '',
-        ownerId: '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      members: [],
-      category: 'software' as const,
-    };
-  }, [matchedSpace, directProject, id]);
-
-  const currentProjectId =
-    matchedSpace?.project.id ||
-    (directProject ? String(directProject.id) : id || '');
-  const currentProjectKey =
-    matchedSpace?.project.key ||
-    directProject?.key ||
-    (id && isNaN(Number(id)) ? id : '');
-
-  // Board Filter States (connected to backend API)
-  const [boardSearch, setBoardSearch] = useState('');
-  const debouncedBoardSearch = useDebounce(boardSearch, 300);
-  const [assignedToMeFilter, setAssignedToMeFilter] = useState(false);
-  const [createdByMeFilter, setCreatedByMeFilter] = useState(false);
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState('all');
-  const [selectedUserIdsFilter, setSelectedUserIdsFilter] = useState<string[]>([]);
-
-  // Derive server query params
-  const serverAssignee = useMemo(() => {
-    if (selectedUserIdsFilter.length === 1 && selectedUserIdsFilter[0] !== 'unassigned') {
-      const parsed = Number(selectedUserIdsFilter[0]);
-      return !isNaN(parsed) && parsed > 0 ? parsed : undefined;
-    }
-    return undefined;
-  }, [selectedUserIdsFilter]);
-
-  const serverUnassigned = useMemo(() => {
-    return selectedUserIdsFilter.includes('unassigned') ? true : undefined;
-  }, [selectedUserIdsFilter]);
-
-  const serverType = useMemo(() => {
-    if (selectedTypeFilter && selectedTypeFilter !== 'all') {
-      const parsed = Number(selectedTypeFilter);
-      return !isNaN(parsed) && parsed > 0 ? parsed : undefined;
-    }
-    return undefined;
-  }, [selectedTypeFilter]);
-
-  // Real backend tasks hook with query filters
   const {
+    space,
+    boardUsers,
+    currentUserId,
+    projectLoading,
+    projectError,
+    retryProject,
+    boardSearch,
+    setBoardSearch,
+    assignedToMeFilter,
+    setAssignedToMeFilter,
+    createdByMeFilter,
+    setCreatedByMeFilter,
+    selectedTypeFilter,
+    setSelectedTypeFilter,
+    filterableTypeOptions,
+    selectedUserIdsFilter,
+    clearBoardFilters,
+    toggleUserIdFilter,
     cards,
     columns,
     cardTypeOptions,
-    isLoading: isTasksLoading,
+    isLoading: tasksLoading,
+    error: tasksError,
+    fetchTasks,
     statusError,
     createTask,
     updateTask,
@@ -183,58 +91,7 @@ export function SpaceDetailPage() {
     addComment,
     deleteComment,
     loadActivity,
-  } = useTasks({
-    projectId: currentProjectId,
-    projectKey: currentProjectKey,
-    autoFetch: Boolean(currentProjectId),
-    search: debouncedBoardSearch.trim() || undefined,
-    mine: assignedToMeFilter ? true : undefined,
-    type: serverType,
-    assignee: serverAssignee,
-    unassigned: serverUnassigned,
-  });
-
-  const handleClearBoardFilters = () => {
-    setBoardSearch('');
-    setAssignedToMeFilter(false);
-    setCreatedByMeFilter(false);
-    setSelectedTypeFilter('all');
-    setSelectedUserIdsFilter([]);
-  };
-
-  const handleToggleUserIdFilter = (userId: string) => {
-    setSelectedUserIdsFilter((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    );
-  };
-
-  // Current authenticated user ID
-  const currentUserId = user ? String(user.id) : undefined;
-
-  // Board users from project members
-  const boardUsers: User[] = useMemo(() => {
-    if (space.members && space.members.length > 0) {
-      return space.members.map((m) => ({
-        id: String(m.id),
-        name: m.name,
-        email: m.email || '',
-        initials: (m.name || 'U').slice(0, 2).toUpperCase(),
-        avatarUrl: m.avatarUrl,
-      }));
-    }
-    if (user) {
-      return [
-        {
-          id: String(user.id),
-          name: user.full_name || user.email,
-          email: user.email,
-          initials: (user.full_name || user.email).slice(0, 2).toUpperCase(),
-          avatarUrl: user.avatar || undefined,
-        },
-      ];
-    }
-    return [];
-  }, [space.members, user]);
+  } = useSpaceDetail(id);
 
   // Load full card details, comments & activity logs whenever a card is selected
   const selectedCardId = selectedCard?.id;
@@ -447,6 +304,23 @@ export function SpaceDetailPage() {
     }
   };
 
+  if (!space) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.topBar}>
+          <button type="button" className={styles.backButton} onClick={handleBackToSpaces}>
+            <ArrowLeftIcon size={14} /> Back to Spaces
+          </button>
+        </div>
+        <div className={styles.emptyState} role={projectError ? 'alert' : 'status'}>
+          <h2>{projectLoading ? 'Loading project...' : projectError ? 'Could not load project' : 'Project Not Found'}</h2>
+          {projectError && <p>{projectError}</p>}
+          {projectError && <button type="button" className={styles.backButton} onClick={retryProject}>Retry</button>}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
       {/* Top action bar: Back button */}
@@ -469,11 +343,27 @@ export function SpaceDetailPage() {
         </div>
       )}
 
+      {projectError && (
+        <div className={styles.errorBanner} role="alert">
+          <span>{projectError}</span>
+          <button type="button" className={styles.backButton} onClick={retryProject}>Retry project</button>
+        </div>
+      )}
+
+      {tasksError && !tasksLoading && (
+        <div className={styles.errorBanner} role="alert">
+          <span>Could not load cards: {tasksError}</span>
+          <button type="button" className={styles.backButton} onClick={() => { void fetchTasks().catch(() => {}); }}>Retry</button>
+        </div>
+      )}
+
+      {tasksLoading && cards.length === 0 && <div role="status">Loading cards...</div>}
+
       {/* Space / Project Header with Create card button */}
       <section className={styles.headerSection}>
         <ProjectHeader
           project={space.project}
-          members={space.members}
+          members={boardUsers}
           category={space.category}
           onCreateCard={handleHeaderCreateCard}
         />
@@ -486,7 +376,7 @@ export function SpaceDetailPage() {
           cards={cards}
           users={boardUsers}
           currentUserId={currentUserId}
-          cardTypes={cardTypeOptions}
+          cardTypes={filterableTypeOptions}
           boardTitle={`${space.project.name} Board`}
           projectKey={space.project.key}
           searchQuery={boardSearch}
@@ -498,8 +388,8 @@ export function SpaceDetailPage() {
           selectedType={selectedTypeFilter}
           onSelectType={setSelectedTypeFilter}
           selectedUserIds={selectedUserIdsFilter}
-          onToggleUserId={handleToggleUserIdFilter}
-          onClearFilters={handleClearBoardFilters}
+          onToggleUserId={toggleUserIdFilter}
+          onClearFilters={clearBoardFilters}
           isServerFiltered={true}
           totalCardsCount={space.project.taskCount}
           onCardPress={handleCardPress}

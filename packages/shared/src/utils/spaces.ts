@@ -42,6 +42,7 @@ export function backendProjectToSpaceItem(bp: BackendProject): SpaceItem {
       members.push({
         id: String(m.user.id),
         name: m.user.full_name || m.user.email,
+        email: m.user.email,
         avatarUrl: m.user.avatar ?? undefined,
       });
     });
@@ -49,6 +50,7 @@ export function backendProjectToSpaceItem(bp: BackendProject): SpaceItem {
     members.push({
       id: String(bp.owner.id),
       name: bp.owner.full_name || bp.owner.email,
+      email: bp.owner.email,
       avatarUrl: bp.owner.avatar ?? undefined,
     });
   }
