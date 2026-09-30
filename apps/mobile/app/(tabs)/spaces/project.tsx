@@ -7,6 +7,8 @@ import {
   useSpaceDetail,
   isStatusAllowedForUser,
   getStatusPermissionHint,
+  userService,
+  type User,
 } from '@jira-clone/shared';
 import { Text, Button, Dropdown } from '../../../src/components/base';
 import { Board } from '../../../src/components/shared/board';
@@ -14,6 +16,7 @@ import { ProjectHeader } from '../../../src/components/shared/project-header';
 import { CardMoveMenu, CardPosition } from '../../../src/components/shared/card-move-menu';
 import { EmptyState } from '../../../src/components/shared/empty-state';
 import { CreateCardModal, type CreateCardInput } from '../../../src/components/shared/create-card-modal';
+import { AddMembersModal } from '../../../src/components/shared/add-members-modal';
 import { useTheme, spacing, radius } from '../../../src/tokens';
 
 /**
@@ -26,6 +29,7 @@ export default function SpacesProjectScreen() {
   const router = useRouter();
   const { projectId, from } = useLocalSearchParams<{ projectId?: string; from?: string }>();
   const {
+    space,
     project,
     boardUsers,
     currentUserId,
@@ -55,7 +59,27 @@ export default function SpacesProjectScreen() {
     createTask,
     updateTask,
     updateTaskStatus,
+    addMembers,
   } = useSpaceDetail(projectId);
+
+  // Users for adding members
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [isAddMembersModalOpen, setIsAddMembersModalOpen] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    userService
+      .getUsers()
+      .then((data) => {
+        if (isMounted) setAllUsers(data);
+      })
+      .catch((err) => {
+        console.error('Failed to load users for add members modal:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Show status error alert when permission is denied on status transition
   useEffect(() => {
@@ -158,6 +182,10 @@ export default function SpacesProjectScreen() {
       dueDate: input.dueDate || null,
       columnId: input.columnId,
     });
+  };
+
+  const handleAddMembersSubmit = async (userIds: string[]) => {
+    await addMembers(userIds);
   };
 
   if (!project) {
@@ -315,12 +343,23 @@ export default function SpacesProjectScreen() {
                 project={project}
                 members={boardUsers}
                 onCreateCard={() => handleOpenCreateCard()}
+                onAddMember={() => setIsAddMembersModalOpen(true)}
               />
             </View>
           )}
           style={styles.board}
         />
       </ScrollView>
+
+      {/* Add Members Modal */}
+      <AddMembersModal
+        visible={isAddMembersModalOpen}
+        onClose={() => setIsAddMembersModalOpen(false)}
+        onAddMembers={handleAddMembersSubmit}
+        spaceName={project.name}
+        existingMemberIds={space?.members?.map((m) => m.id) || boardUsers.map((u) => u.id)}
+        users={allUsers.length > 0 ? allUsers : boardUsers}
+      />
 
       {/* Create Card Modal */}
       <CreateCardModal

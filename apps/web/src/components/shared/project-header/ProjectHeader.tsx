@@ -41,6 +41,25 @@ const PlusIcon: FC<{ size?: number }> = ({ size = 14 }) => (
   </svg>
 );
 
+const UserPlusIcon: FC<{ size?: number }> = ({ size = 14 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="8.5" cy="7" r="4" />
+    <line x1="20" y1="8" x2="20" y2="14" />
+    <line x1="23" y1="11" x2="17" y2="11" />
+  </svg>
+);
+
 export interface ProjectHeaderProps {
   /** Project to display */
   project: Project;
@@ -54,6 +73,10 @@ export interface ProjectHeaderProps {
   actionVariant?: ButtonVariant;
   /** Optional icon to render inside the action button */
   actionIcon?: ReactNode;
+  /** Fired when the Add member button is pressed */
+  onAddMember?: () => void;
+  /** Custom label for the add member button (defaults to 'Add member') */
+  addMemberLabel?: string;
   /** Fired when the Create card button is pressed */
   onCreateCard?: () => void;
   /** Custom label for the create card button (defaults to 'Create card') */
@@ -79,6 +102,8 @@ export const ProjectHeader: FC<ProjectHeaderProps> = ({
   onAction,
   actionVariant = 'secondary',
   actionIcon,
+  onAddMember,
+  addMemberLabel = 'Add member',
   onCreateCard,
   createCardLabel = 'Create card',
   extraActions,
@@ -90,7 +115,8 @@ export const ProjectHeader: FC<ProjectHeaderProps> = ({
 }) => {
   const hasAction = Boolean(actionLabel && onAction);
   const hasMembers = Boolean(members && members.length > 0);
-  const showActionsSection = hasMembers || hasAction || extraActions || Boolean(onCreateCard);
+  const showActionsSection =
+    hasMembers || hasAction || extraActions || Boolean(onCreateCard) || Boolean(onAddMember);
 
   // Derive monogram (e.g. first 2-3 characters of the project key)
   const monogram = project.key
@@ -144,12 +170,21 @@ export const ProjectHeader: FC<ProjectHeaderProps> = ({
             </div>
           )}
 
-          {hasMembers && (hasAction || extraActions || onCreateCard) && (
+          {hasMembers && (hasAction || extraActions || onCreateCard || onAddMember) && (
             <div className={styles.divider} aria-hidden="true" />
           )}
 
           <div className={styles.actionsWrapper}>
             {extraActions}
+            {onAddMember && (
+              <Button
+                label={addMemberLabel}
+                variant="secondary"
+                size="sm"
+                leftIcon={<UserPlusIcon size={14} />}
+                onPress={onAddMember}
+              />
+            )}
             {onCreateCard && (
               <Button
                 label={createCardLabel}

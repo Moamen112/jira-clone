@@ -2,6 +2,7 @@ import { apiClient } from '../lib/apiClient';
 import { API_ENDPOINTS } from '../lib/endpoints';
 import type {
   BackendProject,
+  BackendProjectMember,
   CreateProjectPayload,
   UpdateProjectPayload,
   ProjectListParams,
@@ -64,5 +65,40 @@ export const projectService = {
    */
   async deleteProject(projectId: string | number): Promise<void> {
     await apiClient.delete(API_ENDPOINTS.PROJECTS.DELETE(projectId));
+  },
+
+  /**
+   * Fetches the members list for a project.
+   */
+  async getProjectMembers(projectId: string | number): Promise<BackendProjectMember[]> {
+    const response = await apiClient.get<BackendProjectMember[]>(
+      API_ENDPOINTS.PROJECT_MEMBERS.LIST(projectId)
+    );
+    return response.data;
+  },
+
+  /**
+   * Adds users as members to a project.
+   * Backend expects { users: number[] }
+   */
+  async addProjectMembers(
+    projectId: string | number,
+    userIds: number[]
+  ): Promise<BackendProjectMember[]> {
+    const response = await apiClient.post<BackendProjectMember[]>(
+      API_ENDPOINTS.PROJECT_MEMBERS.ADD(projectId),
+      { users: userIds }
+    );
+    return response.data;
+  },
+
+  /**
+   * Removes a member from a project by user ID.
+   */
+  async removeProjectMember(
+    projectId: string | number,
+    userId: string | number
+  ): Promise<void> {
+    await apiClient.delete(API_ENDPOINTS.PROJECT_MEMBERS.REMOVE(projectId, userId));
   },
 };

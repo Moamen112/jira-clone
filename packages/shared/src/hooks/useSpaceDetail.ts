@@ -114,6 +114,23 @@ export function useSpaceDetail(id?: string) {
     );
   };
 
+  const addMembers = async (userIds: (string | number)[]) => {
+    if (!project?.id) throw new Error('Project is not loaded.');
+    const numericIds = userIds
+      .map((id) => Number(id))
+      .filter((id) => !isNaN(id) && id > 0);
+    if (numericIds.length === 0) return [];
+    const newMemberships = await projectService.addProjectMembers(project.id, numericIds);
+    setRetryCount((count) => count + 1);
+    return newMemberships;
+  };
+
+  const removeMember = async (userId: string | number) => {
+    if (!project?.id) throw new Error('Project is not loaded.');
+    await projectService.removeProjectMember(project.id, userId);
+    setRetryCount((count) => count + 1);
+  };
+
   return {
     space,
     project,
@@ -122,6 +139,8 @@ export function useSpaceDetail(id?: string) {
     projectLoading,
     projectError,
     retryProject: () => setRetryCount((count) => count + 1),
+    addMembers,
+    removeMember,
     boardSearch,
     setBoardSearch,
     assignedToMeFilter,

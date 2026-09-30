@@ -26,6 +26,10 @@ export interface ProjectHeaderProps {
   onCreateCard?: () => void;
   /** Custom label for the create card button (defaults to 'Create card') */
   createCardLabel?: string;
+  /** Fired when the Add member button is pressed */
+  onAddMember?: () => void;
+  /** Custom label for the add member button (defaults to '+ Member') */
+  addMemberLabel?: string;
   /** Container style override */
   style?: ViewStyle;
 }
@@ -38,10 +42,12 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
   actionVariant = 'secondary',
   onCreateCard,
   createCardLabel = 'Create card',
+  onAddMember,
+  addMemberLabel = '+ Member',
   style,
 }) => {
   const hasAction = Boolean(actionLabel && onAction);
-  const showActionsSection = hasAction || Boolean(onCreateCard);
+  const showActionsSection = hasAction || Boolean(onCreateCard) || Boolean(onAddMember);
 
   return (
     <View style={[styles.container, style]}>
@@ -66,6 +72,14 @@ export const ProjectHeader: React.FC<ProjectHeaderProps> = ({
 
       {showActionsSection && (
         <View style={styles.actionsRow}>
+          {onAddMember && (
+            <Button
+              label={addMemberLabel}
+              variant="secondary"
+              size="sm"
+              onPress={onAddMember}
+            />
+          )}
           {onCreateCard && (
             <Button
               label={createCardLabel}
@@ -107,6 +121,7 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    gap: spacing[2],
   },
 });
 

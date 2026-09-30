@@ -4,17 +4,20 @@ import { useParams, useNavigate } from "react-router";
 import { ProjectHeader } from "../../components/shared/project-header";
 import { Board } from "../../components/shared/board";
 import { CardDetail, type CreateCardData } from "../../components/shared/card-detail";
+import { AddMembersModal } from "./components/add-members-modal";
 import {
   type Card,
   type CardTypeOption,
   type Comment,
   type ActivityLog,
+  type User,
   useSpaceDetail,
   backendTaskToCard,
   columnIdToStatus,
   isStatusAllowedForUser,
   getStatusPermissionHint,
   taskService,
+  userService,
   taskTypeToCardTypeOption,
 } from "@jira-clone/shared";
 import { ROUTES } from "../../routes/paths";
@@ -63,6 +66,7 @@ export function SpaceDetailPage() {
     projectLoading,
     projectError,
     retryProject,
+    addMembers,
     boardSearch,
     setBoardSearch,
     assignedToMeFilter,
@@ -133,6 +137,16 @@ export function SpaceDetailPage() {
       }
     }
   }, [cards, selectedCard]);
+
+  const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    userService
+      .getUsers()
+      .then(setAllUsers)
+      .catch((err) => console.warn("Failed to load workspace users:", err));
+  }, []);
 
   const handleBackToSpaces = () => {
     navigate(ROUTES.PROTECTED.SPACES);
@@ -359,13 +373,14 @@ export function SpaceDetailPage() {
 
       {tasksLoading && cards.length === 0 && <div role="status">Loading cards...</div>}
 
-      {/* Space / Project Header with Create card button */}
+      {/* Space / Project Header with Create card and Add member buttons */}
       <section className={styles.headerSection}>
         <ProjectHeader
           project={space.project}
           members={boardUsers}
           category={space.category}
           onCreateCard={handleHeaderCreateCard}
+          onAddMember={() => setIsAddMembersOpen(true)}
         />
       </section>
 
@@ -421,6 +436,18 @@ export function SpaceDetailPage() {
         onDelete={handleDeleteCard}
         onAddComment={handleAddComment}
         onDeleteComment={handleDeleteComment}
+      />
+
+      {/* Add Members to Space Modal */}
+      <AddMembersModal
+        visible={isAddMembersOpen}
+        onClose={() => setIsAddMembersOpen(false)}
+        onAddMembers={async (userIds) => {
+          await addMembers(userIds);
+        }}
+        spaceName={space.project.name}
+        existingMemberIds={space.members.map((m) => m.id)}
+        users={allUsers.length > 0 ? allUsers : boardUsers}
       />
     </div>
   );
